@@ -1,3 +1,4 @@
+import type { HabitWithStreak } from "../../habits/domain/types.js";
 import type { Task } from "../../routine/domain/types.js";
 import type { DashboardDependencies } from "../ports/dashboard-dependencies.js";
 
@@ -6,6 +7,7 @@ export interface DashboardSummary {
   next: Task | null;
   todayCount: number;
   todayDoneCount: number;
+  dueHabits: HabitWithStreak[];
 }
 
 function timeToMinutes(time: string): number {
@@ -43,10 +45,13 @@ export function getDashboardSummary(deps: DashboardDependencies, nowIso: string)
   const tasks = deps.taskRepo.getByDate(today);
   const { now, next } = getNowAndNext(tasks, nowIso);
 
+  const dueHabits = deps.habitLogService ? deps.habitLogService.getTodayDueHabits(today) : [];
+
   return {
     now,
     next,
     todayCount: tasks.length,
     todayDoneCount: tasks.filter((t) => t.status === "done").length,
+    dueHabits,
   };
 }

@@ -1,3 +1,4 @@
+import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
 import { defineConfig, loadEnv } from "vite";
 
@@ -6,7 +7,7 @@ export default defineConfig(({ mode }) => {
   const backendPort = env.BACKEND_PORT || 3000;
 
   return {
-    plugins: [react()],
+    plugins: [react(), tailwindcss()],
     server: {
       port: Number(env.FRONTEND_PORT || 5173),
       proxy: {

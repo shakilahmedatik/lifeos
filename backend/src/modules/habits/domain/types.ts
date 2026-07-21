@@ -1,33 +1,3 @@
-export type TaskCategory = "work" | "workout" | "learning" | "habit" | "personal" | "general";
-
-export type TaskStatus = "planned" | "in_progress" | "done" | "skipped";
-
-export interface Task {
-  id: string;
-  title: string;
-  category: TaskCategory;
-  date: string;
-  startTime: string;
-  endTime: string;
-  status: TaskStatus;
-  notes?: string;
-  reminderMinutesBefore?: number;
-  reminderSound: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface NewTaskInput {
-  title: string;
-  category?: TaskCategory;
-  date: string;
-  startTime: string;
-  endTime: string;
-  notes?: string;
-  reminderMinutesBefore?: number;
-  reminderSound?: boolean;
-}
-
 export type HabitFrequency = "daily" | "weekly";
 
 export type HabitCategory =
@@ -62,6 +32,11 @@ export interface HabitLog {
   completedAt: string;
 }
 
+export interface NewHabitLogInput {
+  habitId: string;
+  date: string;
+}
+
 export interface HabitWithStreak extends Habit {
   currentStreak: number;
   longestStreak: number;
@@ -76,6 +51,13 @@ export interface HabitStats {
   totalCompletions: number;
 }
 
+export interface WeeklySummary {
+  habits: WeeklyHabitSummary[];
+  dailyBreakdown: DailyCompletion[];
+  topHabits: WeeklyHabitSummary[];
+  overallCompletionRate: number;
+}
+
 export interface WeeklyHabitSummary {
   habitId: string;
   name: string;
@@ -88,19 +70,4 @@ export interface WeeklyHabitSummary {
 export interface DailyCompletion {
   date: string;
   completions: number;
-}
-
-export interface WeeklySummary {
-  habits: WeeklyHabitSummary[];
-  dailyBreakdown: DailyCompletion[];
-  topHabits: WeeklyHabitSummary[];
-  overallCompletionRate: number;
-}
-
-export interface DashboardSummary {
-  now: Task | null;
-  next: Task | null;
-  todayCount: number;
-  todayDoneCount: number;
-  dueHabits: HabitWithStreak[];
 }
