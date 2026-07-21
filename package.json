@@ -1,0 +1,13 @@
+{
+  "name": "lifeos",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "pnpm --filter @lifeos/backend dev & pnpm --filter @lifeos/frontend dev",
+    "check": "biome check .",
+    "format": "biome format . --write"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^1.9.4"
+  }
+}

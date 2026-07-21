@@ -1,0 +1,2 @@
+-- LifeOS initial schema
+-- This is a placeholder. The first real migration comes with the Routine module.
