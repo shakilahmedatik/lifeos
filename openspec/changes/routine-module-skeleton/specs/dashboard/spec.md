@@ -1,0 +1,38 @@
+## ADDED Requirements
+
+### Requirement: Now and next summary
+The dashboard SHALL return the current task, next task, and today's completion counts.
+
+#### Scenario: Active task exists
+- **WHEN** a task's time range contains the current time
+- **THEN** that task is returned as `now`
+
+#### Scenario: No active task
+- **WHEN** no task's time range contains the current time
+- **THEN** `now` is `null`
+
+#### Scenario: Next task after current
+- **WHEN** there is a task starting after the current time
+- **THEN** the earliest such task is returned as `next`
+
+#### Scenario: No upcoming tasks
+- **WHEN** no tasks start after the current time
+- **THEN** `next` is `null`
+
+#### Scenario: Today's counts
+- **WHEN** the dashboard summary is requested
+- **THEN** `todayCount` is the total tasks for today and `todayDoneCount` is the count of tasks with status `done`
+
+### Requirement: Dashboard API endpoint
+The system SHALL expose a `GET /api/dashboard/summary` endpoint returning the `DashboardSummary` type.
+
+#### Scenario: Summary response shape
+- **WHEN** a GET request is made to `/api/dashboard/summary`
+- **THEN** the response contains `{ now, next, todayCount, todayDoneCount }` with the appropriate task or null values
+
+### Requirement: Live countdown on frontend
+The frontend `NowCard` SHALL display a live countdown to the end time of the current task, updating every second.
+
+#### Scenario: Countdown display
+- **WHEN** a task is currently active
+- **THEN** the NowCard shows the remaining time in `HH:MM:SS` format, decrementing each second

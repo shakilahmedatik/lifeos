@@ -27,10 +27,3 @@ export interface NewTaskInput {
   reminderMinutesBefore?: number;
   reminderSound?: boolean;
 }
-
-export interface DashboardSummary {
-  now: Task | null;
-  next: Task | null;
-  todayCount: number;
-  todayDoneCount: number;
-}

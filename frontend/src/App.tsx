@@ -1,32 +1,125 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { DashboardSummary, Task } from "../../packages/contracts/src/index.js";
+import DashboardSummaryCard from "./modules/dashboard/DashboardSummary.js";
+import TaskForm from "./modules/routine/TaskForm.js";
+import TaskList from "./modules/routine/TaskList.js";
 
-interface HealthStatus {
-  status: string;
-  port: number;
-}
+const POLL_INTERVAL = 30_000;
 
 export default function App() {
-  const [health, setHealth] = useState<HealthStatus | null>(null);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [summary, setSummary] = useState<DashboardSummary | null>(null);
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [error, setError] = useState<string | null>(null);
+  const pausedRef = useRef(false);
 
-  useEffect(() => {
-    fetch("/api/health")
-      .then((res) => res.json())
-      .then(setHealth)
-      .catch(() => setError("Disconnected"));
+  const fetchTasks = useCallback(async () => {
+    try {
+      const res = await fetch(`/api/routine/tasks?date=${selectedDate}`);
+      if (!res.ok) throw new Error("Failed to fetch tasks");
+      const data = await res.json();
+      setTasks(data);
+      setError(null);
+    } catch {
+      setError("Failed to load tasks");
+    }
+  }, [selectedDate]);
+
+  const fetchSummary = useCallback(async () => {
+    try {
+      const res = await fetch("/api/dashboard/summary");
+      if (!res.ok) throw new Error("Failed to fetch summary");
+      const data = await res.json();
+      setSummary(data);
+      setError(null);
+    } catch {
+      setError("Failed to load dashboard");
+    }
   }, []);
 
+  const fetchAll = useCallback(() => {
+    if (pausedRef.current) return;
+    fetchTasks();
+    fetchSummary();
+  }, [fetchTasks, fetchSummary]);
+
+  useEffect(() => {
+    fetchAll();
+    const interval = setInterval(fetchAll, POLL_INTERVAL);
+    return () => clearInterval(interval);
+  }, [fetchAll]);
+
+  useEffect(() => {
+    const handleVisibility = () => {
+      pausedRef.current = document.hidden;
+      if (!document.hidden) fetchAll();
+    };
+    document.addEventListener("visibilitychange", handleVisibility);
+    return () => document.removeEventListener("visibilitychange", handleVisibility);
+  }, [fetchAll]);
+
+  const handleCreateTask = async (
+    input: import("../../packages/contracts/src/index.js").NewTaskInput,
+  ) => {
+    try {
+      const res = await fetch("/api/routine/tasks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      });
+      if (!res.ok) throw new Error("Failed to create task");
+      const result = await res.json();
+      if (result.overlapsWith?.length > 0) {
+        alert(`Warning: overlaps with ${result.overlapsWith.length} task(s)`);
+      }
+      fetchTasks();
+    } catch {
+      setError("Failed to create task");
+    }
+  };
+
+  const handleStatusChange = async (id: string, status: Task["status"]) => {
+    try {
+      const res = await fetch(`/api/routine/tasks/${id}/status`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status }),
+      });
+      if (!res.ok) throw new Error("Failed to update status");
+      fetchTasks();
+    } catch {
+      setError("Failed to update task status");
+    }
+  };
+
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100 flex items-center justify-center">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold mb-4">LifeOS</h1>
-        {error ? (
-          <p className="text-red-400">{error}</p>
-        ) : health ? (
-          <p className="text-green-400">Connected (port {health.port})</p>
-        ) : (
-          <p className="text-gray-400">Loading...</p>
+    <div className="min-h-screen bg-gray-950 text-gray-100">
+      <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
+        <h1 className="text-3xl font-bold text-center">LifeOS</h1>
+
+        {error && (
+          <div className="bg-red-900/50 border border-red-700 text-red-300 px-4 py-2 rounded text-sm">
+            {error}
+          </div>
         )}
+
+        <DashboardSummaryCard summary={summary} />
+
+        <div className="flex items-center gap-3">
+          <label htmlFor="date-select" className="text-sm text-gray-400">
+            Date:
+          </label>
+          <input
+            id="date-select"
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="bg-gray-800 text-gray-300 rounded px-3 py-1.5 border border-gray-700"
+          />
+        </div>
+
+        <TaskForm onSubmit={handleCreateTask} defaultDate={selectedDate} />
+        <TaskList tasks={tasks} onStatusChange={handleStatusChange} />
       </div>
     </div>
   );
