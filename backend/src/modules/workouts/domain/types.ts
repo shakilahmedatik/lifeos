@@ -63,7 +63,7 @@ export interface WorkoutExercise {
 }
 
 export interface NewWorkoutExerciseInput {
-  exerciseId: string;
+  exerciseId?: string;
   sets?: number;
   reps?: number;
   weight?: number;

@@ -138,9 +138,10 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
         now,
       );
 
-    return this.db
-      .prepare("SELECT * FROM exercise_logs WHERE id = ?")
-      .get(id) as ExerciseLogRow as ExerciseLog;
+    const logRow = this.db.prepare("SELECT * FROM exercise_logs WHERE id = ?").get(id) as
+      | ExerciseLogRow
+      | undefined;
+    return logRow ? rowToExerciseLog(logRow) : (undefined as unknown as ExerciseLog);
   }
 
   getLogsBySessionId(sessionId: string): ExerciseLog[] {

@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import dotenv from "dotenv";
 import express from "express";
 
+import { createBackupRouter } from "./modules/backup/api/router.js";
 import { createDashboardRouter } from "./modules/dashboard/api/router.js";
 import { SqliteAccountRepository } from "./modules/finance/adapters/sqlite/sqlite-account-repository.js";
 import { SqliteCategoryRepository } from "./modules/finance/adapters/sqlite/sqlite-category-repository.js";
@@ -19,8 +20,8 @@ import { HabitLogService } from "./modules/habits/application/habit-log-service.
 import { HabitService } from "./modules/habits/application/habit-service.js";
 import { HabitStatsService } from "./modules/habits/application/habit-stats-service.js";
 import { WeeklyReviewService } from "./modules/habits/application/weekly-review-service.js";
-import { createSqliteNewsArticleRepository } from "./modules/news/adapters/sqlite-news-article-repository.js";
-import { createSqliteRssFeedRepository } from "./modules/news/adapters/sqlite-rss-feed-repository.js";
+import { createSqliteNewsArticleRepository } from "./modules/news/adapters/sqlite/sqlite-news-article-repository.js";
+import { createSqliteRssFeedRepository } from "./modules/news/adapters/sqlite/sqlite-rss-feed-repository.js";
 import { createNewsRouter } from "./modules/news/api/router.js";
 import { createNewsScheduler } from "./modules/news/application/news-scheduler.js";
 import { createRssFetchService } from "./modules/news/application/rss-fetch-service.js";
@@ -31,6 +32,13 @@ import { NotificationScheduler } from "./modules/notifications/application/notif
 import { NotificationService } from "./modules/notifications/application/notification-service.js";
 import { SqliteTaskRepository } from "./modules/routine/adapters/sqlite/sqlite-task-repository.js";
 import { createRoutineRouter } from "./modules/routine/api/router.js";
+import { SqliteLearningLogRepository } from "./modules/skills/adapters/sqlite/sqlite-learning-log-repository.js";
+import { SqliteLearningResourceRepository } from "./modules/skills/adapters/sqlite/sqlite-learning-resource-repository.js";
+import { SqliteSkillAreaRepository } from "./modules/skills/adapters/sqlite/sqlite-skill-area-repository.js";
+import { createSkillsRouter } from "./modules/skills/api/router.js";
+import { LearningLogService } from "./modules/skills/application/learning-log-service.js";
+import { LearningResourceService } from "./modules/skills/application/learning-resource-service.js";
+import { SkillAreaService } from "./modules/skills/application/skill-area-service.js";
 import { SqliteExerciseRepository } from "./modules/workouts/adapters/sqlite/sqlite-exercise-repository.js";
 import { SqliteWorkoutRepository } from "./modules/workouts/adapters/sqlite/sqlite-workout-repository.js";
 import { SqliteWorkoutSessionRepository } from "./modules/workouts/adapters/sqlite/sqlite-workout-session-repository.js";
@@ -46,6 +54,7 @@ dotenv.config({ path: resolve(process.cwd(), "../.env") });
 
 const PORT = Number(process.env.BACKEND_PORT || 3000);
 const DB_PATH = process.env.DATABASE_PATH || "./data/lifeos.sqlite";
+const FRONTEND_PORT = Number(process.env.FRONTEND_PORT || 5173);
 
 const db = createDatabase(resolve(DB_PATH));
 runMigrations(db, new URL("./shared/migrations/", import.meta.url).pathname);
@@ -64,6 +73,10 @@ const rssFeedRepo = createSqliteRssFeedRepository(db);
 const newsArticleRepo = createSqliteNewsArticleRepository(db);
 const rssFetchService = createRssFetchService(rssFeedRepo, newsArticleRepo);
 const newsScheduler = createNewsScheduler(rssFetchService);
+
+const skillAreaRepo = new SqliteSkillAreaRepository(db);
+const resourceRepo = new SqliteLearningResourceRepository(db);
+const learningLogRepo = new SqliteLearningLogRepository(db);
 
 const habitService = new HabitService(habitRepo);
 const habitLogService = new HabitLogService(habitRepo, habitLogRepo);
@@ -84,7 +97,24 @@ const categoryService = new CategoryService(categoryRepo);
 const transactionService = new TransactionService(transactionRepo, accountRepo, categoryRepo);
 const financeReportService = new FinanceReportService(transactionRepo, accountRepo, categoryRepo);
 
+const skillAreaService = new SkillAreaService(skillAreaRepo);
+const resourceService = new LearningResourceService(resourceRepo);
+const learningLogService = new LearningLogService(learningLogRepo, resourceRepo, skillAreaRepo);
+
 const app = express();
+
+// CORS: restrict to local frontend origin
+app.use((_req, res, next) => {
+  res.setHeader("Access-Control-Allow-Origin", `http://localhost:${FRONTEND_PORT}`);
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (_req.method === "OPTIONS") {
+    res.status(204).end();
+    return;
+  }
+  next();
+});
+
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => {
@@ -115,6 +145,8 @@ app.use(
   createFinanceRouter(accountService, categoryService, transactionService, financeReportService),
 );
 app.use("/api/news", createNewsRouter(rssFeedRepo, newsArticleRepo, rssFetchService));
+app.use("/api/skills", createSkillsRouter(skillAreaService, resourceService, learningLogService));
+app.use("/api/backup", createBackupRouter(resolve(DB_PATH)));
 
 newsScheduler.start();
 notificationScheduler.start();

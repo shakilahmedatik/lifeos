@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { playNotificationSound, resumeAudioContext } from "./sound-player.js";
-import type { SoundPreset } from "./sound-presets.js";
+import { playNotificationSound, resumeAudioContext } from "../notifications/sound-player.js";
+import type { SoundPreset } from "../notifications/sound-presets.js";
 
 export type WorkoutTimerAlertType = "set_complete" | "rest_complete" | "workout_complete";
 

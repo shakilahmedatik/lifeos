@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 
-import type { NewsArticle } from "../domain/types.js";
-import type { NewsArticleRepository } from "../ports/repositories.js";
+import type { NewsArticle } from "../../domain/types.js";
+import type { NewsArticleRepository } from "../../ports/repositories.js";
 
 export function createSqliteNewsArticleRepository(db: Database.Database): NewsArticleRepository {
   return {

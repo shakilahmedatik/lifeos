@@ -14,7 +14,7 @@ export function NewsDigest() {
   const [hasMore, setHasMore] = useState(true);
   const [loadingMore, setLoadingMore] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const lastArticleRef = useRef<HTMLDivElement | null>(null);
+  const lastArticleRef = useRef<HTMLButtonElement | null>(null);
 
   const loadArticles = useCallback(
     async (reset = false) => {

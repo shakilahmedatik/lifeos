@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
+import { nowIsoInDhaka } from "../../../../shared/timezone.js";
 import type {
   NewNotificationInput,
   Notification,
@@ -44,7 +45,7 @@ export class SqliteNotificationRepository implements NotificationRepository {
   }
 
   findPendingNotifications(): NotificationWithTask[] {
-    const now = new Date().toISOString();
+    const now = nowIsoInDhaka();
     const rows = this.db
       .prepare(`
       SELECT

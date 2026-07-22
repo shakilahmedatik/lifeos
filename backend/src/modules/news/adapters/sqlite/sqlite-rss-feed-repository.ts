@@ -1,7 +1,7 @@
 import type Database from "better-sqlite3";
 
-import type { NewRssFeedInput, RssFeed } from "../domain/types.js";
-import type { RssFeedRepository } from "../ports/repositories.js";
+import type { NewRssFeedInput, RssFeed } from "../../domain/types.js";
+import type { RssFeedRepository } from "../../ports/repositories.js";
 
 export function createSqliteRssFeedRepository(db: Database.Database): RssFeedRepository {
   return {

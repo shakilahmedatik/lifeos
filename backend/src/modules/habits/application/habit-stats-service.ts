@@ -1,3 +1,4 @@
+import { todayInDhaka } from "../../../shared/timezone.js";
 import { currentStreak, longestStreak } from "../domain/rules.js";
 import type { HabitStats } from "../domain/types.js";
 import type { HabitLogRepository } from "../ports/habit-log-repository.js";
@@ -16,7 +17,7 @@ export class HabitStatsService {
     const logs = this.habitLogRepo.getByHabitId(habitId);
     const rangeLogs = this.habitLogRepo.getByDateRange(startDate, endDate);
 
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayInDhaka();
     const completionCount = rangeLogs.filter((l) => l.habitId === habitId).length;
 
     const totalDays = this.calculateDaysInRange(startDate, endDate);

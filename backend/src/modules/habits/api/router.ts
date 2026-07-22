@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import { nowIsoInDhaka, todayInDhaka } from "../../../shared/timezone.js";
 import type { HabitLogService } from "../application/habit-log-service.js";
 import type { HabitService } from "../application/habit-service.js";
 import type { HabitStatsService } from "../application/habit-stats-service.js";
@@ -60,7 +61,7 @@ export function createHabitsRouter(
   });
 
   router.post("/:id/log", (req, res) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayInDhaka();
     const log = habitLogService.logHabit({ habitId: req.params.id, date: today });
     res.status(201).json(log);
   });
@@ -101,7 +102,7 @@ export function createHabitsRouter(
   router.get("/weekly-review", (req, res) => {
     const { weekStart } = req.query;
     if (!weekStart) {
-      const today = new Date();
+      const today = new Date(nowIsoInDhaka());
       const day = today.getDay();
       const diff = today.getDate() - day + (day === 0 ? -6 : 1);
       const monday = new Date(today);
@@ -116,7 +117,7 @@ export function createHabitsRouter(
   });
 
   router.get("/today", (_req, res) => {
-    const today = new Date().toISOString().split("T")[0];
+    const today = todayInDhaka();
     const habits = habitLogService.getTodayDueHabits(today);
     res.json(habits);
   });
