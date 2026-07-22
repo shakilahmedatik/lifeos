@@ -1,4 +1,4 @@
-import type { Habit, HabitFrequency, HabitLog } from "./types.js";
+import type { Habit, HabitLog } from "./types.js";
 
 export function isDueToday(habit: Habit, today: string): boolean {
   if (habit.frequency === "daily") return true;

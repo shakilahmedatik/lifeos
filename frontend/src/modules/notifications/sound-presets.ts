@@ -1,4 +1,12 @@
-export type SoundPreset = "default" | "gentle" | "urgent" | "chime" | "bell";
+export type SoundPreset =
+  | "default"
+  | "gentle"
+  | "urgent"
+  | "chime"
+  | "bell"
+  | "workout_set"
+  | "workout_rest"
+  | "workout_complete";
 
 export interface SoundConfig {
   name: string;
@@ -43,6 +51,27 @@ export const SOUND_PRESETS: Record<SoundPreset, SoundConfig> = {
     duration: 0.6,
     type: "sine",
     volume: 0.5,
+  },
+  workout_set: {
+    name: "Set Complete",
+    frequency: 880,
+    duration: 0.2,
+    type: "sine",
+    volume: 0.6,
+  },
+  workout_rest: {
+    name: "Rest Complete",
+    frequency: 660,
+    duration: 0.4,
+    type: "triangle",
+    volume: 0.5,
+  },
+  workout_complete: {
+    name: "Workout Complete",
+    frequency: 1047,
+    duration: 0.8,
+    type: "sine",
+    volume: 0.7,
   },
 };
 

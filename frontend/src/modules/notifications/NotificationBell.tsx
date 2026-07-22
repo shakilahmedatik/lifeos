@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 interface NotificationBellProps {
   onClick: () => void;
@@ -7,13 +7,7 @@ interface NotificationBellProps {
 export function NotificationBell({ onClick }: NotificationBellProps) {
   const [unreadCount, setUnreadCount] = useState(0);
 
-  useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, []);
-
-  const fetchUnreadCount = async () => {
+  const fetchUnreadCount = useCallback(async () => {
     try {
       const response = await fetch("/api/notifications/unread-count");
       if (response.ok) {
@@ -23,7 +17,13 @@ export function NotificationBell({ onClick }: NotificationBellProps) {
     } catch (error) {
       console.error("Error fetching unread count:", error);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchUnreadCount();
+    const interval = setInterval(fetchUnreadCount, 30000);
+    return () => clearInterval(interval);
+  }, [fetchUnreadCount]);
 
   return (
     <button

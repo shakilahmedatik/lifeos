@@ -1,5 +1,15 @@
-import type { Request, Response } from "express";
-import type { NotificationWithTask } from "../domain/types.js";
+import type { Response } from "express";
+import type { NotificationSoundType, NotificationWithTask } from "../domain/types.js";
+
+export type WorkoutTimerAlertType = "set_complete" | "rest_complete" | "workout_complete";
+
+export interface WorkoutTimerAlert {
+  type: WorkoutTimerAlertType;
+  sessionId: string;
+  exerciseName?: string;
+  setNumber?: number;
+  soundType: NotificationSoundType;
+}
 
 export interface SSEClient {
   id: string;
@@ -50,6 +60,25 @@ export class NotificationBroadcaster {
       },
     });
 
+    this.sendToAllClients(eventData);
+  }
+
+  broadcastWorkoutTimerAlert(alert: WorkoutTimerAlert): void {
+    const eventData = JSON.stringify({
+      type: "workout_timer",
+      data: {
+        type: alert.type,
+        sessionId: alert.sessionId,
+        exerciseName: alert.exerciseName,
+        setNumber: alert.setNumber,
+        soundType: alert.soundType,
+      },
+    });
+
+    this.sendToAllClients(eventData);
+  }
+
+  private sendToAllClients(eventData: string): void {
     for (const [clientId, client] of this.clients) {
       try {
         client.response.write(`id: ${clientId}\n`);

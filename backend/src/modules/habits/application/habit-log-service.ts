@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { currentStreak, isDueToday, longestStreak } from "../domain/rules.js";
-import type { Habit, HabitLog, HabitWithStreak, NewHabitLogInput } from "../domain/types.js";
+import type { HabitLog, HabitWithStreak, NewHabitLogInput } from "../domain/types.js";
 import type { HabitLogRepository } from "../ports/habit-log-repository.js";
 import type { HabitRepository } from "../ports/habit-repository.js";
 

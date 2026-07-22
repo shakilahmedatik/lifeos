@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { playNotificationSound } from "./sound-player.js";
 import { SOUND_PRESET_OPTIONS, type SoundPreset } from "./sound-presets.js";
 
@@ -6,11 +6,7 @@ export function SoundSettings() {
   const [selectedSound, setSelectedSound] = useState<SoundPreset>("default");
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchSoundPreference();
-  }, []);
-
-  const fetchSoundPreference = async () => {
+  const fetchSoundPreference = useCallback(async () => {
     try {
       const response = await fetch("/api/settings/sound");
       if (response.ok) {
@@ -22,7 +18,11 @@ export function SoundSettings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchSoundPreference();
+  }, [fetchSoundPreference]);
 
   const saveSoundPreference = async (soundType: SoundPreset) => {
     try {

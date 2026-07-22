@@ -18,6 +18,14 @@ import { NotificationScheduler } from "./modules/notifications/application/notif
 import { NotificationService } from "./modules/notifications/application/notification-service.js";
 import { SqliteTaskRepository } from "./modules/routine/adapters/sqlite/sqlite-task-repository.js";
 import { createRoutineRouter } from "./modules/routine/api/router.js";
+import { SqliteExerciseRepository } from "./modules/workouts/adapters/sqlite/sqlite-exercise-repository.js";
+import { SqliteWorkoutRepository } from "./modules/workouts/adapters/sqlite/sqlite-workout-repository.js";
+import { SqliteWorkoutSessionRepository } from "./modules/workouts/adapters/sqlite/sqlite-workout-session-repository.js";
+import { createWorkoutsRouter } from "./modules/workouts/api/router.js";
+import { ExerciseService } from "./modules/workouts/application/exercise-service.js";
+import { WorkoutHistoryService } from "./modules/workouts/application/workout-history-service.js";
+import { WorkoutService } from "./modules/workouts/application/workout-service.js";
+import { WorkoutSessionService } from "./modules/workouts/application/workout-session-service.js";
 import { createDatabase } from "./shared/db.js";
 import { runMigrations } from "./shared/migrations/runner.js";
 
@@ -33,6 +41,9 @@ const taskRepo = new SqliteTaskRepository(db);
 const habitRepo = new SqliteHabitRepository(db);
 const habitLogRepo = new SqliteHabitLogRepository(db);
 const notificationRepo = new SqliteNotificationRepository(db);
+const workoutRepo = new SqliteWorkoutRepository(db);
+const exerciseRepo = new SqliteExerciseRepository(db);
+const workoutSessionRepo = new SqliteWorkoutSessionRepository(db);
 
 const habitService = new HabitService(habitRepo);
 const habitLogService = new HabitLogService(habitRepo, habitLogRepo);
@@ -44,6 +55,10 @@ const notificationScheduler = new NotificationScheduler(
   notificationService,
   notificationBroadcaster,
 );
+const workoutService = new WorkoutService(workoutRepo);
+const exerciseService = new ExerciseService(exerciseRepo);
+const workoutSessionService = new WorkoutSessionService(workoutSessionRepo);
+const workoutHistoryService = new WorkoutHistoryService(workoutSessionRepo);
 
 const app = express();
 app.use(express.json());
@@ -61,6 +76,15 @@ app.use("/api/dashboard", createDashboardRouter({ taskRepo, habitLogService }));
 app.use(
   "/api/notifications",
   createNotificationsRouter(notificationService, notificationBroadcaster),
+);
+app.use(
+  "/api/workouts",
+  createWorkoutsRouter(
+    workoutService,
+    exerciseService,
+    workoutSessionService,
+    workoutHistoryService,
+  ),
 );
 
 notificationScheduler.start();

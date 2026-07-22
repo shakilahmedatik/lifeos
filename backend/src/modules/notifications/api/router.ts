@@ -57,7 +57,7 @@ export function createNotificationsRouter(
   });
 
   router.post("/task/:taskId", (req, res) => {
-    const deleted = notificationService.deleteNotificationsByTaskId(req.params.taskId);
+    const _deleted = notificationService.deleteNotificationsByTaskId(req.params.taskId);
     res.status(204).send();
   });
 
