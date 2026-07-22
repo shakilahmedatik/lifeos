@@ -1,6 +1,7 @@
 import type { DashboardSummary as DashboardSummaryType } from "../../../../packages/contracts/src/index.js";
 import { FinanceWidget } from "../finance/FinanceWidget.js";
 import HabitChip from "../habits/HabitChip.js";
+import NewsTicker from "./NewsTicker.js";
 import NextCard from "./NextCard.js";
 import NowCard from "./NowCard.js";
 
@@ -21,6 +22,7 @@ export default function DashboardSummary({ summary, onHabitToggle }: DashboardSu
           {summary.todayDoneCount}/{summary.todayCount} tasks done today
         </div>
       )}
+      <NewsTicker />
       {summary?.dueHabits && summary.dueHabits.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {summary.dueHabits.map((habit) => (

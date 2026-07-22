@@ -19,6 +19,11 @@ import { HabitLogService } from "./modules/habits/application/habit-log-service.
 import { HabitService } from "./modules/habits/application/habit-service.js";
 import { HabitStatsService } from "./modules/habits/application/habit-stats-service.js";
 import { WeeklyReviewService } from "./modules/habits/application/weekly-review-service.js";
+import { createSqliteNewsArticleRepository } from "./modules/news/adapters/sqlite-news-article-repository.js";
+import { createSqliteRssFeedRepository } from "./modules/news/adapters/sqlite-rss-feed-repository.js";
+import { createNewsRouter } from "./modules/news/api/router.js";
+import { createNewsScheduler } from "./modules/news/application/news-scheduler.js";
+import { createRssFetchService } from "./modules/news/application/rss-fetch-service.js";
 import { SqliteNotificationRepository } from "./modules/notifications/adapters/sqlite/sqlite-notification-repository.js";
 import { createNotificationsRouter } from "./modules/notifications/api/router.js";
 import { NotificationBroadcaster } from "./modules/notifications/application/notification-broadcaster.js";
@@ -55,6 +60,10 @@ const workoutSessionRepo = new SqliteWorkoutSessionRepository(db);
 const accountRepo = new SqliteAccountRepository(db);
 const categoryRepo = new SqliteCategoryRepository(db);
 const transactionRepo = new SqliteTransactionRepository(db);
+const rssFeedRepo = createSqliteRssFeedRepository(db);
+const newsArticleRepo = createSqliteNewsArticleRepository(db);
+const rssFetchService = createRssFetchService(rssFeedRepo, newsArticleRepo);
+const newsScheduler = createNewsScheduler(rssFetchService);
 
 const habitService = new HabitService(habitRepo);
 const habitLogService = new HabitLogService(habitRepo, habitLogRepo);
@@ -105,7 +114,9 @@ app.use(
   "/api/finance",
   createFinanceRouter(accountService, categoryService, transactionService, financeReportService),
 );
+app.use("/api/news", createNewsRouter(rssFeedRepo, newsArticleRepo, rssFetchService));
 
+newsScheduler.start();
 notificationScheduler.start();
 
 app.listen(PORT, "127.0.0.1", () => {
