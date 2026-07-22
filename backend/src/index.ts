@@ -4,6 +4,14 @@ import dotenv from "dotenv";
 import express from "express";
 
 import { createDashboardRouter } from "./modules/dashboard/api/router.js";
+import { SqliteAccountRepository } from "./modules/finance/adapters/sqlite/sqlite-account-repository.js";
+import { SqliteCategoryRepository } from "./modules/finance/adapters/sqlite/sqlite-category-repository.js";
+import { SqliteTransactionRepository } from "./modules/finance/adapters/sqlite/sqlite-transaction-repository.js";
+import { createFinanceRouter } from "./modules/finance/api/router.js";
+import { AccountService } from "./modules/finance/application/account-service.js";
+import { CategoryService } from "./modules/finance/application/category-service.js";
+import { FinanceReportService } from "./modules/finance/application/finance-report-service.js";
+import { TransactionService } from "./modules/finance/application/transaction-service.js";
 import { SqliteHabitLogRepository } from "./modules/habits/adapters/sqlite/sqlite-habit-log-repository.js";
 import { SqliteHabitRepository } from "./modules/habits/adapters/sqlite/sqlite-habit-repository.js";
 import { createHabitsRouter } from "./modules/habits/api/router.js";
@@ -44,6 +52,9 @@ const notificationRepo = new SqliteNotificationRepository(db);
 const workoutRepo = new SqliteWorkoutRepository(db);
 const exerciseRepo = new SqliteExerciseRepository(db);
 const workoutSessionRepo = new SqliteWorkoutSessionRepository(db);
+const accountRepo = new SqliteAccountRepository(db);
+const categoryRepo = new SqliteCategoryRepository(db);
+const transactionRepo = new SqliteTransactionRepository(db);
 
 const habitService = new HabitService(habitRepo);
 const habitLogService = new HabitLogService(habitRepo, habitLogRepo);
@@ -59,6 +70,10 @@ const workoutService = new WorkoutService(workoutRepo);
 const exerciseService = new ExerciseService(exerciseRepo);
 const workoutSessionService = new WorkoutSessionService(workoutSessionRepo);
 const workoutHistoryService = new WorkoutHistoryService(workoutSessionRepo);
+const accountService = new AccountService(accountRepo, transactionRepo);
+const categoryService = new CategoryService(categoryRepo);
+const transactionService = new TransactionService(transactionRepo, accountRepo, categoryRepo);
+const financeReportService = new FinanceReportService(transactionRepo, accountRepo, categoryRepo);
 
 const app = express();
 app.use(express.json());
@@ -85,6 +100,10 @@ app.use(
     workoutSessionService,
     workoutHistoryService,
   ),
+);
+app.use(
+  "/api/finance",
+  createFinanceRouter(accountService, categoryService, transactionService, financeReportService),
 );
 
 notificationScheduler.start();

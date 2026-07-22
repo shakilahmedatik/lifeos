@@ -1,4 +1,5 @@
 import type { DashboardSummary as DashboardSummaryType } from "../../../../packages/contracts/src/index.js";
+import { FinanceWidget } from "../finance/FinanceWidget.js";
 import HabitChip from "../habits/HabitChip.js";
 import NextCard from "./NextCard.js";
 import NowCard from "./NowCard.js";
@@ -27,6 +28,7 @@ export default function DashboardSummary({ summary, onHabitToggle }: DashboardSu
           ))}
         </div>
       )}
+      <FinanceWidget />
     </div>
   );
 }
