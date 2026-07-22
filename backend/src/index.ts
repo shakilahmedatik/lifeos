@@ -11,6 +11,11 @@ import { HabitLogService } from "./modules/habits/application/habit-log-service.
 import { HabitService } from "./modules/habits/application/habit-service.js";
 import { HabitStatsService } from "./modules/habits/application/habit-stats-service.js";
 import { WeeklyReviewService } from "./modules/habits/application/weekly-review-service.js";
+import { SqliteNotificationRepository } from "./modules/notifications/adapters/sqlite/sqlite-notification-repository.js";
+import { createNotificationsRouter } from "./modules/notifications/api/router.js";
+import { NotificationBroadcaster } from "./modules/notifications/application/notification-broadcaster.js";
+import { NotificationScheduler } from "./modules/notifications/application/notification-scheduler.js";
+import { NotificationService } from "./modules/notifications/application/notification-service.js";
 import { SqliteTaskRepository } from "./modules/routine/adapters/sqlite/sqlite-task-repository.js";
 import { createRoutineRouter } from "./modules/routine/api/router.js";
 import { createDatabase } from "./shared/db.js";
@@ -27,11 +32,18 @@ runMigrations(db, new URL("./shared/migrations/", import.meta.url).pathname);
 const taskRepo = new SqliteTaskRepository(db);
 const habitRepo = new SqliteHabitRepository(db);
 const habitLogRepo = new SqliteHabitLogRepository(db);
+const notificationRepo = new SqliteNotificationRepository(db);
 
 const habitService = new HabitService(habitRepo);
 const habitLogService = new HabitLogService(habitRepo, habitLogRepo);
 const habitStatsService = new HabitStatsService(habitRepo, habitLogRepo);
 const weeklyReviewService = new WeeklyReviewService(habitRepo, habitLogRepo);
+const notificationService = new NotificationService(notificationRepo);
+const notificationBroadcaster = new NotificationBroadcaster();
+const notificationScheduler = new NotificationScheduler(
+  notificationService,
+  notificationBroadcaster,
+);
 
 const app = express();
 app.use(express.json());
@@ -46,6 +58,12 @@ app.use(
   createHabitsRouter(habitService, habitLogService, habitStatsService, weeklyReviewService),
 );
 app.use("/api/dashboard", createDashboardRouter({ taskRepo, habitLogService }));
+app.use(
+  "/api/notifications",
+  createNotificationsRouter(notificationService, notificationBroadcaster),
+);
+
+notificationScheduler.start();
 
 app.listen(PORT, "127.0.0.1", () => {
   console.log(`LifeOS backend running on http://127.0.0.1:${PORT}`);
