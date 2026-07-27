@@ -52,6 +52,7 @@ import { WorkoutSessionService } from "./modules/workouts/application/workout-se
 import { authMiddleware } from "./shared/auth-middleware.js";
 import { createDatabase } from "./shared/db.js";
 import { runMigrations } from "./shared/migrations/runner.js";
+import { apiRateLimiter } from "./shared/rate-limiter.js";
 
 dotenv.config({ path: resolve(process.cwd(), "../.env") });
 
@@ -119,6 +120,7 @@ app.use((_req, res, next) => {
 });
 
 app.use(express.json());
+app.use("/api", apiRateLimiter);
 
 app.use("/api/health", createHealthRouter(db));
 app.use("/api/auth", createAuthRouter());

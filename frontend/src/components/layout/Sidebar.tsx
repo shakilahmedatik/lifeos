@@ -24,22 +24,26 @@ const navItems = [
 export default function Dock() {
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-3 pointer-events-none">
-      <nav className="pointer-events-auto flex items-center gap-1 px-3 py-2 rounded-2xl bg-gray-900/80 backdrop-blur-xl border border-gray-700/50 shadow-2xl shadow-black/40">
+      <nav
+        aria-label="Main Navigation"
+        className="pointer-events-auto flex items-center gap-1 max-w-[95vw] overflow-x-auto px-3 py-2 rounded-2xl bg-sidebar/90 backdrop-blur-xl border border-border shadow-2xl shadow-black/50 scrollbar-none"
+      >
         {navItems.map((item) => (
           <NavLink
             key={item.to}
             to={item.to}
             end={item.to === "/"}
+            aria-label={item.label}
             className={({ isActive }) =>
-              `relative flex flex-col items-center justify-center w-12 h-12 rounded-xl transition-all duration-200 group ${
+              `relative flex flex-col items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 sm:w-12 sm:h-12 rounded-xl transition-all duration-200 group ${
                 isActive
-                  ? "bg-blue-600/15 text-blue-400 -translate-y-1"
-                  : "text-gray-500 hover:text-gray-200 hover:bg-gray-800/50 hover:-translate-y-1"
+                  ? "bg-accent/15 text-accent -translate-y-1"
+                  : "text-secondary hover:text-primary hover:bg-card-hover/50 hover:-translate-y-1"
               }`
             }
           >
             <item.icon size={20} />
-            <span className="absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-md bg-gray-900 text-xs text-gray-200 opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg border border-gray-700/50">
+            <span className="hidden sm:block absolute -top-8 left-1/2 -translate-x-1/2 px-2 py-1 rounded-md bg-sidebar text-xs text-primary opacity-0 group-hover:opacity-100 transition-opacity duration-200 whitespace-nowrap pointer-events-none shadow-lg border border-border">
               {item.label}
             </span>
           </NavLink>

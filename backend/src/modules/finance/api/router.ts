@@ -5,6 +5,13 @@ import type { CategoryService } from "../application/category-service.js";
 import type { FinanceReportService } from "../application/finance-report-service.js";
 import type { TransactionService } from "../application/transaction-service.js";
 
+import {
+  NewAccountInputSchema,
+  NewCategoryInputSchema,
+  NewTransactionInputSchema,
+} from "@lifeos/contracts";
+import { validateBody } from "../../../shared/validate.js";
+
 export function createFinanceRouter(
   accountService: AccountService,
   categoryService: CategoryService,
@@ -33,7 +40,7 @@ export function createFinanceRouter(
     res.json(account);
   });
 
-  router.post("/accounts", (req, res) => {
+  router.post("/accounts", validateBody(NewAccountInputSchema), (req, res) => {
     try {
       const account = accountService.createAccount(req.body);
       res.status(201).json(account);
@@ -104,7 +111,7 @@ export function createFinanceRouter(
     res.json(category);
   });
 
-  router.post("/categories", (req, res) => {
+  router.post("/categories", validateBody(NewCategoryInputSchema), (req, res) => {
     try {
       const category = categoryService.createCategory(req.body);
       res.status(201).json(category);
@@ -166,7 +173,7 @@ export function createFinanceRouter(
     res.json(transaction);
   });
 
-  router.post("/transactions", (req, res) => {
+  router.post("/transactions", validateBody(NewTransactionInputSchema), (req, res) => {
     try {
       const transaction = transactionService.createTransaction(req.body);
       res.status(201).json(transaction);

@@ -15,11 +15,19 @@
       "types": "./src/date-utils.ts",
       "import": "./src/date-utils.ts",
       "require": "./src/date-utils.ts"
+    },
+    "./schemas": {
+      "types": "./src/schemas.ts",
+      "import": "./src/schemas.ts",
+      "require": "./src/schemas.ts"
     }
   },
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "zod": "^3.24.2"
   },
   "devDependencies": {
     "typescript": "^5.7.0"
