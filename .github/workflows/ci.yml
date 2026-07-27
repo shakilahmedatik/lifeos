@@ -25,9 +25,8 @@ jobs:
           cache: "pnpm"
 
       - name: Install dependencies
-        run: |
-          pnpm approve-builds --all || true
-          pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --config.onlyBuiltDependencies="better-sqlite3,esbuild,@biomejs/biome"
+
 
       - name: Check code formatting and linting
         run: pnpm check
