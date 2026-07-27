@@ -1,5 +1,8 @@
 # Phase 3: Performance
 
+> [!NOTE]
+> ✅ **Status: Complete** — All Phase 3 performance optimizations have been implemented and verified.
+
 > Once the app is correct, make it fast. Target: no perceptible lag on any interaction, minimal battery drain from background polling.
 
 ## 1. Replace Polling with SSE for Routines/Dashboard (Deferred)

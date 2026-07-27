@@ -99,7 +99,15 @@ export class NotificationBroadcaster {
 
   private sendHeartbeat(): void {
     const now = Date.now();
+    const STALE_THRESHOLD_MS = 90_000;
+
     for (const [clientId, client] of this.clients) {
+      if (now - client.lastHeartbeat > STALE_THRESHOLD_MS) {
+        console.warn(`Removing stale SSE client (inactive > 90s): ${clientId}`);
+        this.removeClient(clientId);
+        continue;
+      }
+
       try {
         client.response.write(`: heartbeat ${now}\n\n`);
         client.lastHeartbeat = now;

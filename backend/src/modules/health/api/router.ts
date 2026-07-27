@@ -1,7 +1,16 @@
 import type Database from "better-sqlite3";
 import { Router } from "express";
 
-export function createHealthRouter(db: Database.Database): Router {
+export interface SchedulerStatus {
+  name: string;
+  status: "idle" | "running" | "error";
+  lastRun?: string;
+}
+
+export function createHealthRouter(
+  db: Database.Database,
+  getSchedulerStatus?: () => SchedulerStatus[],
+): Router {
   const router = Router();
 
   router.get("/", (_req, res) => {
@@ -22,6 +31,7 @@ export function createHealthRouter(db: Database.Database): Router {
       status,
       timestamp: new Date().toISOString(),
       db: dbState,
+      schedulers: getSchedulerStatus ? getSchedulerStatus() : [],
       uptime: process.uptime(),
     });
   });
