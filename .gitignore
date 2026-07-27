@@ -3,6 +3,10 @@ dist
 backend/data/*.sqlite
 backend/data/*.sqlite-shm
 backend/data/*.sqlite-wal
+backend/data/backups/
 .env
 .env.local
+.DS_Store
 *.log
+coverage
+

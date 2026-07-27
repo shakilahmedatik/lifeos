@@ -36,5 +36,33 @@ export function createHealthRouter(
     });
   });
 
+  router.get("/openapi.json", (_req, res) => {
+    res.json({
+      openapi: "3.0.3",
+      info: {
+        title: "LifeOS API",
+        version: "1.0.0",
+        description: "Personal productivity and life management system API",
+      },
+      paths: {
+        "/api/health": {
+          get: { summary: "System health check endpoint" },
+        },
+        "/api/routine/tasks": {
+          get: { summary: "List tasks by date" },
+          post: { summary: "Create a new time-blocked task" },
+        },
+        "/api/habits": {
+          get: { summary: "List habits" },
+          post: { summary: "Create habit" },
+        },
+        "/api/finance/transactions": {
+          get: { summary: "List transactions" },
+          post: { summary: "Create transaction" },
+        },
+      },
+    });
+  });
+
   return router;
 }

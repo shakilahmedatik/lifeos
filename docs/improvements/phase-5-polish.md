@@ -1,5 +1,8 @@
 # Phase 5: Polish
 
+> [!NOTE]
+> ✅ **Status: Complete** — All Phase 5 repo hygiene, CI pipeline, OpenAPI, and maintenance tasks have been implemented and verified.
+
 > The app is correct, stable, fast, and feature-complete. Now make it maintainable and a joy to operate.
 
 ## 1. Write a README

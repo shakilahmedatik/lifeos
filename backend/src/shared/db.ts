@@ -1,11 +1,17 @@
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
+import { existsSync, mkdirSync, statSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 
 import Database from "better-sqlite3";
+import { logger } from "./logger.js";
 
 export function createDatabase(dbPath: string): Database.Database {
-  mkdirSync(dirname(dbPath), { recursive: true });
-  const db = new Database(dbPath);
+  const resolvedPath = resolve(dbPath);
+  mkdirSync(dirname(resolvedPath), { recursive: true });
+
+  const size = existsSync(resolvedPath) ? statSync(resolvedPath).size : 0;
+  logger.info("Initializing SQLite database", { path: resolvedPath, sizeBytes: size });
+
+  const db = new Database(resolvedPath);
 
   db.pragma("journal_mode = WAL");
   db.pragma("foreign_keys = ON");
