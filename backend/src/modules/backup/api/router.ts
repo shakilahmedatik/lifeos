@@ -28,5 +28,24 @@ export function createBackupRouter(dbPath: string): Router {
     }
   });
 
+  router.post("/restore", (req, res) => {
+    try {
+      const backupDir = resolve(process.cwd(), "data/backups");
+      mkdirSync(backupDir, { recursive: true });
+      const preRestoreBackup = join(backupDir, `pre-restore-${Date.now()}.sqlite`);
+      copyFileSync(dbPath, preRestoreBackup);
+
+      if (req.body && Buffer.isBuffer(req.body)) {
+        copyFileSync(req.body.toString(), dbPath);
+      }
+      res.json({
+        message: "Database restore initialized successfully.",
+        safetyBackup: preRestoreBackup,
+      });
+    } catch (err) {
+      res.status(500).json({ error: `Restore failed: ${(err as Error).message}` });
+    }
+  });
+
   return router;
 }
