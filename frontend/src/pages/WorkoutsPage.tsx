@@ -1,5 +1,5 @@
+import type { NewWorkoutInput } from "@lifeos/contracts";
 import { useState } from "react";
-import type { NewWorkoutInput } from "../../../packages/contracts/src/index.js";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";

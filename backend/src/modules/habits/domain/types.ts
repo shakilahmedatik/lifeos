@@ -10,4 +10,4 @@ export type {
   WeeklySummary,
   WeeklyHabitSummary,
   DailyCompletion,
-} from "../../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";

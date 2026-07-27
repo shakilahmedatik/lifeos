@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { fetchWithAuth } from "../../lib/api.js";
 import { SOUND_PRESET_OPTIONS, type SoundPreset } from "./sound-presets.js";
 
 interface ReminderFormProps {
@@ -25,7 +26,7 @@ export function ReminderForm({ taskId, taskTitle, onSubmit, onCancel }: Reminder
       setLoading(true);
       setError(null);
 
-      const response = await fetch("/api/notifications", {
+      const response = await fetchWithAuth("/api/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

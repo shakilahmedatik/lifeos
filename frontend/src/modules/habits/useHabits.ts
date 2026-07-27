@@ -1,9 +1,5 @@
+import type { Habit, NewHabitInput, WeeklySummary } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
-import type {
-  Habit,
-  NewHabitInput,
-  WeeklySummary,
-} from "../../../../packages/contracts/src/index.js";
 import {
   createHabit,
   deleteHabit,

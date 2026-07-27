@@ -1,4 +1,4 @@
-import type { Habit } from "../../../../packages/contracts/src/index.js";
+import type { Habit } from "@lifeos/contracts";
 import StreakBadge from "./StreakBadge.js";
 
 interface HabitListProps {

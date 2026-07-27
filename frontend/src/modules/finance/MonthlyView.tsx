@@ -1,10 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type {
-  AccountWithBalance,
-  CategoryBreakdown,
-  MonthlySummary,
-} from "../../../../packages/contracts/src/index.js";
+import type { AccountWithBalance, CategoryBreakdown, MonthlySummary } from "@lifeos/contracts";
 import { fetchAccountBalances, fetchCategoryBreakdown, fetchMonthlySummary } from "./api.js";
 
 interface MonthlyViewProps {

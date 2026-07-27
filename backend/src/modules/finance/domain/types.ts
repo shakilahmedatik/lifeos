@@ -10,4 +10,4 @@ export type {
   MonthlySummary,
   CategoryBreakdown,
   AccountWithBalance,
-} from "../../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";

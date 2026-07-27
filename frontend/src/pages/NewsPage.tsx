@@ -1,5 +1,5 @@
+import type { NewsArticle, RssFeed } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
-import type { NewsArticle, RssFeed } from "../../../packages/contracts/src/index.js";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";

@@ -36,7 +36,7 @@ import type {
   WorkoutSession,
   WorkoutSessionWithLogs,
   WorkoutWithExercises,
-} from "../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";
 
 const STORAGE_KEY = "lifeos_auth_token";
 
@@ -53,13 +53,24 @@ export function setAuthToken(token: string | null) {
   }
 }
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
+export async function fetchWithAuth(url: string, options?: RequestInit): Promise<Response> {
   const headers: Record<string, string> = {
     ...(options?.headers as Record<string, string>),
   };
   const token = getAuthToken();
   if (token) headers["x-auth-token"] = token;
-  const res = await fetch(url, { ...options, headers });
+  return fetch(url, { ...options, headers });
+}
+
+export function getSSEUrl(baseUrl: string): string {
+  const token = getAuthToken();
+  if (!token) return baseUrl;
+  const separator = baseUrl.includes("?") ? "&" : "?";
+  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
+}
+
+async function request<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetchWithAuth(url, options);
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`API error ${res.status}: ${body || res.statusText}`);
@@ -75,7 +86,7 @@ export const api = {
 
   // Routine
   getTasks: (date: string) => request<Task[]>(`/api/routine/tasks?date=${date}`),
-  createTask: (input: import("../../../packages/contracts/src/index.js").NewTaskInput) =>
+  createTask: (input: import("@lifeos/contracts").NewTaskInput) =>
     request<{ task: Task; overlapsWith: Task[] }>("/api/routine/tasks", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -87,10 +98,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     }),
-  updateTask: (
-    id: string,
-    patch: Partial<import("../../../packages/contracts/src/index.js").NewTaskInput>,
-  ) =>
+  updateTask: (id: string, patch: Partial<import("@lifeos/contracts").NewTaskInput>) =>
     request<Task>(`/api/routine/tasks/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -130,47 +138,37 @@ export const api = {
     ),
 
   // Skills
-  getSkillAreas: () =>
-    request<import("../../../packages/contracts/src/index.js").SkillArea[]>("/api/skills/areas"),
-  createSkillArea: (input: import("../../../packages/contracts/src/index.js").NewSkillAreaInput) =>
-    request<import("../../../packages/contracts/src/index.js").SkillArea>("/api/skills/areas", {
+  getSkillAreas: () => request<import("@lifeos/contracts").SkillArea[]>("/api/skills/areas"),
+  createSkillArea: (input: import("@lifeos/contracts").NewSkillAreaInput) =>
+    request<import("@lifeos/contracts").SkillArea>("/api/skills/areas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
   getLearningResources: () =>
-    request<import("../../../packages/contracts/src/index.js").LearningResource[]>(
-      "/api/skills/resources",
-    ),
+    request<import("@lifeos/contracts").LearningResource[]>("/api/skills/resources"),
   getResourcesByArea: (areaId: string) =>
-    request<import("../../../packages/contracts/src/index.js").LearningResource[]>(
+    request<import("@lifeos/contracts").LearningResource[]>(
       `/api/skills/resources/by-area/${areaId}`,
     ),
-  createLearningResource: (
-    input: import("../../../packages/contracts/src/index.js").NewLearningResourceInput,
-  ) =>
-    request<import("../../../packages/contracts/src/index.js").LearningResource>(
-      "/api/skills/resources",
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(input),
-      },
-    ),
+  createLearningResource: (input: import("@lifeos/contracts").NewLearningResourceInput) =>
+    request<import("@lifeos/contracts").LearningResource>("/api/skills/resources", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
   getResourceProgress: (id: string) =>
-    request<import("../../../packages/contracts/src/index.js").ResourceWithProgress>(
+    request<import("@lifeos/contracts").ResourceWithProgress>(
       `/api/skills/resources/${id}/progress`,
     ),
-  logLearningSession: (
-    input: import("../../../packages/contracts/src/index.js").NewLearningLogInput,
-  ) =>
-    request<import("../../../packages/contracts/src/index.js").LearningLog>("/api/skills/logs", {
+  logLearningSession: (input: import("@lifeos/contracts").NewLearningLogInput) =>
+    request<import("@lifeos/contracts").LearningLog>("/api/skills/logs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
   getLearningLogsByResource: (resourceId: string) =>
-    request<import("../../../packages/contracts/src/index.js").LearningLog[]>(
+    request<import("@lifeos/contracts").LearningLog[]>(
       `/api/skills/logs/by-resource/${resourceId}`,
     ),
 

@@ -5,4 +5,4 @@ export type {
   NewNotificationInput,
   UpdateNotificationInput,
   NotificationWithTask,
-} from "../../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";

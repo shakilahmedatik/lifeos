@@ -1,4 +1,4 @@
-import type { HabitWithStreak } from "../../../../packages/contracts/src/index.js";
+import type { HabitWithStreak } from "@lifeos/contracts";
 
 interface HabitChipProps {
   habit: HabitWithStreak;

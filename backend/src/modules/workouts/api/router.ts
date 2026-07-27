@@ -13,77 +13,6 @@ export function createWorkoutsRouter(
 ): Router {
   const router = Router();
 
-  // Workout routes
-  router.get("/", (_req, res) => {
-    const workouts = workoutService.listWorkouts();
-    res.json(workouts);
-  });
-
-  router.get("/:id", (req, res) => {
-    const workout = workoutService.getWorkoutWithExercises(req.params.id);
-    if (!workout) {
-      res.status(404).json({ error: "Workout not found" });
-      return;
-    }
-    res.json(workout);
-  });
-
-  router.post("/", (req, res) => {
-    const workout = workoutService.createWorkout(req.body);
-    res.status(201).json(workout);
-  });
-
-  router.patch("/:id", (req, res) => {
-    const workout = workoutService.updateWorkout(req.params.id, req.body);
-    if (!workout) {
-      res.status(404).json({ error: "Workout not found" });
-      return;
-    }
-    res.json(workout);
-  });
-
-  router.delete("/:id", (req, res) => {
-    const deleted = workoutService.deleteWorkout(req.params.id);
-    if (!deleted) {
-      res.status(404).json({ error: "Workout not found" });
-      return;
-    }
-    res.status(204).send();
-  });
-
-  // Workout exercises
-  router.post("/:id/exercises", (req, res) => {
-    const workout = workoutService.getWorkout(req.params.id);
-    if (!workout) {
-      res.status(404).json({ error: "Workout not found" });
-      return;
-    }
-    const exercise = workoutService.addExerciseToWorkout(
-      req.params.id,
-      req.body.exerciseId,
-      req.body,
-    );
-    res.status(201).json(exercise);
-  });
-
-  router.patch("/:workoutId/exercises/:exerciseId", (req, res) => {
-    const exercise = workoutService.updateWorkoutExercise(req.params.exerciseId, req.body);
-    if (!exercise) {
-      res.status(404).json({ error: "Exercise not found" });
-      return;
-    }
-    res.json(exercise);
-  });
-
-  router.delete("/:workoutId/exercises/:exerciseId", (req, res) => {
-    const deleted = workoutService.removeExerciseFromWorkout(req.params.exerciseId);
-    if (!deleted) {
-      res.status(404).json({ error: "Exercise not found" });
-      return;
-    }
-    res.status(204).send();
-  });
-
   // Exercise routes
   router.get("/exercises", (_req, res) => {
     const exercises = exerciseService.listExercises();
@@ -208,6 +137,77 @@ export function createWorkoutsRouter(
     const limit = Number(req.query.limit) || 10;
     const sessions = workoutHistoryService.getRecentSessions(limit);
     res.json(sessions);
+  });
+
+  // Workout routes
+  router.get("/", (_req, res) => {
+    const workouts = workoutService.listWorkouts();
+    res.json(workouts);
+  });
+
+  router.get("/:id", (req, res) => {
+    const workout = workoutService.getWorkoutWithExercises(req.params.id);
+    if (!workout) {
+      res.status(404).json({ error: "Workout not found" });
+      return;
+    }
+    res.json(workout);
+  });
+
+  router.post("/", (req, res) => {
+    const workout = workoutService.createWorkout(req.body);
+    res.status(201).json(workout);
+  });
+
+  router.patch("/:id", (req, res) => {
+    const workout = workoutService.updateWorkout(req.params.id, req.body);
+    if (!workout) {
+      res.status(404).json({ error: "Workout not found" });
+      return;
+    }
+    res.json(workout);
+  });
+
+  router.delete("/:id", (req, res) => {
+    const deleted = workoutService.deleteWorkout(req.params.id);
+    if (!deleted) {
+      res.status(404).json({ error: "Workout not found" });
+      return;
+    }
+    res.status(204).send();
+  });
+
+  // Workout exercises
+  router.post("/:id/exercises", (req, res) => {
+    const workout = workoutService.getWorkout(req.params.id);
+    if (!workout) {
+      res.status(404).json({ error: "Workout not found" });
+      return;
+    }
+    const exercise = workoutService.addExerciseToWorkout(
+      req.params.id,
+      req.body.exerciseId,
+      req.body,
+    );
+    res.status(201).json(exercise);
+  });
+
+  router.patch("/:workoutId/exercises/:exerciseId", (req, res) => {
+    const exercise = workoutService.updateWorkoutExercise(req.params.exerciseId, req.body);
+    if (!exercise) {
+      res.status(404).json({ error: "Exercise not found" });
+      return;
+    }
+    res.json(exercise);
+  });
+
+  router.delete("/:workoutId/exercises/:exerciseId", (req, res) => {
+    const deleted = workoutService.removeExerciseFromWorkout(req.params.exerciseId);
+    if (!deleted) {
+      res.status(404).json({ error: "Exercise not found" });
+      return;
+    }
+    res.status(204).send();
   });
 
   return router;

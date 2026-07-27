@@ -1,10 +1,6 @@
+import type { DashboardSummary, HabitWithStreak, Task } from "@lifeos/contracts";
+import { getClientDateString } from "@lifeos/contracts/date-utils";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getClientDateString } from "../../../packages/contracts/src/date-utils.js";
-import type {
-  DashboardSummary,
-  HabitWithStreak,
-  Task,
-} from "../../../packages/contracts/src/index.js";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";

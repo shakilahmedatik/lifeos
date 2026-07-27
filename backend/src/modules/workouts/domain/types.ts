@@ -13,4 +13,4 @@ export type {
   WorkoutWithExercises,
   WorkoutSessionWithLogs,
   WorkoutStats,
-} from "../../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";

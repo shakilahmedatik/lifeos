@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-import type { NewWorkoutInput, Workout } from "../../../../packages/contracts/src/index.js";
+import type { NewWorkoutInput, Workout } from "@lifeos/contracts";
 import { useWorkouts } from "./useWorkouts.js";
 
 interface WorkoutListProps {
@@ -94,11 +94,18 @@ export function WorkoutList({ onSelectWorkout, onStartSession }: WorkoutListProp
       ) : (
         <div className="space-y-2">
           {workouts.map((workout) => (
-            <button
-              type="button"
+            <div
               key={workout.id}
-              className="p-4 border rounded hover:bg-gray-50 w-full text-left"
+              // biome-ignore lint/a11y/useSemanticElements: outer element cannot be button because child action buttons exist
+              role="button"
+              tabIndex={0}
+              className="p-4 border rounded hover:bg-gray-50 w-full text-left cursor-pointer"
               onClick={() => onSelectWorkout?.(workout)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  onSelectWorkout?.(workout);
+                }
+              }}
             >
               <div className="flex justify-between items-start">
                 <div>
@@ -136,7 +143,7 @@ export function WorkoutList({ onSelectWorkout, onStartSession }: WorkoutListProp
                   </button>
                 </div>
               </div>
-            </button>
+            </div>
           ))}
         </div>
       )}

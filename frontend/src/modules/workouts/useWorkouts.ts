@@ -9,7 +9,7 @@ import type {
   WorkoutSessionWithLogs,
   WorkoutStats,
   WorkoutWithExercises,
-} from "../../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";
 import * as api from "./api.js";
 
 export function useWorkouts() {

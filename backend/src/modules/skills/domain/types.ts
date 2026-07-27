@@ -9,4 +9,4 @@ export type {
   NewLearningLogInput,
   ResourceWithProgress,
   SkillAreaSummary,
-} from "../../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";

@@ -3,4 +3,4 @@ export type {
   TaskStatus,
   Task,
   NewTaskInput,
-} from "../../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";

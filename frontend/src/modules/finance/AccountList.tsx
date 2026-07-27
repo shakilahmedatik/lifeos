@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { Account } from "../../../../packages/contracts/src/index.js";
+import type { Account } from "@lifeos/contracts";
 import { archiveAccount, createAccount, fetchAccounts } from "./api.js";
 
 export function AccountList() {

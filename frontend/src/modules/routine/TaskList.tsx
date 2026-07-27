@@ -1,5 +1,5 @@
+import type { Task } from "@lifeos/contracts";
 import { useState } from "react";
-import type { Task } from "../../../../packages/contracts/src/index.js";
 import { ReminderForm } from "../notifications/ReminderForm.js";
 import type { SoundPreset } from "../notifications/sound-presets.js";
 

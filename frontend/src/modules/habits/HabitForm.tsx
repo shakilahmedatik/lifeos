@@ -1,5 +1,5 @@
+import type { Habit, NewHabitInput } from "@lifeos/contracts";
 import { useState } from "react";
-import type { Habit, NewHabitInput } from "../../../../packages/contracts/src/index.js";
 
 interface HabitFormProps {
   habit?: Habit;

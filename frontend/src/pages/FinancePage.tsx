@@ -1,14 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
 import type {
   AccountWithBalance,
   Category,
   NewTransactionInput,
   Transaction,
-} from "../../../packages/contracts/src/index.js";
-import {
-  getClientDateString,
-  getClientMonthString,
-} from "../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";
+import { getClientDateString, getClientMonthString } from "@lifeos/contracts";
+import { useCallback, useEffect, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";

@@ -1,5 +1,5 @@
+import type { Task } from "@lifeos/contracts";
 import { useEffect, useState } from "react";
-import type { Task } from "../../../../packages/contracts/src/index.js";
 
 interface NowCardProps {
   task: Task | null;

@@ -4,6 +4,7 @@ interface RateLimitOptions {
   windowMs: number;
   max: number;
   message?: string;
+  skip?: (req: Request) => boolean;
 }
 
 interface ClientRecord {
@@ -12,7 +13,7 @@ interface ClientRecord {
 }
 
 export function createRateLimiter(options: RateLimitOptions) {
-  const { windowMs, max, message = "Too many requests, please try again later." } = options;
+  const { windowMs, max, message = "Too many requests, please try again later.", skip } = options;
   const clients = new Map<string, ClientRecord>();
 
   // Periodically clean up expired entries
@@ -29,6 +30,10 @@ export function createRateLimiter(options: RateLimitOptions) {
   );
 
   return (req: Request, res: Response, next: NextFunction) => {
+    if (skip?.(req)) {
+      return next();
+    }
+
     const ip = req.ip || req.socket.remoteAddress || "127.0.0.1";
     const now = Date.now();
 
@@ -56,5 +61,9 @@ export function createRateLimiter(options: RateLimitOptions) {
 
 export const apiRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 500, // Limit each IP to 500 requests per 15 min
+  max: 2500, // Limit each IP to 2500 requests per 15 min
+  skip: (req) =>
+    req.path.includes("/stream") ||
+    req.path.startsWith("/health") ||
+    req.originalUrl?.includes("/notifications/stream"),
 });

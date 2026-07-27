@@ -1,4 +1,4 @@
-import type { WeeklySummary } from "../../../../packages/contracts/src/index.js";
+import type { WeeklySummary } from "@lifeos/contracts";
 
 interface WeeklyReviewWidgetProps {
   summary: WeeklySummary | null;

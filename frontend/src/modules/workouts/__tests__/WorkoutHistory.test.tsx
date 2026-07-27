@@ -1,7 +1,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import type { WorkoutSession, WorkoutStats } from "../../../../../packages/contracts/src/index.js";
+import type { WorkoutSession, WorkoutStats } from "@lifeos/contracts";
 import { WorkoutHistory } from "../WorkoutHistory.js";
 
 const mockSessions: WorkoutSession[] = [

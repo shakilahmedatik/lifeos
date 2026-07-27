@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getSSEUrl } from "../../lib/api.js";
 import { playNotificationSound, resumeAudioContext } from "../notifications/sound-player.js";
 import type { SoundPreset } from "../notifications/sound-presets.js";
 
@@ -22,15 +23,19 @@ export function useWorkoutTimerSSE(options: UseWorkoutTimerSSEOptions = {}) {
   const [lastAlert, setLastAlert] = useState<WorkoutTimerAlert | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  const optionsRef = useRef(options);
+  useEffect(() => {
+    optionsRef.current = options;
+  }, [options]);
+
   const connect = useCallback(() => {
     resumeAudioContext();
 
-    const eventSource = new EventSource("/api/notifications/stream");
+    const eventSource = new EventSource(getSSEUrl("/api/notifications/stream"));
 
     eventSource.onopen = () => {
       setIsConnected(true);
       setError(null);
-      console.log("Workout timer SSE connected");
     };
 
     eventSource.onmessage = (event) => {
@@ -40,11 +45,11 @@ export function useWorkoutTimerSSE(options: UseWorkoutTimerSSEOptions = {}) {
           const alert = data.data as WorkoutTimerAlert;
           setLastAlert(alert);
 
-          if (options.autoPlaySound !== false) {
+          if (optionsRef.current.autoPlaySound !== false) {
             playNotificationSound(alert.soundType);
           }
 
-          options.onAlert?.(alert);
+          optionsRef.current.onAlert?.(alert);
         }
       } catch (err) {
         console.error("Error parsing workout timer SSE message:", err);
@@ -54,14 +59,13 @@ export function useWorkoutTimerSSE(options: UseWorkoutTimerSSEOptions = {}) {
     eventSource.onerror = () => {
       setIsConnected(false);
       setError("Workout timer SSE connection error");
-      console.log("Workout timer SSE connection error, will retry...");
     };
 
     return () => {
       eventSource.close();
       setIsConnected(false);
     };
-  }, [options]);
+  }, []);
 
   useEffect(() => {
     const cleanup = connect();

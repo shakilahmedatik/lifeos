@@ -1,4 +1,4 @@
-import type { Task } from "../../../../packages/contracts/src/index.js";
+import type { Task } from "@lifeos/contracts";
 
 interface NextCardProps {
   task: Task | null;

@@ -1,4 +1,4 @@
-import type { DashboardSummary as DashboardSummaryType } from "../../../../packages/contracts/src/index.js";
+import type { DashboardSummary as DashboardSummaryType } from "@lifeos/contracts";
 import { FinanceWidget } from "../finance/FinanceWidget.js";
 import HabitChip from "../habits/HabitChip.js";
 import { NewsTicker } from "./NewsTicker.js";

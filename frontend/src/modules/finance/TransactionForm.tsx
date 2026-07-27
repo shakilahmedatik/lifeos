@@ -1,10 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type {
-  Account,
-  Category,
-  NewTransactionInput,
-} from "../../../../packages/contracts/src/index.js";
+import type { Account, Category, NewTransactionInput } from "@lifeos/contracts";
 import { createTransaction, fetchActiveAccounts, fetchActiveCategories } from "./api.js";
 
 interface TransactionFormProps {

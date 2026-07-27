@@ -1,6 +1,6 @@
+import type { NewTaskInput } from "@lifeos/contracts";
+import { getClientDateString } from "@lifeos/contracts";
 import { useState } from "react";
-import type { NewTaskInput } from "../../../../packages/contracts/src/index.js";
-import { getClientDateString } from "../../../../packages/contracts/src/index.js";
 
 interface TaskFormProps {
   onSubmit: (input: NewTaskInput) => void;

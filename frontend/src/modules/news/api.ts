@@ -1,7 +1,5 @@
-import type {
-  NewsArticle as _NewsArticle,
-  RssFeed as _RssFeed,
-} from "../../../../packages/contracts/src/index.js";
+import type { NewsArticle as _NewsArticle, RssFeed as _RssFeed } from "@lifeos/contracts";
+import { fetchWithAuth } from "../../lib/api.js";
 
 export type RssFeed = _RssFeed;
 export type NewsArticle = _NewsArticle;
@@ -10,19 +8,19 @@ const API_BASE = "/api/news";
 
 // Feed API
 export async function fetchFeeds(): Promise<RssFeed[]> {
-  const res = await fetch(`${API_BASE}/feeds`);
+  const res = await fetchWithAuth(`${API_BASE}/feeds`);
   if (!res.ok) throw new Error("Failed to fetch feeds");
   return res.json();
 }
 
 export async function fetchFeed(id: string): Promise<RssFeed> {
-  const res = await fetch(`${API_BASE}/feeds/${id}`);
+  const res = await fetchWithAuth(`${API_BASE}/feeds/${id}`);
   if (!res.ok) throw new Error("Failed to fetch feed");
   return res.json();
 }
 
 export async function createFeed(input: { title: string; url: string }): Promise<RssFeed> {
-  const res = await fetch(`${API_BASE}/feeds`, {
+  const res = await fetchWithAuth(`${API_BASE}/feeds`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -38,7 +36,7 @@ export async function updateFeed(
   id: string,
   patch: { title?: string; url?: string },
 ): Promise<RssFeed> {
-  const res = await fetch(`${API_BASE}/feeds/${id}`, {
+  const res = await fetchWithAuth(`${API_BASE}/feeds/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -51,12 +49,12 @@ export async function updateFeed(
 }
 
 export async function deleteFeed(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/feeds/${id}`, { method: "DELETE" });
+  const res = await fetchWithAuth(`${API_BASE}/feeds/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete feed");
 }
 
 export async function toggleFeedStatus(id: string): Promise<RssFeed> {
-  const res = await fetch(`${API_BASE}/feeds/${id}/toggle`, { method: "PATCH" });
+  const res = await fetchWithAuth(`${API_BASE}/feeds/${id}/toggle`, { method: "PATCH" });
   if (!res.ok) throw new Error("Failed to toggle feed status");
   return res.json();
 }
@@ -77,19 +75,19 @@ export async function fetchArticles(params?: {
   const queryString = searchParams.toString();
   const url = `${API_BASE}/articles${queryString ? `?${queryString}` : ""}`;
 
-  const res = await fetch(url);
+  const res = await fetchWithAuth(url);
   if (!res.ok) throw new Error("Failed to fetch articles");
   return res.json();
 }
 
 export async function fetchTickerArticles(): Promise<NewsArticle[]> {
-  const res = await fetch(`${API_BASE}/articles/ticker`);
+  const res = await fetchWithAuth(`${API_BASE}/articles/ticker`);
   if (!res.ok) throw new Error("Failed to fetch ticker articles");
   return res.json();
 }
 
 export async function markArticleAsRead(id: string): Promise<NewsArticle> {
-  const res = await fetch(`${API_BASE}/articles/${id}/read`, { method: "PATCH" });
+  const res = await fetchWithAuth(`${API_BASE}/articles/${id}/read`, { method: "PATCH" });
   if (!res.ok) throw new Error("Failed to mark article as read");
   return res.json();
 }

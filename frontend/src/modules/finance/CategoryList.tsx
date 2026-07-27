@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { Category } from "../../../../packages/contracts/src/index.js";
+import type { Category } from "@lifeos/contracts";
 import { archiveCategory, createCategory, fetchCategories } from "./api.js";
 
 export function CategoryList() {

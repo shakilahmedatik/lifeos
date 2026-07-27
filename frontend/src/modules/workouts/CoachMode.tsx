@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 
-import type { WorkoutWithExercises } from "../../../../packages/contracts/src/index.js";
+import type { WorkoutWithExercises } from "@lifeos/contracts";
 import { playNotificationSound } from "../notifications/sound-player.js";
 import { addExerciseLog, completeSession, startSession } from "./api.js";
 import { useWorkoutTimerSSE } from "./useWorkoutTimerSSE.js";

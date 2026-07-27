@@ -19,6 +19,29 @@ export function createHabitsRouter(
     res.json(habits);
   });
 
+  router.get("/today", (_req, res) => {
+    const today = todayInDhaka();
+    const habits = habitLogService.getTodayDueHabits(today);
+    res.json(habits);
+  });
+
+  router.get("/weekly-review", (req, res) => {
+    const { weekStart } = req.query;
+    if (!weekStart) {
+      const today = new Date(nowIsoInDhaka());
+      const day = today.getDay();
+      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
+      const monday = new Date(today);
+      monday.setDate(diff);
+      const weekStartStr = monday.toISOString().split("T")[0];
+      const summary = weeklyReviewService.getWeeklySummary(weekStartStr);
+      res.json(summary);
+      return;
+    }
+    const summary = weeklyReviewService.getWeeklySummary(weekStart as string);
+    res.json(summary);
+  });
+
   router.get("/:id", (req, res) => {
     const habit = habitService.getHabit(req.params.id);
     if (!habit) {
@@ -97,29 +120,6 @@ export function createHabitsRouter(
       return;
     }
     res.json(stats);
-  });
-
-  router.get("/weekly-review", (req, res) => {
-    const { weekStart } = req.query;
-    if (!weekStart) {
-      const today = new Date(nowIsoInDhaka());
-      const day = today.getDay();
-      const diff = today.getDate() - day + (day === 0 ? -6 : 1);
-      const monday = new Date(today);
-      monday.setDate(diff);
-      const weekStartStr = monday.toISOString().split("T")[0];
-      const summary = weeklyReviewService.getWeeklySummary(weekStartStr);
-      res.json(summary);
-      return;
-    }
-    const summary = weeklyReviewService.getWeeklySummary(weekStart as string);
-    res.json(summary);
-  });
-
-  router.get("/today", (_req, res) => {
-    const today = todayInDhaka();
-    const habits = habitLogService.getTodayDueHabits(today);
-    res.json(habits);
   });
 
   return router;

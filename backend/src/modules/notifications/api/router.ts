@@ -16,6 +16,25 @@ export function createNotificationsRouter(
     res.json(notifications);
   });
 
+  router.get("/stream", (req, res) => {
+    const clientId = randomUUID();
+
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+
+    res.flushHeaders();
+
+    res.write(`: connected ${clientId}\n\n`);
+
+    broadcaster.addClient(clientId, res);
+
+    req.on("close", () => {
+      broadcaster.removeClient(clientId);
+    });
+  });
+
   router.get("/:id", (req, res) => {
     const notification = notificationService.getNotification(req.params.id);
     if (!notification) {
@@ -59,25 +78,6 @@ export function createNotificationsRouter(
   router.post("/task/:taskId", (req, res) => {
     const _deleted = notificationService.deleteNotificationsByTaskId(req.params.taskId);
     res.status(204).send();
-  });
-
-  router.get("/stream", (req, res) => {
-    const clientId = randomUUID();
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.setHeader("X-Accel-Buffering", "no");
-
-    res.flushHeaders();
-
-    res.write(`: connected ${clientId}\n\n`);
-
-    broadcaster.addClient(clientId, res);
-
-    req.on("close", () => {
-      broadcaster.removeClient(clientId);
-    });
   });
 
   return router;

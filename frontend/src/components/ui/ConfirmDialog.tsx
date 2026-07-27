@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Button } from "./Button.js";
-import { Modal } from "./Modal.js";
+import Button from "./Button.js";
+import Modal from "./Modal.js";
 
 export interface ConfirmDialogProps {
   open: boolean;

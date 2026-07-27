@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import type { Category, Transaction } from "../../../../packages/contracts/src/index.js";
+import type { Category, Transaction } from "@lifeos/contracts";
 import { deleteTransaction, fetchActiveCategories, fetchTransactionsByDateRange } from "./api.js";
 
 interface TransactionListProps {

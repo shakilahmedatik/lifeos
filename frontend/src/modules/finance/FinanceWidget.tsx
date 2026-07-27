@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 
-import type { MonthlySummary } from "../../../../packages/contracts/src/index.js";
+import type { MonthlySummary } from "@lifeos/contracts";
 import { fetchMonthlySummary } from "./api.js";
 
 export function FinanceWidget() {

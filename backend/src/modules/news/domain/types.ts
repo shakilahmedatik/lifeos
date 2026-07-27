@@ -4,4 +4,4 @@ export type {
   NewRssFeedInput,
   NewsArticle,
   FeedWithArticleCount,
-} from "../../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";

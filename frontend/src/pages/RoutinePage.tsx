@@ -1,12 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import type {
   NewNotificationInput,
   NewTaskInput,
   Task,
   TaskCategory,
   TaskStatus,
-} from "../../../packages/contracts/src/index.js";
-import { getClientDateString } from "../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";
+import { getClientDateString } from "@lifeos/contracts";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";

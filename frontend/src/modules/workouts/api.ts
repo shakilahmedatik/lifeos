@@ -11,25 +11,26 @@ import type {
   WorkoutSessionWithLogs,
   WorkoutStats,
   WorkoutWithExercises,
-} from "../../../../packages/contracts/src/index.js";
+} from "@lifeos/contracts";
+import { fetchWithAuth } from "../../lib/api.js";
 
 const API_BASE = "/api/workouts";
 
 // Workout API
 export async function fetchWorkouts(): Promise<Workout[]> {
-  const res = await fetch(API_BASE);
+  const res = await fetchWithAuth(API_BASE);
   if (!res.ok) throw new Error("Failed to fetch workouts");
   return res.json();
 }
 
 export async function fetchWorkout(id: string): Promise<WorkoutWithExercises> {
-  const res = await fetch(`${API_BASE}/${id}`);
+  const res = await fetchWithAuth(`${API_BASE}/${id}`);
   if (!res.ok) throw new Error("Failed to fetch workout");
   return res.json();
 }
 
 export async function createWorkout(input: NewWorkoutInput): Promise<Workout> {
-  const res = await fetch(API_BASE, {
+  const res = await fetchWithAuth(API_BASE, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -39,7 +40,7 @@ export async function createWorkout(input: NewWorkoutInput): Promise<Workout> {
 }
 
 export async function updateWorkout(id: string, patch: Partial<NewWorkoutInput>): Promise<Workout> {
-  const res = await fetch(`${API_BASE}/${id}`, {
+  const res = await fetchWithAuth(`${API_BASE}/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -49,7 +50,7 @@ export async function updateWorkout(id: string, patch: Partial<NewWorkoutInput>)
 }
 
 export async function deleteWorkout(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
+  const res = await fetchWithAuth(`${API_BASE}/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete workout");
 }
 
@@ -59,7 +60,7 @@ export async function addExerciseToWorkout(
   exerciseId: string,
   input: NewWorkoutExerciseInput,
 ): Promise<WorkoutExercise> {
-  const res = await fetch(`${API_BASE}/${workoutId}/exercises`, {
+  const res = await fetchWithAuth(`${API_BASE}/${workoutId}/exercises`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ ...input, exerciseId }),
@@ -73,7 +74,7 @@ export async function updateWorkoutExercise(
   exerciseId: string,
   patch: Partial<NewWorkoutExerciseInput>,
 ): Promise<WorkoutExercise> {
-  const res = await fetch(`${API_BASE}/${workoutId}/exercises/${exerciseId}`, {
+  const res = await fetchWithAuth(`${API_BASE}/${workoutId}/exercises/${exerciseId}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -86,25 +87,27 @@ export async function removeExerciseFromWorkout(
   workoutId: string,
   exerciseId: string,
 ): Promise<void> {
-  const res = await fetch(`${API_BASE}/${workoutId}/exercises/${exerciseId}`, { method: "DELETE" });
+  const res = await fetchWithAuth(`${API_BASE}/${workoutId}/exercises/${exerciseId}`, {
+    method: "DELETE",
+  });
   if (!res.ok) throw new Error("Failed to remove exercise from workout");
 }
 
 // Exercise Library API
 export async function fetchExercises(): Promise<Exercise[]> {
-  const res = await fetch(`${API_BASE}/exercises`);
+  const res = await fetchWithAuth(`${API_BASE}/exercises`);
   if (!res.ok) throw new Error("Failed to fetch exercises");
   return res.json();
 }
 
 export async function fetchExercise(id: string): Promise<Exercise> {
-  const res = await fetch(`${API_BASE}/exercises/${id}`);
+  const res = await fetchWithAuth(`${API_BASE}/exercises/${id}`);
   if (!res.ok) throw new Error("Failed to fetch exercise");
   return res.json();
 }
 
 export async function createExercise(input: NewExerciseInput): Promise<Exercise> {
-  const res = await fetch(`${API_BASE}/exercises`, {
+  const res = await fetchWithAuth(`${API_BASE}/exercises`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -117,7 +120,7 @@ export async function updateExercise(
   id: string,
   patch: Partial<NewExerciseInput>,
 ): Promise<Exercise> {
-  const res = await fetch(`${API_BASE}/exercises/${id}`, {
+  const res = await fetchWithAuth(`${API_BASE}/exercises/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -127,25 +130,25 @@ export async function updateExercise(
 }
 
 export async function deleteExercise(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/exercises/${id}`, { method: "DELETE" });
+  const res = await fetchWithAuth(`${API_BASE}/exercises/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete exercise");
 }
 
 // Session API
 export async function fetchSessions(): Promise<WorkoutSession[]> {
-  const res = await fetch(`${API_BASE}/sessions`);
+  const res = await fetchWithAuth(`${API_BASE}/sessions`);
   if (!res.ok) throw new Error("Failed to fetch sessions");
   return res.json();
 }
 
 export async function fetchSession(id: string): Promise<WorkoutSessionWithLogs> {
-  const res = await fetch(`${API_BASE}/sessions/${id}`);
+  const res = await fetchWithAuth(`${API_BASE}/sessions/${id}`);
   if (!res.ok) throw new Error("Failed to fetch session");
   return res.json();
 }
 
 export async function startSession(workoutId: string): Promise<WorkoutSession> {
-  const res = await fetch(`${API_BASE}/sessions`, {
+  const res = await fetchWithAuth(`${API_BASE}/sessions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ workoutId }),
@@ -159,7 +162,7 @@ export async function completeSession(
   durationSeconds: number,
   notes?: string,
 ): Promise<WorkoutSession> {
-  const res = await fetch(`${API_BASE}/sessions/${id}/complete`, {
+  const res = await fetchWithAuth(`${API_BASE}/sessions/${id}/complete`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ durationSeconds, notes }),
@@ -169,7 +172,7 @@ export async function completeSession(
 }
 
 export async function deleteSession(id: string): Promise<void> {
-  const res = await fetch(`${API_BASE}/sessions/${id}`, { method: "DELETE" });
+  const res = await fetchWithAuth(`${API_BASE}/sessions/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete session");
 }
 
@@ -178,7 +181,7 @@ export async function addExerciseLog(
   sessionId: string,
   input: NewExerciseLogInput,
 ): Promise<ExerciseLog> {
-  const res = await fetch(`${API_BASE}/sessions/${sessionId}/logs`, {
+  const res = await fetchWithAuth(`${API_BASE}/sessions/${sessionId}/logs`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -188,26 +191,26 @@ export async function addExerciseLog(
 }
 
 export async function fetchSessionLogs(sessionId: string): Promise<ExerciseLog[]> {
-  const res = await fetch(`${API_BASE}/sessions/${sessionId}/logs`);
+  const res = await fetchWithAuth(`${API_BASE}/sessions/${sessionId}/logs`);
   if (!res.ok) throw new Error("Failed to fetch session logs");
   return res.json();
 }
 
 // History API
 export async function fetchWorkoutHistory(): Promise<WorkoutSession[]> {
-  const res = await fetch(`${API_BASE}/history`);
+  const res = await fetchWithAuth(`${API_BASE}/history`);
   if (!res.ok) throw new Error("Failed to fetch workout history");
   return res.json();
 }
 
 export async function fetchWorkoutStats(): Promise<WorkoutStats> {
-  const res = await fetch(`${API_BASE}/history/stats`);
+  const res = await fetchWithAuth(`${API_BASE}/history/stats`);
   if (!res.ok) throw new Error("Failed to fetch workout stats");
   return res.json();
 }
 
 export async function fetchRecentSessions(limit = 10): Promise<WorkoutSession[]> {
-  const res = await fetch(`${API_BASE}/history/recent?limit=${limit}`);
+  const res = await fetchWithAuth(`${API_BASE}/history/recent?limit=${limit}`);
   if (!res.ok) throw new Error("Failed to fetch recent sessions");
   return res.json();
 }
