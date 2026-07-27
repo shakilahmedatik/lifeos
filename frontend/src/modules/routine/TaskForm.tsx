@@ -1,4 +1,10 @@
-import type { NewTaskInput, TaskCategory, TaskRecurrence, TaskSubtask } from "@lifeos/contracts";
+import type {
+  NewTaskInput,
+  NotificationSoundType,
+  TaskCategory,
+  TaskRecurrence,
+  TaskSubtask,
+} from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
 import { useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
@@ -57,7 +63,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
   // Notifications
   const [enableReminder, setEnableReminder] = useState(false);
   const [reminderMinutesBefore, setReminderMinutesBefore] = useState(15);
-  const [reminderSound, setReminderSound] = useState("default");
+  const [reminderSound, setReminderSound] = useState<NotificationSoundType | "none">("default");
 
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
@@ -143,6 +149,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
         ...(enableReminder && {
           reminderMinutesBefore,
           reminderSilent: reminderSound === "none",
+          reminderSound: reminderSound !== "none" ? reminderSound : undefined,
         }),
       });
 
@@ -454,7 +461,9 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
                 <select
                   id="task-reminder-sound"
                   value={reminderSound}
-                  onChange={(e) => setReminderSound(e.target.value)}
+                  onChange={(e) =>
+                    setReminderSound(e.target.value as NotificationSoundType | "none")
+                  }
                   className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
                 >
                   <option value="default">Default</option>

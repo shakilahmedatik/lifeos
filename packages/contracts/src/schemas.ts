@@ -27,6 +27,8 @@ export const TaskSubtaskSchema = z.object({
   completed: z.boolean(),
 });
 
+export const NotificationSoundTypeSchema = z.enum(["default", "gentle", "urgent", "chime", "bell"]);
+
 export const NewTaskInputSchema = z
   .object({
     title: z.string().min(1, "Title is required").max(200, "Title is too long"),
@@ -37,6 +39,7 @@ export const NewTaskInputSchema = z
     notes: z.string().optional(),
     reminderMinutesBefore: z.number().min(1).max(1440).nullable().optional(),
     reminderSilent: z.boolean().optional(),
+    reminderSound: NotificationSoundTypeSchema.optional(),
     recurrence: TaskRecurrenceSchema.optional(),
     subtasks: z.array(TaskSubtaskSchema).optional(),
   })
@@ -54,6 +57,7 @@ export const UpdateTaskSchema = z.object({
   notes: z.string().optional(),
   reminderMinutesBefore: z.number().min(1).max(1440).nullable().optional(),
   reminderSilent: z.boolean().optional(),
+  reminderSound: NotificationSoundTypeSchema.optional(),
   recurrence: TaskRecurrenceSchema.optional(),
   subtasks: z.array(TaskSubtaskSchema).optional(),
 });

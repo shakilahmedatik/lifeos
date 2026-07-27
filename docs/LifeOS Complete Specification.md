@@ -36,11 +36,11 @@ or need the user to context-switch away from the dashboard are suspect.
 
 - Software engineer, Bangladesh, remote job, works Sunday–Thursday, roughly
   9:30 AM–6:00 PM.
-- 27 years old, single, lives alone, works from home.
-- Home gym equipment available (dumbbells up to ~13.5 kg each), no gym
+- Works from home.
+- Home gym equipment available (dumbbells, barbells, pushup board, resistance bands, pullup bar), no gym
   membership — all workouts must be performable at home.
 - Early-career; skill growth is a stated priority (DevOps, MERN, Go, AI/LLM
-  orchestration).
+  orchestration, Pentesting, ML, etc).
 - Named problems the system must address:
   - Procrastination and general laziness
   - Chronic lateness / poor time awareness

@@ -21,6 +21,7 @@ export interface Task {
   notes?: string;
   reminderMinutesBefore?: number | null;
   reminderSilent: boolean;
+  reminderSound?: NotificationSoundType;
   recurrence?: TaskRecurrence;
   isOvernight?: boolean;
   subtasks?: TaskSubtask[];
@@ -37,6 +38,7 @@ export interface NewTaskInput {
   notes?: string;
   reminderMinutesBefore?: number | null;
   reminderSilent?: boolean;
+  reminderSound?: NotificationSoundType;
   recurrence?: TaskRecurrence;
   subtasks?: TaskSubtask[];
 }

@@ -9,8 +9,10 @@ function getAudioContext(): AudioContext {
   return audioContext;
 }
 
-export function playNotificationSound(preset: SoundPreset = "default"): void {
+export function playNotificationSound(preset: SoundPreset | "none" = "default"): void {
+  if (preset === "none" || !preset) return;
   const config = SOUND_PRESETS[preset];
+  if (!config) return;
   const ctx = getAudioContext();
 
   const oscillator = ctx.createOscillator();

@@ -37,6 +37,10 @@ export class NotificationService {
     return this.notificationRepo.findPendingNotifications();
   }
 
+  getUnreadCount(userId = "default"): number {
+    return this.notificationRepo.getUnreadCount(userId);
+  }
+
   markNotificationAsSent(id: string): Notification | null {
     return this.notificationRepo.update(id, { status: "sent" });
   }

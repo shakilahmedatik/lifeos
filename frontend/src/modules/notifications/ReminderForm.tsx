@@ -50,16 +50,16 @@ export function ReminderForm({ taskId, taskTitle, onSubmit, onCancel }: Reminder
   };
 
   return (
-    <div className="border rounded-lg p-4">
-      <h3 className="font-semibold mb-3">Set Reminder for: {taskTitle}</h3>
+    <div className="bg-gray-800/60 border border-gray-700/50 rounded-xl p-4 text-gray-200">
+      <h3 className="font-semibold text-gray-100 mb-3">Set Reminder for: {taskTitle}</h3>
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-3">
+        <div className="bg-red-900/40 border border-red-800 text-red-300 px-3 py-2 rounded-lg text-xs mb-3">
           {error}
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
-          <label htmlFor="reminder-time" className="block text-sm font-medium mb-1">
+          <label htmlFor="reminder-time" className="block text-xs font-medium text-gray-400 mb-1">
             Reminder Time
           </label>
           <input
@@ -67,19 +67,19 @@ export function ReminderForm({ taskId, taskTitle, onSubmit, onCancel }: Reminder
             type="datetime-local"
             value={reminderTime}
             onChange={(e) => setReminderTime(e.target.value)}
-            className="w-full border rounded px-3 py-2"
+            className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
             required
           />
         </div>
         <div>
-          <label htmlFor="sound-type" className="block text-sm font-medium mb-1">
+          <label htmlFor="sound-type" className="block text-xs font-medium text-gray-400 mb-1">
             Sound
           </label>
           <select
             id="sound-type"
             value={soundType}
             onChange={(e) => setSoundType(e.target.value as SoundPreset)}
-            className="w-full border rounded px-3 py-2"
+            className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
           >
             {SOUND_PRESET_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -88,21 +88,21 @@ export function ReminderForm({ taskId, taskTitle, onSubmit, onCancel }: Reminder
             ))}
           </select>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50"
-          >
-            {loading ? "Setting..." : "Set Reminder"}
-          </button>
+        <div className="flex gap-2 justify-end pt-2">
           <button
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="bg-gray-300 text-gray-700 px-4 py-2 rounded hover:bg-gray-400 disabled:opacity-50"
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-gray-700/50 text-gray-300 hover:bg-gray-700 border border-gray-600/50 disabled:opacity-50 transition-colors"
           >
             Cancel
+          </button>
+          <button
+            type="submit"
+            disabled={loading}
+            className="px-3 py-1.5 rounded-lg text-xs font-medium bg-blue-600 text-white hover:bg-blue-500 disabled:opacity-50 transition-colors"
+          >
+            {loading ? "Setting..." : "Set Reminder"}
           </button>
         </div>
       </form>

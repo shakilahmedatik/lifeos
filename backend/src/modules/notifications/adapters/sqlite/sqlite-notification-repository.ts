@@ -45,7 +45,7 @@ export class SqliteNotificationRepository implements NotificationRepository {
   }
 
   findPendingNotifications(): NotificationWithTask[] {
-    const now = nowIsoInDhaka();
+    const now = new Date().toISOString();
     const rows = this.db
       .prepare(`
       SELECT
@@ -61,6 +61,15 @@ export class SqliteNotificationRepository implements NotificationRepository {
     `)
       .all(now) as NotificationWithTask[];
     return rows;
+  }
+
+  getUnreadCount(userId: string): number {
+    const result = this.db
+      .prepare(
+        "SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND status = 'scheduled'",
+      )
+      .get(userId) as { count: number } | undefined;
+    return result?.count ?? 0;
   }
 
   create(input: NewNotificationInput): Notification {

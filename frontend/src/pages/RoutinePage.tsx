@@ -86,12 +86,12 @@ export default function RoutinePage() {
           const dt = new Date(y, m - 1, d, hh, mm);
           dt.setMinutes(dt.getMinutes() - input.reminderMinutesBefore);
 
+          const soundType = input.reminderSound || (input.reminderSilent ? undefined : "default");
+
           await api.createNotification({
             taskId: result.task.id,
             reminderTime: dt.toISOString(),
-            soundType: input.reminderSilent
-              ? undefined
-              : ("default" as NewNotificationInput["soundType"]),
+            soundType: soundType as NewNotificationInput["soundType"],
           });
         } catch {
           toast.warning("Task created, but failed to schedule reminder notification");
@@ -132,6 +132,34 @@ export default function RoutinePage() {
       if (result.overlapsWith && result.overlapsWith.length > 0) {
         const titles = result.overlapsWith.map((t) => `"${t.title}"`).join(", ");
         toast.warning(`Note: Task overlaps with ${titles}`);
+      }
+
+      // Sync notification if reminder settings or timing changed
+      if (result.task.reminderMinutesBefore) {
+        try {
+          await api.deleteNotificationsByTaskId(id);
+          const [y, m, d] = result.task.date.split("-").map(Number);
+          const [hh, mm] = result.task.startTime.split(":").map(Number);
+          const dt = new Date(y, m - 1, d, hh, mm);
+          dt.setMinutes(dt.getMinutes() - result.task.reminderMinutesBefore);
+
+          const soundType =
+            patch.reminderSound || (result.task.reminderSilent ? undefined : "default");
+
+          await api.createNotification({
+            taskId: result.task.id,
+            reminderTime: dt.toISOString(),
+            soundType: soundType as NewNotificationInput["soundType"],
+          });
+        } catch {
+          // Non-blocking notification sync warning
+        }
+      } else if (patch.reminderMinutesBefore === null) {
+        try {
+          await api.deleteNotificationsByTaskId(id);
+        } catch {
+          // Ignore delete notification failure
+        }
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to update task");

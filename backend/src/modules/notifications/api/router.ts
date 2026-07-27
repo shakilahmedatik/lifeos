@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { NewNotificationInputSchema } from "@lifeos/contracts";
 import { Router } from "express";
 
 import type { NotificationBroadcaster } from "../application/notification-broadcaster.js";
@@ -14,6 +15,12 @@ export function createNotificationsRouter(
     const userId = (req.query.userId as string) || "default";
     const notifications = notificationService.listNotifications(userId);
     res.json(notifications);
+  });
+
+  router.get("/unread-count", (req, res) => {
+    const userId = (req.query.userId as string) || "default";
+    const count = notificationService.getUnreadCount(userId);
+    res.json({ count });
   });
 
   router.get("/stream", (req, res) => {
@@ -45,8 +52,14 @@ export function createNotificationsRouter(
   });
 
   router.post("/", (req, res) => {
+    const parsed = NewNotificationInputSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: parsed.error.flatten() });
+      return;
+    }
+
     try {
-      const notification = notificationService.createNotification(req.body);
+      const notification = notificationService.createNotification(parsed.data);
       res.status(201).json(notification);
     } catch (error) {
       if (error instanceof Error) {
@@ -75,8 +88,13 @@ export function createNotificationsRouter(
     res.status(204).send();
   });
 
+  router.delete("/task/:taskId", (req, res) => {
+    notificationService.deleteNotificationsByTaskId(req.params.taskId);
+    res.status(204).send();
+  });
+
   router.post("/task/:taskId", (req, res) => {
-    const _deleted = notificationService.deleteNotificationsByTaskId(req.params.taskId);
+    notificationService.deleteNotificationsByTaskId(req.params.taskId);
     res.status(204).send();
   });
 
