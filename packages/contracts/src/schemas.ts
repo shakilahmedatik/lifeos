@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isValidDateString } from "./date-utils.js";
 
 export const TaskCategorySchema = z.enum([
   "work",
@@ -11,15 +12,54 @@ export const TaskCategorySchema = z.enum([
 
 export const TaskStatusSchema = z.enum(["planned", "in_progress", "done", "skipped"]);
 
-export const NewTaskInputSchema = z.object({
-  title: z.string().min(1, "Title is required").max(200, "Title is too long"),
+export const TaskRecurrenceSchema = z.enum(["none", "daily", "weekdays", "weekly"]);
+
+const StrictDateSchema = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD")
+  .refine(isValidDateString, "Must be a valid calendar date");
+
+const StrictTimeSchema = z.string().regex(/^\d{2}:\d{2}$/, "Time must be HH:MM (24h)");
+
+export const TaskSubtaskSchema = z.object({
+  id: z.string(),
+  title: z.string().min(1),
+  completed: z.boolean(),
+});
+
+export const NewTaskInputSchema = z
+  .object({
+    title: z.string().min(1, "Title is required").max(200, "Title is too long"),
+    category: TaskCategorySchema.optional(),
+    date: StrictDateSchema,
+    startTime: StrictTimeSchema,
+    endTime: StrictTimeSchema,
+    notes: z.string().optional(),
+    reminderMinutesBefore: z.number().min(1).max(1440).nullable().optional(),
+    reminderSilent: z.boolean().optional(),
+    recurrence: TaskRecurrenceSchema.optional(),
+    subtasks: z.array(TaskSubtaskSchema).optional(),
+  })
+  .refine((data) => data.startTime !== data.endTime, {
+    message: "startTime cannot be equal to endTime",
+    path: ["endTime"],
+  });
+
+export const UpdateTaskSchema = z.object({
+  title: z.string().min(1, "Title is required").max(200, "Title is too long").optional(),
   category: TaskCategorySchema.optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/, "Start time must be HH:MM"),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/, "End time must be HH:MM"),
+  date: StrictDateSchema.optional(),
+  startTime: StrictTimeSchema.optional(),
+  endTime: StrictTimeSchema.optional(),
   notes: z.string().optional(),
   reminderMinutesBefore: z.number().min(1).max(1440).nullable().optional(),
   reminderSilent: z.boolean().optional(),
+  recurrence: TaskRecurrenceSchema.optional(),
+  subtasks: z.array(TaskSubtaskSchema).optional(),
+});
+
+export const UpdateStatusSchema = z.object({
+  status: TaskStatusSchema,
 });
 
 export const HabitCategorySchema = z.enum([

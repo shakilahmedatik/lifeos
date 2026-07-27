@@ -1,99 +1,189 @@
-import type { Task } from "@lifeos/contracts";
-import { useState } from "react";
-import { ReminderForm } from "../notifications/ReminderForm.js";
-import type { SoundPreset } from "../notifications/sound-presets.js";
+import type { Task, TaskStatus, TaskSubtask } from "@lifeos/contracts";
+import Badge from "../../components/ui/Badge.js";
+import Card from "../../components/ui/Card.js";
+import { ClockIcon, EditIcon, XIcon } from "../../components/ui/icons.js";
+import TaskCategoryBadge, { CATEGORY_COLORS } from "./TaskCategoryBadge.js";
 
 interface TaskListProps {
   tasks: Task[];
-  onStatusChange: (id: string, status: Task["status"]) => void;
-  onSetReminder?: (taskId: string, reminderTime: string, soundType: SoundPreset) => void;
+  onStatusChange: (id: string, status: TaskStatus) => void;
+  onEdit: (task: Task) => void;
+  onDelete: (id: string) => void;
+  onToggleSubtask?: (taskId: string, updatedSubtasks: TaskSubtask[]) => void;
 }
 
-const statusColors: Record<Task["status"], string> = {
-  planned: "bg-gray-700 text-gray-300",
-  in_progress: "bg-blue-900 text-blue-300",
-  done: "bg-green-900 text-green-300",
-  skipped: "bg-yellow-900 text-yellow-300",
+const STATUS_VARIANTS: Record<TaskStatus, "info" | "success" | "warning" | "default"> = {
+  planned: "default",
+  in_progress: "info",
+  done: "success",
+  skipped: "warning",
 };
 
-const categoryColors: Record<Task["category"], string> = {
-  work: "border-l-blue-500",
-  workout: "border-l-red-500",
-  learning: "border-l-purple-500",
-  habit: "border-l-orange-500",
-  personal: "border-l-pink-500",
-  general: "border-l-gray-500",
-};
+export function computeDurationMins(startTime: string, endTime: string): number {
+  const [sH, sM] = startTime.split(":").map(Number);
+  const [eH, eM] = endTime.split(":").map(Number);
+  const start = sH * 60 + sM;
+  const end = eH * 60 + eM;
+  return start < end ? end - start : 1440 - start + end;
+}
 
-export default function TaskList({ tasks, onStatusChange, onSetReminder }: TaskListProps) {
-  const [reminderTaskId, setReminderTaskId] = useState<string | null>(null);
-
+export default function TaskList({
+  tasks,
+  onStatusChange,
+  onEdit,
+  onDelete,
+  onToggleSubtask,
+}: TaskListProps) {
   if (tasks.length === 0) {
     return (
-      <div className="text-center text-gray-500 py-8">No tasks for this day. Add one above.</div>
+      <Card className="text-center py-10">
+        <ClockIcon size={36} className="text-gray-600 mx-auto mb-3" />
+        <h3 className="text-sm font-semibold text-gray-300">No tasks scheduled for this day</h3>
+        <p className="text-xs text-gray-500 mt-1">
+          Use the "Add Task" button above to plan your day or set up recurring routines.
+        </p>
+      </Card>
     );
   }
 
-  const handleSetReminder = (taskId: string, reminderTime: string, soundType: SoundPreset) => {
-    onSetReminder?.(taskId, reminderTime, soundType);
-    setReminderTaskId(null);
-  };
+  // Explicit client-side sort guarantee
+  const sortedTasks = [...tasks].sort((a, b) => a.startTime.localeCompare(b.startTime));
 
   return (
-    <div className="space-y-2">
-      {tasks.map((task) => (
-        <div key={task.id}>
-          <div
-            className={`flex items-center gap-3 p-3 rounded-lg bg-gray-800 border-l-4 ${categoryColors[task.category]}`}
+    <div className="space-y-3">
+      {sortedTasks.map((task) => {
+        const catStyle = CATEGORY_COLORS[task.category] || CATEGORY_COLORS.general;
+        const duration = computeDurationMins(task.startTime, task.endTime);
+        const isOvernight = task.startTime > task.endTime;
+        const hasSubtasks = task.subtasks && task.subtasks.length > 0;
+        const completedSubtasks = task.subtasks?.filter((st) => st.completed).length ?? 0;
+
+        const handleSubtaskCheck = (subtaskId: string) => {
+          if (!task.subtasks) return;
+          const updated = task.subtasks.map((st) =>
+            st.id === subtaskId ? { ...st, completed: !st.completed } : st,
+          );
+          onToggleSubtask?.(task.id, updated);
+        };
+
+        return (
+          <Card
+            key={task.id}
+            padding="sm"
+            className={`border-l-4 ${catStyle.borderLeft} transition-all hover:bg-gray-800/80`}
           >
-            <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-2 flex-wrap">
+                  <span
+                    className={`text-sm font-semibold truncate ${
+                      task.status === "done"
+                        ? "line-through text-gray-400"
+                        : task.status === "skipped"
+                          ? "line-through text-gray-500"
+                          : "text-gray-100"
+                    }`}
+                  >
+                    {task.title}
+                  </span>
+
+                  <TaskCategoryBadge category={task.category} />
+
+                  <Badge variant={STATUS_VARIANTS[task.status]} size="sm">
+                    {task.status.replace("_", " ")}
+                  </Badge>
+
+                  {task.recurrence && task.recurrence !== "none" && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase font-medium">
+                      🔄 {task.recurrence}
+                    </span>
+                  )}
+
+                  {hasSubtasks && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded bg-purple-500/10 text-purple-300 border border-purple-500/20 font-medium">
+                      ☑️ {completedSubtasks}/{task.subtasks?.length} subtasks
+                    </span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                  <span>
+                    {task.startTime} – {task.endTime}
+                  </span>
+                  <span>•</span>
+                  <span>{duration} mins</span>
+                  {isOvernight && <span className="text-amber-400">🌙 (+1 day)</span>}
+                  {task.notes && (
+                    <>
+                      <span>•</span>
+                      <span className="truncate text-gray-400 max-w-xs">{task.notes}</span>
+                    </>
+                  )}
+                </div>
+              </div>
+
               <div className="flex items-center gap-2">
-                <span className="font-medium text-gray-100 truncate">{task.title}</span>
-                <span className={`text-xs px-2 py-0.5 rounded-full ${statusColors[task.status]}`}>
-                  {task.status.replace("_", " ")}
-                </span>
-              </div>
-              <div className="text-sm text-gray-400 mt-1">
-                {task.startTime} – {task.endTime}
-                {task.notes && <span className="ml-2">• {task.notes}</span>}
-              </div>
-            </div>
-            <div className="flex items-center gap-2">
-              {onSetReminder && (
+                <label htmlFor={`status-select-${task.id}`} className="sr-only">
+                  Change status for {task.title}
+                </label>
+                <select
+                  id={`status-select-${task.id}`}
+                  value={task.status}
+                  onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
+                  className="bg-gray-700/60 border border-gray-600/50 text-gray-300 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                >
+                  <option value="planned">Planned</option>
+                  <option value="in_progress">In Progress</option>
+                  <option value="done">Done</option>
+                  <option value="skipped">Skipped</option>
+                </select>
+
                 <button
                   type="button"
-                  onClick={() => setReminderTaskId(reminderTaskId === task.id ? null : task.id)}
-                  className="text-blue-400 hover:text-blue-300 text-sm"
+                  onClick={() => onEdit(task)}
+                  aria-label={`Edit task ${task.title}`}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-blue-400 hover:bg-gray-700/60 transition-colors"
+                  title="Edit task"
                 >
-                  Set Reminder
+                  <EditIcon size={14} />
                 </button>
-              )}
-              <select
-                value={task.status}
-                onChange={(e) => onStatusChange(task.id, e.target.value as Task["status"])}
-                className="bg-gray-700 text-gray-300 text-sm rounded px-2 py-1 border-none cursor-pointer"
-              >
-                <option value="planned">Planned</option>
-                <option value="in_progress">In Progress</option>
-                <option value="done">Done</option>
-                <option value="skipped">Skipped</option>
-              </select>
+
+                <button
+                  type="button"
+                  onClick={() => onDelete(task.id)}
+                  aria-label={`Delete task ${task.title}`}
+                  className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                  title="Delete task"
+                >
+                  <XIcon size={14} />
+                </button>
+              </div>
             </div>
-          </div>
-          {reminderTaskId === task.id && (
-            <div className="mt-2">
-              <ReminderForm
-                taskId={task.id}
-                taskTitle={task.title}
-                onSubmit={(reminderTime, soundType) =>
-                  handleSetReminder(task.id, reminderTime, soundType)
-                }
-                onCancel={() => setReminderTaskId(null)}
-              />
-            </div>
-          )}
-        </div>
-      ))}
+
+            {/* Subtasks Checklist rendered inside Card */}
+            {hasSubtasks && (
+              <div className="mt-2.5 pt-2 border-t border-gray-700/40 space-y-1 pl-1">
+                {task.subtasks?.map((st) => (
+                  <label
+                    key={st.id}
+                    className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none hover:text-gray-100"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={st.completed}
+                      onChange={() => handleSubtaskCheck(st.id)}
+                      className="rounded bg-gray-700 border-gray-600 accent-blue-500"
+                    />
+                    <span className={st.completed ? "line-through text-gray-500" : ""}>
+                      {st.title}
+                    </span>
+                  </label>
+                ))}
+              </div>
+            )}
+          </Card>
+        );
+      })}
     </div>
   );
 }

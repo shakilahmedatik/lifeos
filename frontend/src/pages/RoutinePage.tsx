@@ -2,49 +2,34 @@ import type {
   NewNotificationInput,
   NewTaskInput,
   Task,
-  TaskCategory,
   TaskStatus,
+  TaskSubtask,
 } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
-import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import { CalendarIcon, PlusIcon, RefreshCwIcon, XIcon } from "../components/ui/icons.js";
+import { CalendarIcon, PlusIcon, RefreshCwIcon } from "../components/ui/icons.js";
 import { api } from "../lib/api.js";
+import DeleteConfirmModal from "../modules/routine/DeleteConfirmModal.js";
+import TaskDetailModal from "../modules/routine/TaskDetailModal.js";
+import TaskEditModal from "../modules/routine/TaskEditModal.js";
+import TaskForm from "../modules/routine/TaskForm.js";
+import TaskList from "../modules/routine/TaskList.js";
+import TaskTimelineView from "../modules/routine/TaskTimelineView.js";
 
-const CATEGORY_STYLES: Record<TaskCategory, string> = {
-  work: "border-l-blue-500/70",
-  workout: "border-l-red-500/70",
-  learning: "border-l-purple-500/70",
-  habit: "border-l-orange-500/70",
-  personal: "border-l-pink-500/70",
-  general: "border-l-gray-500/70",
-};
-
-const STATUS_VARIANTS: Record<TaskStatus, "info" | "success" | "warning" | "default"> = {
-  planned: "default",
-  in_progress: "info",
-  done: "success",
-  skipped: "warning",
-};
+type ViewMode = "list" | "timeline";
 
 export default function RoutinePage() {
   const today = getClientDateString();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(today);
+  const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [showForm, setShowForm] = useState(false);
-  const [title, setTitle] = useState("");
-  const [category, setCategory] = useState<TaskCategory>("general");
-  const [startTime, setStartTime] = useState("09:00");
-  const [endTime, setEndTime] = useState("10:00");
-  const [notes, setNotes] = useState("");
-  const [enableReminder, setEnableReminder] = useState(false);
-  const [reminderMinutesBefore, setReminderMinutesBefore] = useState(15);
-  const [reminderSound, setReminderSound] = useState("default");
-  const [error, setError] = useState<string | null>(null);
+  const [viewingTask, setViewingTask] = useState<Task | null>(null);
+  const [editingTask, setEditingTask] = useState<Task | null>(null);
+  const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
   const pausedRef = useRef(false);
   const toast = useAppToast();
 
@@ -52,279 +37,281 @@ export default function RoutinePage() {
     try {
       const data = await api.getTasks(date);
       setTasks(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load tasks");
-      toast.error("Failed to load tasks");
+    } catch {
+      toast.error("Failed to load tasks schedule");
     } finally {
       setLoading(false);
     }
   }, [date, toast]);
 
+  // Polling with FIXED Tab Visibility Leak
   useEffect(() => {
     fetchTasks();
-    const interval = setInterval(fetchTasks, 30_000);
+    const interval = setInterval(() => {
+      if (!pausedRef.current) {
+        fetchTasks();
+      }
+    }, 30_000);
     return () => clearInterval(interval);
   }, [fetchTasks]);
 
   useEffect(() => {
     const handler = () => {
       pausedRef.current = document.hidden;
-      if (!document.hidden) fetchTasks();
+      if (!document.hidden) {
+        fetchTasks();
+      }
     };
     document.addEventListener("visibilitychange", handler);
     return () => document.removeEventListener("visibilitychange", handler);
   }, [fetchTasks]);
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title.trim()) return;
+  // Create Task
+  const handleCreateTask = async (input: NewTaskInput) => {
     try {
-      const input: NewTaskInput = {
-        title: title.trim(),
-        category,
-        date,
-        startTime,
-        endTime,
-        notes: notes.trim() || undefined,
-        ...(enableReminder && {
-          reminderMinutesBefore,
-          reminderSilent: reminderSound === "none",
-        }),
-      };
       const result = await api.createTask(input);
-      if (enableReminder && reminderSound !== "none") {
-        const [y, m, d] = date.split("-").map(Number);
-        const [hh, mm] = startTime.split(":").map(Number);
-        const dt = new Date(y, m - 1, d, hh, mm);
-        dt.setMinutes(dt.getMinutes() - reminderMinutesBefore);
-        await api.createNotification({
-          taskId: result.task.id,
-          reminderTime: dt.toISOString(),
-          soundType: reminderSound as NewNotificationInput["soundType"],
-        });
-      }
-      setTitle("");
-      setNotes("");
-      setEnableReminder(false);
       setShowForm(false);
-      toast.success("Task created");
       fetchTasks();
+      toast.success("Task created successfully");
+
+      if (result.overlapsWith && result.overlapsWith.length > 0) {
+        const titles = result.overlapsWith.map((t) => `"${t.title}"`).join(", ");
+        toast.warning(`Note: Task overlaps with ${titles}`);
+      }
+
+      if (input.reminderMinutesBefore) {
+        try {
+          const [y, m, d] = input.date.split("-").map(Number);
+          const [hh, mm] = input.startTime.split(":").map(Number);
+          const dt = new Date(y, m - 1, d, hh, mm);
+          dt.setMinutes(dt.getMinutes() - input.reminderMinutesBefore);
+
+          await api.createNotification({
+            taskId: result.task.id,
+            reminderTime: dt.toISOString(),
+            soundType: input.reminderSilent
+              ? undefined
+              : ("default" as NewNotificationInput["soundType"]),
+          });
+        } catch {
+          toast.warning("Task created, but failed to schedule reminder notification");
+        }
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create task");
-      toast.error("Failed to create task");
+      toast.error(err instanceof Error ? err.message : "Failed to create task");
+      throw err;
     }
   };
 
-  const handleStatusChange = async (id: string, status: TaskStatus) => {
+  // Optimistic Status Update
+  const handleStatusChange = async (id: string, newStatus: TaskStatus) => {
+    const previousTasks = [...tasks];
+
+    // Optimistically update local state
+    setTasks((current) => current.map((t) => (t.id === id ? { ...t, status: newStatus } : t)));
+    if (viewingTask?.id === id) {
+      setViewingTask((prev) => (prev ? { ...prev, status: newStatus } : null));
+    }
+
     try {
-      await api.updateTaskStatus(id, status);
-      fetchTasks();
+      await api.updateTaskStatus(id, newStatus);
     } catch {
-      toast.error("Failed to update task");
+      // Rollback on failure
+      setTasks(previousTasks);
+      toast.error("Failed to update task status");
     }
   };
 
-  const handleDelete = async (id: string) => {
+  // Update Task
+  const handleUpdateTask = async (id: string, patch: Partial<Task>) => {
     try {
-      await api.deleteTask(id);
+      const result = await api.updateTask(id, patch);
       fetchTasks();
+      toast.success("Task updated");
+
+      if (result.overlapsWith && result.overlapsWith.length > 0) {
+        const titles = result.overlapsWith.map((t) => `"${t.title}"`).join(", ");
+        toast.warning(`Note: Task overlaps with ${titles}`);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Failed to update task");
+      throw err;
+    }
+  };
+
+  // Optimistic Toggle Subtask
+  const handleToggleSubtask = async (taskId: string, updatedSubtasks: TaskSubtask[]) => {
+    setTasks((current) =>
+      current.map((t) => (t.id === taskId ? { ...t, subtasks: updatedSubtasks } : t)),
+    );
+    if (viewingTask?.id === taskId) {
+      setViewingTask((prev) => (prev ? { ...prev, subtasks: updatedSubtasks } : null));
+    }
+
+    try {
+      await api.updateTask(taskId, { subtasks: updatedSubtasks });
     } catch {
+      fetchTasks();
+    }
+  };
+
+  // Optimistic Delete Task
+  const handleConfirmDelete = async () => {
+    if (!deletingTaskId) return;
+    const idToDelete = deletingTaskId;
+    const previousTasks = [...tasks];
+
+    // Optimistically update local state
+    setTasks((current) => current.filter((t) => t.id !== idToDelete));
+    setDeletingTaskId(null);
+    if (viewingTask?.id === idToDelete) {
+      setViewingTask(null);
+    }
+
+    try {
+      await api.deleteTask(idToDelete);
+      toast.success("Task deleted");
+    } catch {
+      // Rollback on failure
+      setTasks(previousTasks);
       toast.error("Failed to delete task");
     }
   };
 
+  const taskBeingDeleted = tasks.find((t) => t.id === deletingTaskId);
+
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-gray-100">Tasks</h1>
-          <p className="text-sm text-gray-500 mt-1">Plan and manage your day</p>
+          <h1 className="text-2xl font-bold text-gray-100">Routine & Schedule</h1>
+          <p className="text-sm text-gray-400 mt-1">
+            Plan, schedule, and execute your day structured by time blocks
+          </p>
         </div>
-        <div className="flex items-center gap-2">
+
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* View Mode Toggle */}
+          <div className="bg-gray-800/80 p-1 rounded-lg border border-gray-700/50 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => setViewMode("list")}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                viewMode === "list" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              List
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setViewMode("timeline")}
+              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
+                viewMode === "timeline"
+                  ? "bg-blue-600 text-white"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              Timeline
+            </button>
+          </div>
+
           <Button
             variant="secondary"
             size="sm"
             icon={<RefreshCwIcon size={14} />}
             onClick={fetchTasks}
+            aria-label="Refresh task schedule"
           />
+
           <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(!showForm)}>
             Add Task
           </Button>
         </div>
       </div>
 
-      {error && (
-        <div className="bg-red-900/30 border border-red-800/50 text-red-300 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-red-500" />
-          {error}
-          <button onClick={() => setError(null)} className="ml-auto">
-            <XIcon size={14} />
-          </button>
-        </div>
-      )}
-
-      <div className="flex items-center gap-2">
-        <CalendarIcon size={16} className="text-gray-500" />
+      {/* Date Selector */}
+      <div className="flex items-center gap-3 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">
+        <CalendarIcon size={18} className="text-blue-400" />
+        <label htmlFor="routine-date-picker" className="text-xs font-medium text-gray-400">
+          Viewing Schedule For:
+        </label>
         <input
+          id="routine-date-picker"
           type="date"
           value={date}
           onChange={(e) => setDate(e.target.value)}
-          className="bg-gray-800/60 border border-gray-700/50 text-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500/50"
+          className="bg-gray-700/60 border border-gray-600/50 text-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500/50"
         />
+        {date === today && (
+          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-medium">
+            Today
+          </span>
+        )}
       </div>
 
+      {/* Task Creation Form */}
       {showForm && (
-        <Card className="border-blue-500/20">
-          <form onSubmit={handleCreate} className="space-y-3">
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="What do you need to do?"
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
-              required
-            />
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <select
-                value={category}
-                onChange={(e) => setCategory(e.target.value as TaskCategory)}
-                className="bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-              >
-                <option value="general">General</option>
-                <option value="work">Work</option>
-                <option value="workout">Workout</option>
-                <option value="learning">Learning</option>
-                <option value="habit">Habit</option>
-                <option value="personal">Personal</option>
-              </select>
-              <div>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-                />
-              </div>
-              <div>
-                <input
-                  type="time"
-                  value={endTime}
-                  onChange={(e) => setEndTime(e.target.value)}
-                  className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-                />
-              </div>
-              <Button type="submit" size="sm" className="w-full">
-                Create
-              </Button>
-            </div>
-            <textarea
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Notes (optional)"
-              rows={2}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500 resize-none"
-            />
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={enableReminder}
-                  onChange={(e) => setEnableReminder(e.target.checked)}
-                  className="rounded bg-gray-700/50 border-gray-600/50 accent-blue-500"
-                />
-                <span>Notify me</span>
-              </label>
-              {enableReminder && (
-                <div className="grid grid-cols-2 gap-3 pl-6">
-                  <select
-                    value={reminderMinutesBefore}
-                    onChange={(e) => setReminderMinutesBefore(Number(e.target.value))}
-                    className="bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-                  >
-                    <option value={5}>5 min before</option>
-                    <option value={10}>10 min before</option>
-                    <option value={15}>15 min before</option>
-                    <option value={30}>30 min before</option>
-                    <option value={60}>1 hour before</option>
-                  </select>
-                  <select
-                    value={reminderSound}
-                    onChange={(e) => setReminderSound(e.target.value)}
-                    className="bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-                  >
-                    <option value="default">Default</option>
-                    <option value="gentle">Gentle</option>
-                    <option value="urgent">Urgent</option>
-                    <option value="chime">Chime</option>
-                    <option value="none">Silent</option>
-                  </select>
-                </div>
-              )}
-            </div>
-          </form>
-        </Card>
+        <TaskForm
+          onSubmit={handleCreateTask}
+          onCancel={() => setShowForm(false)}
+          defaultDate={date}
+        />
       )}
 
+      {/* Content Area */}
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
             <div key={i} className="h-16 bg-gray-800/60 rounded-xl animate-pulse" />
           ))}
         </div>
-      ) : tasks.length === 0 ? (
-        <Card className="text-center py-8">
-          <CalendarIcon size={32} className="text-gray-600 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">No tasks scheduled for this day</p>
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<PlusIcon size={14} />}
-            onClick={() => setShowForm(true)}
-            className="mt-3"
-          >
-            Create your first task
-          </Button>
-        </Card>
+      ) : viewMode === "list" ? (
+        <TaskList
+          tasks={tasks}
+          onStatusChange={handleStatusChange}
+          onEdit={(task) => setEditingTask(task)}
+          onDelete={(id) => setDeletingTaskId(id)}
+          onToggleSubtask={handleToggleSubtask}
+        />
       ) : (
-        <div className="space-y-2">
-          {tasks.map((task) => (
-            <Card
-              key={task.id}
-              padding="sm"
-              className={`flex items-center gap-4 ${CATEGORY_STYLES[task.category]}`}
-            >
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-200 truncate">{task.title}</span>
-                  <Badge variant={STATUS_VARIANTS[task.status]} size="sm">
-                    {task.status.replace("_", " ")}
-                  </Badge>
-                </div>
-                <p className="text-xs text-gray-500 mt-0.5">
-                  {task.startTime} – {task.endTime}
-                  {task.notes && <span className="ml-2">· {task.notes}</span>}
-                </p>
-              </div>
-              <select
-                value={task.status}
-                onChange={(e) => handleStatusChange(task.id, e.target.value as TaskStatus)}
-                className="bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-2 py-1 text-xs focus:outline-none focus:border-blue-500/50 cursor-pointer"
-              >
-                <option value="planned">Planned</option>
-                <option value="in_progress">In Progress</option>
-                <option value="done">Done</option>
-                <option value="skipped">Skipped</option>
-              </select>
-              <button
-                onClick={() => handleDelete(task.id)}
-                className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-              >
-                <XIcon size={14} />
-              </button>
-            </Card>
-          ))}
-        </div>
+        <TaskTimelineView
+          tasks={tasks}
+          selectedDate={date}
+          todayDate={today}
+          onViewTask={(task) => setViewingTask(task)}
+        />
+      )}
+
+      {/* Detail Modal */}
+      {viewingTask && (
+        <TaskDetailModal
+          task={viewingTask}
+          onClose={() => setViewingTask(null)}
+          onEdit={(task) => setEditingTask(task)}
+          onDelete={(id) => setDeletingTaskId(id)}
+          onToggleSubtask={handleToggleSubtask}
+          onStatusChange={handleStatusChange}
+        />
+      )}
+
+      {/* Edit Modal */}
+      {editingTask && (
+        <TaskEditModal
+          task={editingTask}
+          onSave={handleUpdateTask}
+          onClose={() => setEditingTask(null)}
+        />
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {deletingTaskId && taskBeingDeleted && (
+        <DeleteConfirmModal
+          taskTitle={taskBeingDeleted.title}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setDeletingTaskId(null)}
+        />
       )}
     </div>
   );

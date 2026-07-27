@@ -2,6 +2,14 @@ export type TaskCategory = "work" | "workout" | "learning" | "habit" | "personal
 
 export type TaskStatus = "planned" | "in_progress" | "done" | "skipped";
 
+export type TaskRecurrence = "none" | "daily" | "weekdays" | "weekly";
+
+export interface TaskSubtask {
+  id: string;
+  title: string;
+  completed: boolean;
+}
+
 export interface Task {
   id: string;
   title: string;
@@ -13,6 +21,9 @@ export interface Task {
   notes?: string;
   reminderMinutesBefore?: number | null;
   reminderSilent: boolean;
+  recurrence?: TaskRecurrence;
+  isOvernight?: boolean;
+  subtasks?: TaskSubtask[];
   createdAt: string;
   updatedAt: string;
 }
@@ -26,6 +37,8 @@ export interface NewTaskInput {
   notes?: string;
   reminderMinutesBefore?: number | null;
   reminderSilent?: boolean;
+  recurrence?: TaskRecurrence;
+  subtasks?: TaskSubtask[];
 }
 
 export type HabitFrequency = "daily" | "weekly";
@@ -446,6 +459,9 @@ export {
   getClientDateString,
   getClientMonthString,
   getClientCurrentMinute,
+  isValidDateString,
+  isWeekday,
+  getDayOfWeekIndex,
 } from "./date-utils.js";
 
 export * from "./schemas.js";

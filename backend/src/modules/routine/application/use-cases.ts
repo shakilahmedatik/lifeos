@@ -8,8 +8,8 @@ export function createTask(
   repo: TaskRepository,
   input: NewTaskInput,
 ): { task: Task; overlapsWith: Task[] } {
-  if (input.startTime >= input.endTime) {
-    throw new Error("startTime must be before endTime");
+  if (input.startTime === input.endTime) {
+    throw new Error("startTime cannot be equal to endTime");
   }
 
   const id = randomUUID();
@@ -31,16 +31,28 @@ export function setTaskStatus(repo: TaskRepository, id: string, status: Task["st
   return task;
 }
 
-export function updateTask(repo: TaskRepository, id: string, patch: Partial<NewTaskInput>): Task {
-  if (patch.startTime !== undefined && patch.endTime !== undefined) {
-    if (patch.startTime >= patch.endTime) {
-      throw new Error("startTime must be before endTime");
-    }
+export function updateTask(
+  repo: TaskRepository,
+  id: string,
+  patch: Partial<NewTaskInput>,
+): { task: Task; overlapsWith: Task[] } {
+  const existing = repo.getById(id);
+  if (!existing) throw new Error(`Task ${id} not found`);
+
+  const mergedStart = patch.startTime ?? existing.startTime;
+  const mergedEnd = patch.endTime ?? existing.endTime;
+
+  if (mergedStart === mergedEnd) {
+    throw new Error("startTime cannot be equal to endTime");
   }
 
   const task = repo.update(id, patch);
   if (!task) throw new Error(`Task ${id} not found`);
-  return task;
+
+  const dayTasks = repo.getByDate(task.date);
+  const overlapsWith = dayTasks.filter((t) => t.id !== task.id && tasksOverlap(task, t));
+
+  return { task, overlapsWith };
 }
 
 export function deleteTask(repo: TaskRepository, id: string): void {

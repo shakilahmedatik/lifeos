@@ -1,5 +1,10 @@
+import {
+  NewTaskInputSchema,
+  UpdateStatusSchema,
+  UpdateTaskSchema,
+  isValidDateString,
+} from "@lifeos/contracts";
 import { Router } from "express";
-import { z } from "zod";
 
 import {
   createTask,
@@ -10,73 +15,25 @@ import {
 } from "../application/use-cases.js";
 import type { TaskRepository } from "../ports/task-repository.js";
 
-const TaskCategorySchema = z.enum(["work", "workout", "learning", "habit", "personal", "general"]);
-const TaskStatusSchema = z.enum(["planned", "in_progress", "done", "skipped"]);
-
-const CreateTaskSchema = z.object({
-  title: z.string().min(1),
-  category: TaskCategorySchema.optional(),
-  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-  startTime: z.string().regex(/^\d{2}:\d{2}$/),
-  endTime: z.string().regex(/^\d{2}:\d{2}$/),
-  notes: z.string().optional(),
-  reminderMinutesBefore: z
-    .number()
-    .int()
-    .refine((v) => v === null || [5, 10, 15, 30, 60].includes(v), {
-      message: "reminderMinutesBefore must be one of 5, 10, 15, 30, 60",
-    })
-    .nullable()
-    .optional(),
-  reminderSilent: z.boolean().optional(),
-});
-
-const UpdateTaskSchema = z.object({
-  title: z.string().min(1).optional(),
-  category: TaskCategorySchema.optional(),
-  date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .optional(),
-  startTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .optional(),
-  endTime: z
-    .string()
-    .regex(/^\d{2}:\d{2}$/)
-    .optional(),
-  notes: z.string().optional(),
-  reminderMinutesBefore: z
-    .number()
-    .int()
-    .refine((v) => v === null || [5, 10, 15, 30, 60].includes(v), {
-      message: "reminderMinutesBefore must be one of 5, 10, 15, 30, 60",
-    })
-    .nullable()
-    .optional(),
-  reminderSilent: z.boolean().optional(),
-});
-
-const UpdateStatusSchema = z.object({
-  status: TaskStatusSchema,
-});
-
 export function createRoutineRouter(repo: TaskRepository): Router {
   const router = Router();
 
   router.get("/tasks", (req, res) => {
     const date = req.query.date as string | undefined;
-    if (!date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    if (!date || !isValidDateString(date)) {
       res.status(400).json({ error: "Missing or invalid ?date=YYYY-MM-DD query param" });
       return;
     }
-    const tasks = getDaySchedule(repo, date);
-    res.json(tasks);
+    try {
+      const tasks = getDaySchedule(repo, date);
+      res.json(tasks);
+    } catch (err) {
+      res.status(500).json({ error: "Failed to retrieve schedule" });
+    }
   });
 
   router.post("/tasks", (req, res) => {
-    const parsed = CreateTaskSchema.safeParse(req.body);
+    const parsed = NewTaskInputSchema.safeParse(req.body);
     if (!parsed.success) {
       res.status(400).json({ error: parsed.error.flatten() });
       return;
@@ -85,7 +42,8 @@ export function createRoutineRouter(repo: TaskRepository): Router {
       const result = createTask(repo, parsed.data);
       res.status(201).json(result);
     } catch (err) {
-      res.status(400).json({ error: (err as Error).message });
+      const msg = (err as Error).message;
+      res.status(400).json({ error: msg });
     }
   });
 
@@ -96,10 +54,15 @@ export function createRoutineRouter(repo: TaskRepository): Router {
       return;
     }
     try {
-      const task = updateTask(repo, req.params.id, parsed.data);
-      res.json(task);
+      const result = updateTask(repo, req.params.id, parsed.data);
+      res.json(result);
     } catch (err) {
-      res.status(404).json({ error: (err as Error).message });
+      const msg = (err as Error).message;
+      if (msg.includes("not found")) {
+        res.status(404).json({ error: msg });
+      } else {
+        res.status(400).json({ error: msg });
+      }
     }
   });
 
@@ -113,7 +76,12 @@ export function createRoutineRouter(repo: TaskRepository): Router {
       const task = setTaskStatus(repo, req.params.id, parsed.data.status);
       res.json(task);
     } catch (err) {
-      res.status(404).json({ error: (err as Error).message });
+      const msg = (err as Error).message;
+      if (msg.includes("not found")) {
+        res.status(404).json({ error: msg });
+      } else {
+        res.status(400).json({ error: msg });
+      }
     }
   });
 
@@ -122,7 +90,12 @@ export function createRoutineRouter(repo: TaskRepository): Router {
       deleteTask(repo, req.params.id);
       res.status(204).end();
     } catch (err) {
-      res.status(404).json({ error: (err as Error).message });
+      const msg = (err as Error).message;
+      if (msg.includes("not found")) {
+        res.status(404).json({ error: msg });
+      } else {
+        res.status(500).json({ error: "Failed to delete task" });
+      }
     }
   });
 

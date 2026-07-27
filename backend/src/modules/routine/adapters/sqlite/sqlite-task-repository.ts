@@ -1,6 +1,8 @@
+import { getDayOfWeekIndex, isWeekday } from "@lifeos/contracts";
 import type Database from "better-sqlite3";
 
-import type { NewTaskInput, Task } from "../../domain/types.js";
+import { isOvernightTask } from "../../domain/rules.js";
+import type { NewTaskInput, Task, TaskRecurrence, TaskSubtask } from "../../domain/types.js";
 import type { TaskRepository } from "../../ports/task-repository.js";
 
 interface TaskRow {
@@ -14,22 +16,38 @@ interface TaskRow {
   notes: string | null;
   reminder_minutes_before: number | null;
   reminder_sound: number;
+  recurrence: TaskRecurrence;
+  subtasks?: string | null;
   created_at: string;
   updated_at: string;
 }
 
-function rowToTask(row: TaskRow): Task {
+function parseSubtasks(raw?: string | null): TaskSubtask[] {
+  if (!raw) return [];
+  try {
+    return JSON.parse(raw);
+  } catch {
+    return [];
+  }
+}
+
+function rowToTask(row: TaskRow, dateOverride?: string): Task {
+  const startTime = row.start_time;
+  const endTime = row.end_time;
   return {
     id: row.id,
     title: row.title,
     category: row.category,
-    date: row.date,
-    startTime: row.start_time,
-    endTime: row.end_time,
+    date: dateOverride ?? row.date,
+    startTime,
+    endTime,
     status: row.status,
     notes: row.notes ?? undefined,
     reminderMinutesBefore: row.reminder_minutes_before ?? undefined,
     reminderSilent: row.reminder_sound !== 1,
+    recurrence: row.recurrence ?? "none",
+    isOvernight: isOvernightTask(startTime, endTime),
+    subtasks: parseSubtasks(row.subtasks),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -44,18 +62,51 @@ export class SqliteTaskRepository implements TaskRepository {
   }
 
   getByDate(date: string): Task[] {
-    const rows = this.db
-      .prepare("SELECT * FROM tasks WHERE date = ? ORDER BY start_time")
+    // 1. Direct date tasks
+    const directRows = this.db.prepare("SELECT * FROM tasks WHERE date = ?").all(date) as TaskRow[];
+
+    const taskMap = new Map<string, Task>();
+    for (const r of directRows) {
+      taskMap.set(r.id, rowToTask(r));
+    }
+
+    // 2. Recurring tasks starting on or before date
+    const recurringRows = this.db
+      .prepare("SELECT * FROM tasks WHERE recurrence != 'none' AND date <= ?")
       .all(date) as TaskRow[];
-    return rows.map(rowToTask);
+
+    const targetDayIndex = getDayOfWeekIndex(date);
+    const targetIsWeekday = isWeekday(date, "bd"); // Bangladesh: Sun-Thu
+
+    for (const r of recurringRows) {
+      if (taskMap.has(r.id)) continue; // Already added as direct date
+
+      let matches = false;
+      if (r.recurrence === "daily") {
+        matches = true;
+      } else if (r.recurrence === "weekdays") {
+        matches = targetIsWeekday;
+      } else if (r.recurrence === "weekly") {
+        matches = getDayOfWeekIndex(r.date) === targetDayIndex;
+      }
+
+      if (matches) {
+        taskMap.set(r.id, rowToTask(r, date));
+      }
+    }
+
+    const tasks = Array.from(taskMap.values());
+    return tasks.sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
   create(id: string, input: NewTaskInput): Task {
     const now = new Date().toISOString();
+    const subtasksJson = JSON.stringify(input.subtasks ?? []);
+
     this.db
       .prepare(
-        `INSERT INTO tasks (id, title, category, date, start_time, end_time, status, notes, reminder_minutes_before, reminder_sound, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?, ?, ?)`,
+        `INSERT INTO tasks (id, title, category, date, start_time, end_time, status, notes, reminder_minutes_before, reminder_sound, recurrence, subtasks, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -67,6 +118,8 @@ export class SqliteTaskRepository implements TaskRepository {
         input.notes ?? null,
         input.reminderMinutesBefore ?? null,
         input.reminderSilent ? 0 : 1,
+        input.recurrence ?? "none",
+        subtasksJson,
         now,
         now,
       );
@@ -112,6 +165,14 @@ export class SqliteTaskRepository implements TaskRepository {
     if (patch.reminderSilent !== undefined) {
       fields.push("reminder_sound = ?");
       values.push(patch.reminderSilent ? 0 : 1);
+    }
+    if (patch.recurrence !== undefined) {
+      fields.push("recurrence = ?");
+      values.push(patch.recurrence);
+    }
+    if (patch.subtasks !== undefined) {
+      fields.push("subtasks = ?");
+      values.push(JSON.stringify(patch.subtasks));
     }
 
     if (fields.length === 0) return existing;

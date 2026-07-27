@@ -99,7 +99,7 @@ export const api = {
       body: JSON.stringify({ status }),
     }),
   updateTask: (id: string, patch: Partial<import("@lifeos/contracts").NewTaskInput>) =>
-    request<Task>(`/api/routine/tasks/${id}`, {
+    request<{ task: Task; overlapsWith: Task[] }>(`/api/routine/tasks/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
