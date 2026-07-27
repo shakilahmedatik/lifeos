@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { createTask, deleteTask, setTaskStatus, updateTask } from "../application/use-cases.js";
+import { createTask, deleteTask, updateTask } from "../application/use-cases.js";
 import type { NewTaskInput, Task } from "../domain/types.js";
 import type { TaskRepository } from "../ports/task-repository.js";
 

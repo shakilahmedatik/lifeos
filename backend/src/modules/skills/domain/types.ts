@@ -1,12 +1,12 @@
 export type {
-  SkillArea,
-  NewSkillAreaInput,
+  LearningLog,
+  LearningResource,
   LearningResourceType,
   LearningUnit,
-  LearningResource,
-  NewLearningResourceInput,
-  LearningLog,
   NewLearningLogInput,
+  NewLearningResourceInput,
+  NewSkillAreaInput,
   ResourceWithProgress,
+  SkillArea,
   SkillAreaSummary,
 } from "@lifeos/contracts";

@@ -1,6 +1,4 @@
 import { useMemo, useState } from "react";
-
-import type { Workout, WorkoutSession } from "@lifeos/contracts";
 import { useWorkoutSessions, useWorkouts } from "./useWorkouts.js";
 
 interface WorkoutHistoryWithFilterProps {

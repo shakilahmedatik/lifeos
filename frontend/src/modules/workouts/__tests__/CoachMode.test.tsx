@@ -1,7 +1,6 @@
+import type { Exercise, WorkoutWithExercises } from "@lifeos/contracts";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { Exercise, WorkoutWithExercises } from "@lifeos/contracts";
 import { CoachMode } from "../CoachMode.js";
 
 const mockExercises: Exercise[] = [

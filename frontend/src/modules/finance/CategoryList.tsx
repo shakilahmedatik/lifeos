@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-
 import type { Category } from "@lifeos/contracts";
+import { useCallback, useEffect, useState } from "react";
 import { archiveCategory, createCategory, fetchCategories } from "./api.js";
 
 export function CategoryList() {
@@ -10,18 +9,18 @@ export function CategoryList() {
   const [newName, setNewName] = useState("");
   const [newKind, setNewKind] = useState<Category["kind"]>("expense");
 
-  useEffect(() => {
-    loadCategories();
-  }, []);
-
-  async function loadCategories() {
+  const loadCategories = useCallback(async () => {
     try {
       const data = await fetchCategories();
       setCategories(data);
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    loadCategories();
+  }, [loadCategories]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();

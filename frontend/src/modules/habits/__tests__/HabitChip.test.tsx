@@ -1,7 +1,6 @@
+import type { HabitWithStreak } from "@lifeos/contracts";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
-
-import type { HabitWithStreak } from "@lifeos/contracts";
 import HabitChip from "../HabitChip.js";
 
 const mockHabit: HabitWithStreak = {

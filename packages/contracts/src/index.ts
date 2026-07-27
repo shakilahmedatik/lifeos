@@ -458,12 +458,12 @@ export interface NotificationWithTask extends Notification {
 }
 
 export {
+  getClientCurrentMinute,
   getClientDateString,
   getClientMonthString,
-  getClientCurrentMinute,
+  getDayOfWeekIndex,
   isValidDateString,
   isWeekday,
-  getDayOfWeekIndex,
 } from "./date-utils.js";
 
 export * from "./schemas.js";

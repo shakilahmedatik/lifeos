@@ -5,7 +5,7 @@ interface WorkoutProgressProps {
 }
 
 export function WorkoutProgress({ workoutId }: WorkoutProgressProps) {
-  const { stats, loading: statsLoading } = useWorkoutStats();
+  const { loading: statsLoading } = useWorkoutStats();
   const { sessions, loading: sessionsLoading } = useWorkoutSessions();
 
   if (statsLoading || sessionsLoading) {

@@ -1,8 +1,8 @@
 export type {
+  NewNotificationInput,
+  Notification,
   NotificationSoundType,
   NotificationStatus,
-  Notification,
-  NewNotificationInput,
-  UpdateNotificationInput,
   NotificationWithTask,
+  UpdateNotificationInput,
 } from "@lifeos/contracts";

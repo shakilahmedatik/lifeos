@@ -67,11 +67,7 @@ export default function SkillsPage() {
     setShowSessionForm(false);
   };
 
-  const handleCourseSubmit = (input: {
-    name: string;
-    platform: string;
-    totalLessons: number;
-  }) => {
+  const handleCourseSubmit = (input: { name: string; platform: string; totalLessons: number }) => {
     if (editingCourse) {
       editCourse(editingCourse.id, input);
       setEditingCourse(null);
@@ -288,7 +284,7 @@ export default function SkillsPage() {
               }}
               onDelete={(id) => {
                 const category = categories.find((c) => c.id === id);
-                const sessionCount = sessions.filter((s) => s.skillCategoryId === id).length;
+                const _sessionCount = sessions.filter((s) => s.skillCategoryId === id).length;
                 setDeleteConfirmation({
                   type: "category",
                   id,

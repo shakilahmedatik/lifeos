@@ -1,10 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-
 import type { WorkoutWithExercises } from "@lifeos/contracts";
+import { useCallback, useEffect, useState } from "react";
 import { playNotificationSound } from "../notifications/sound-player.js";
 import { addExerciseLog, completeSession, startSession } from "./api.js";
-import { useWorkoutTimerSSE } from "./useWorkoutTimerSSE.js";
 import { useExercises } from "./useWorkouts.js";
+import { useWorkoutTimerSSE } from "./useWorkoutTimerSSE.js";
 
 interface CoachModeProps {
   workout: WorkoutWithExercises;

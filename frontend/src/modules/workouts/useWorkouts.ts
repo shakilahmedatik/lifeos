@@ -1,5 +1,3 @@
-import { useCallback, useEffect, useState } from "react";
-
 import type {
   Exercise,
   NewExerciseInput,
@@ -10,6 +8,7 @@ import type {
   WorkoutStats,
   WorkoutWithExercises,
 } from "@lifeos/contracts";
+import { useCallback, useEffect, useState } from "react";
 import * as api from "./api.js";
 
 export function useWorkouts() {

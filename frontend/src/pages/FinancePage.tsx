@@ -7,11 +7,10 @@ import type {
 import { getClientDateString, getClientMonthString } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
-import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
+import { PlusIcon } from "../components/ui/icons.js";
 import Modal from "../components/ui/Modal.js";
-import { PlusIcon, WalletIcon } from "../components/ui/icons.js";
 import * as financeApi from "../modules/finance/api.js";
 
 export default function FinancePage() {

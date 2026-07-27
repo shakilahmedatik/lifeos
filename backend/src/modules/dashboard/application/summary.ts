@@ -1,6 +1,4 @@
 import type { DashboardSummary } from "@lifeos/contracts";
-import { nowIsoInDhaka } from "../../../shared/timezone.js";
-import type { HabitWithStreak } from "../../habits/domain/types.js";
 import type { Task } from "../../routine/domain/types.js";
 import type { DashboardDependencies } from "../ports/dashboard-dependencies.js";
 

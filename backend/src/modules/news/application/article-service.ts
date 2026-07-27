@@ -3,7 +3,7 @@ import type { NewsArticleRepository, RssFeedRepository } from "../ports/reposito
 
 export function createArticleService(
   articleRepository: NewsArticleRepository,
-  feedRepository: RssFeedRepository,
+  _feedRepository: RssFeedRepository,
 ) {
   return {
     getArticles(limit = 20, offset = 0): NewsArticle[] {

@@ -179,7 +179,7 @@ export function getSessionCountByCategory(categoryId: string): number {
 export function getLearningStats() {
   const sessions = getSessions();
   const courses = getCourses();
-  const categories = getCategories();
+  const _categories = getCategories();
 
   return {
     totalSessions: sessions.length,

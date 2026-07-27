@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-
 import type { Account, Category, NewTransactionInput } from "@lifeos/contracts";
+import { useCallback, useEffect, useState } from "react";
 import { createTransaction, fetchActiveAccounts, fetchActiveCategories } from "./api.js";
 
 interface TransactionFormProps {
@@ -19,11 +18,7 @@ export function TransactionForm({ onTransactionCreated }: TransactionFormProps) 
   const [amount, setAmount] = useState("");
   const [note, setNote] = useState("");
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  async function loadData() {
+  const loadData = useCallback(async () => {
     try {
       const [accountsData, categoriesData] = await Promise.all([
         fetchActiveAccounts(),
@@ -36,7 +31,11 @@ export function TransactionForm({ onTransactionCreated }: TransactionFormProps) 
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
