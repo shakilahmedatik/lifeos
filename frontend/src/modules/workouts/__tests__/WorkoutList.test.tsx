@@ -1,7 +1,7 @@
+// @vitest-environment jsdom
+import type { Workout } from "@lifeos/contracts";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
-
-import type { Workout } from "@lifeos/contracts";
 import { WorkoutList } from "../WorkoutList.js";
 
 const mockWorkouts: Workout[] = [

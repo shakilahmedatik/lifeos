@@ -1,6 +1,5 @@
-import { useState } from "react";
-
 import type { NewWorkoutExerciseInput } from "@lifeos/contracts";
+import { useState } from "react";
 import { addExerciseToWorkout, removeExerciseFromWorkout, updateWorkoutExercise } from "./api.js";
 import { useExercises, useWorkout } from "./useWorkouts.js";
 

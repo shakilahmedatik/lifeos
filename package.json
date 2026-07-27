@@ -8,6 +8,8 @@
     "format": "biome format . --write"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4"
+    "@biomejs/biome": "^2.5.5",
+    "jsdom": "^29.1.1",
+    "vitest": "^4.1.10"
   }
 }

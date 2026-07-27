@@ -1,6 +1,5 @@
-import { useState } from "react";
-
 import type { NewWorkoutInput, Workout } from "@lifeos/contracts";
+import { useState } from "react";
 import { useWorkouts } from "./useWorkouts.js";
 
 interface WorkoutListProps {
@@ -96,7 +95,6 @@ export function WorkoutList({ onSelectWorkout, onStartSession }: WorkoutListProp
           {workouts.map((workout) => (
             <div
               key={workout.id}
-              // biome-ignore lint/a11y/useSemanticElements: outer element cannot be button because child action buttons exist
               role="button"
               tabIndex={0}
               className="p-4 border rounded hover:bg-gray-50 w-full text-left cursor-pointer"

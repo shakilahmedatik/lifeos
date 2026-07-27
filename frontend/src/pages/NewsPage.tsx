@@ -1,11 +1,10 @@
 import type { NewsArticle, RssFeed } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
-import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import Modal from "../components/ui/Modal.js";
 import { NewspaperIcon, PlusIcon, RefreshCwIcon } from "../components/ui/icons.js";
+import Modal from "../components/ui/Modal.js";
 import * as newsApi from "../modules/news/api.js";
 
 export default function NewsPage() {

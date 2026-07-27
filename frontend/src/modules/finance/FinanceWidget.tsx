@@ -1,17 +1,12 @@
-import { useEffect, useState } from "react";
-
 import type { MonthlySummary } from "@lifeos/contracts";
+import { useCallback, useEffect, useState } from "react";
 import { fetchMonthlySummary } from "./api.js";
 
 export function FinanceWidget() {
   const [summary, setSummary] = useState<MonthlySummary | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadSummary();
-  }, []);
-
-  async function loadSummary() {
+  const loadSummary = useCallback(async () => {
     try {
       const now = new Date();
       const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -20,7 +15,11 @@ export function FinanceWidget() {
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    loadSummary();
+  }, [loadSummary]);
 
   function formatAmount(amountMinor: number): string {
     return `৳${(amountMinor / 100).toFixed(0)}`;

@@ -4,9 +4,9 @@ import { useState } from "react";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import Modal from "../components/ui/Modal.js";
+import Card from "../components/ui/Card.js";
 import { CheckCheckIcon, PlusIcon } from "../components/ui/icons.js";
+import Modal from "../components/ui/Modal.js";
 import { useHabits } from "../modules/habits/useHabits.js";
 
 const CATEGORY_VARIANTS: Record<
@@ -27,7 +27,7 @@ export default function HabitsPage() {
   const [name, setName] = useState("");
   const [frequency, setFrequency] = useState<"daily" | "weekly">("daily");
   const [category, setCategory] = useState<HabitCategory>("general");
-  const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const [_editingHabit, _setEditingHabit] = useState<Habit | null>(null);
   const toast = useAppToast();
 
   const handleSubmit = async (e: React.FormEvent) => {

@@ -1,16 +1,14 @@
-import { Router } from "express";
-
-import type { AccountService } from "../application/account-service.js";
-import type { CategoryService } from "../application/category-service.js";
-import type { FinanceReportService } from "../application/finance-report-service.js";
-import type { TransactionService } from "../application/transaction-service.js";
-
 import {
   NewAccountInputSchema,
   NewCategoryInputSchema,
   NewTransactionInputSchema,
 } from "@lifeos/contracts";
+import { Router } from "express";
 import { validateBody } from "../../../shared/validate.js";
+import type { AccountService } from "../application/account-service.js";
+import type { CategoryService } from "../application/category-service.js";
+import type { FinanceReportService } from "../application/finance-report-service.js";
+import type { TransactionService } from "../application/transaction-service.js";
 
 export function createFinanceRouter(
   accountService: AccountService,

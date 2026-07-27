@@ -3,8 +3,8 @@ import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import Modal from "../components/ui/Modal.js";
 import { GraduationCapIcon, PlusIcon } from "../components/ui/icons.js";
+import Modal from "../components/ui/Modal.js";
 import {
   useCourseProgress,
   useLearningSessions,

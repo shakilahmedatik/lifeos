@@ -1,8 +1,8 @@
 export type {
-  TaskCategory,
-  TaskStatus,
-  TaskRecurrence,
-  TaskSubtask,
-  Task,
   NewTaskInput,
+  Task,
+  TaskCategory,
+  TaskRecurrence,
+  TaskStatus,
+  TaskSubtask,
 } from "@lifeos/contracts";

@@ -13,6 +13,7 @@ describe("NotificationService", () => {
       findByUserId: vi.fn().mockReturnValue([]),
       findByTaskId: vi.fn().mockReturnValue([]),
       findPendingNotifications: vi.fn().mockReturnValue([]),
+      getUnreadCount: vi.fn().mockReturnValue(0),
       create: vi.fn(),
       update: vi.fn(),
       delete: vi.fn(),
@@ -61,5 +62,11 @@ describe("NotificationService", () => {
   it("should get pending notifications", () => {
     service.getPendingNotifications();
     expect(mockRepository.findPendingNotifications).toHaveBeenCalled();
+  });
+
+  it("should get unread count", () => {
+    const count = service.getUnreadCount("user-1");
+    expect(mockRepository.getUnreadCount).toHaveBeenCalledWith("user-1");
+    expect(count).toBe(0);
   });
 });

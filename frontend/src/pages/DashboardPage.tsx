@@ -309,13 +309,7 @@ function TaskProgress({ done, total }: { done: number; total: number }) {
   );
 }
 
-function HabitChip({
-  habit,
-  onToggle,
-}: {
-  habit: HabitWithStreak;
-  onToggle: () => void;
-}) {
+function HabitChip({ habit, onToggle }: { habit: HabitWithStreak; onToggle: () => void }) {
   return (
     <button
       onClick={onToggle}

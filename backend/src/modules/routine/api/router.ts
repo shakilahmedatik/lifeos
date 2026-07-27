@@ -1,8 +1,8 @@
 import {
+  isValidDateString,
   NewTaskInputSchema,
   UpdateStatusSchema,
   UpdateTaskSchema,
-  isValidDateString,
 } from "@lifeos/contracts";
 import { Router } from "express";
 
@@ -27,7 +27,7 @@ export function createRoutineRouter(repo: TaskRepository): Router {
     try {
       const tasks = getDaySchedule(repo, date);
       res.json(tasks);
-    } catch (err) {
+    } catch (_err) {
       res.status(500).json({ error: "Failed to retrieve schedule" });
     }
   });

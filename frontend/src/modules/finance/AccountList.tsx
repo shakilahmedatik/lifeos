@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-
 import type { Account } from "@lifeos/contracts";
+import { useCallback, useEffect, useState } from "react";
 import { archiveAccount, createAccount, fetchAccounts } from "./api.js";
 
 export function AccountList() {
@@ -10,18 +9,18 @@ export function AccountList() {
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<Account["type"]>("bank");
 
-  useEffect(() => {
-    loadAccounts();
-  }, []);
-
-  async function loadAccounts() {
+  const loadAccounts = useCallback(async () => {
     try {
       const data = await fetchAccounts();
       setAccounts(data);
     } finally {
       setLoading(false);
     }
-  }
+  }, []);
+
+  useEffect(() => {
+    loadAccounts();
+  }, [loadAccounts]);
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
