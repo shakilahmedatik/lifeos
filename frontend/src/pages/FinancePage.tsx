@@ -1,11 +1,21 @@
-import { useEffect, useState } from "react";
-import type { AccountWithBalance, Transaction, Category, NewTransactionInput } from "../../../packages/contracts/src/index.js";
-import * as financeApi from "../modules/finance/api.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
+import { useCallback, useEffect, useState } from "react";
+import type {
+  AccountWithBalance,
+  Category,
+  NewTransactionInput,
+  Transaction,
+} from "../../../packages/contracts/src/index.js";
+import {
+  getClientDateString,
+  getClientMonthString,
+} from "../../../packages/contracts/src/index.js";
+import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
+import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import Modal from "../components/ui/Modal.js";
 import { PlusIcon, WalletIcon } from "../components/ui/icons.js";
+import * as financeApi from "../modules/finance/api.js";
 
 export default function FinancePage() {
   const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
@@ -17,26 +27,29 @@ export default function FinancePage() {
   const [accountId, setAccountId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [note, setNote] = useState("");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(getClientDateString());
+  const toast = useAppToast();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [acs, txs, cats] = await Promise.all([
         financeApi.fetchAccountBalances(),
-        financeApi.fetchMonthlyTransactions(new Date().toISOString().slice(0, 7)),
+        financeApi.fetchMonthlyTransactions(getClientMonthString()),
         financeApi.fetchActiveCategories(),
       ]);
       setAccounts(acs);
       setTransactions(txs);
       setCategories(cats);
     } catch {
-      // silently fail
+      toast.error("Failed to load finance data");
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -46,7 +59,7 @@ export default function FinancePage() {
         accountId,
         categoryId,
         date,
-        amountMinor: Math.round(parseFloat(amount) * 100),
+        amountMinor: Math.round(Number.parseFloat(amount) * 100),
         note: note.trim() || undefined,
       };
       await financeApi.createTransaction(input);
@@ -55,7 +68,7 @@ export default function FinancePage() {
       setShowForm(false);
       fetchData();
     } catch {
-      // silently fail
+      toast.error("Failed to create transaction");
     }
   };
 
@@ -122,7 +135,9 @@ export default function FinancePage() {
                   accounts.map((a) => (
                     <div key={a.id} className="flex items-center justify-between py-1.5">
                       <span className="text-sm text-gray-300">{a.name}</span>
-                      <span className="text-sm font-medium text-gray-200">{formatBDT(a.balance)}</span>
+                      <span className="text-sm font-medium text-gray-200">
+                        {formatBDT(a.balance)}
+                      </span>
                     </div>
                   ))
                 )}
@@ -140,9 +155,13 @@ export default function FinancePage() {
                     <div key={t.id} className="flex items-center justify-between py-1.5">
                       <div className="flex-1 min-w-0">
                         <p className="text-sm text-gray-300 truncate">{t.note || "Transaction"}</p>
-                        <p className="text-xs text-gray-600">{new Date(t.date).toLocaleDateString()}</p>
+                        <p className="text-xs text-gray-600">
+                          {new Date(t.date).toLocaleDateString()}
+                        </p>
                       </div>
-                      <span className={`text-sm font-medium ${categories.find((c) => c.id === t.categoryId)?.kind === "income" ? "text-emerald-400" : "text-red-400"}`}>
+                      <span
+                        className={`text-sm font-medium ${categories.find((c) => c.id === t.categoryId)?.kind === "income" ? "text-emerald-400" : "text-red-400"}`}
+                      >
                         {formatBDT(t.amountMinor)}
                       </span>
                     </div>
@@ -179,7 +198,9 @@ export default function FinancePage() {
               >
                 <option value="">Select account</option>
                 {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>{a.name}</option>
+                  <option key={a.id} value={a.id}>
+                    {a.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -193,7 +214,9 @@ export default function FinancePage() {
               >
                 <option value="">Select category</option>
                 {categories.map((c) => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
+                  <option key={c.id} value={c.id}>
+                    {c.name}
+                  </option>
                 ))}
               </select>
             </div>
@@ -218,7 +241,9 @@ export default function FinancePage() {
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>Cancel</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>
+              Cancel
+            </Button>
             <Button type="submit">Add Transaction</Button>
           </div>
         </form>

@@ -29,7 +29,7 @@ function rowToTask(row: TaskRow): Task {
     status: row.status,
     notes: row.notes ?? undefined,
     reminderMinutesBefore: row.reminder_minutes_before ?? undefined,
-    reminderSound: row.reminder_sound === 1,
+    reminderSilent: row.reminder_sound !== 1,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -66,7 +66,7 @@ export class SqliteTaskRepository implements TaskRepository {
         input.endTime,
         input.notes ?? null,
         input.reminderMinutesBefore ?? null,
-        input.reminderSound === false ? 0 : 1,
+        input.reminderSilent ? 0 : 1,
         now,
         now,
       );
@@ -107,11 +107,11 @@ export class SqliteTaskRepository implements TaskRepository {
     }
     if (patch.reminderMinutesBefore !== undefined) {
       fields.push("reminder_minutes_before = ?");
-      values.push(patch.reminderMinutesBefore);
+      values.push(patch.reminderMinutesBefore ?? null);
     }
-    if (patch.reminderSound !== undefined) {
+    if (patch.reminderSilent !== undefined) {
       fields.push("reminder_sound = ?");
-      values.push(patch.reminderSound ? 1 : 0);
+      values.push(patch.reminderSilent ? 0 : 1);
     }
 
     if (fields.length === 0) return existing;

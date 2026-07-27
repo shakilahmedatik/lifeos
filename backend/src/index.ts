@@ -3,6 +3,7 @@ import { resolve } from "node:path";
 import dotenv from "dotenv";
 import express from "express";
 
+import { createAuthRouter } from "./modules/auth/api/router.js";
 import { createBackupRouter } from "./modules/backup/api/router.js";
 import { createDashboardRouter } from "./modules/dashboard/api/router.js";
 import { SqliteAccountRepository } from "./modules/finance/adapters/sqlite/sqlite-account-repository.js";
@@ -20,6 +21,7 @@ import { HabitLogService } from "./modules/habits/application/habit-log-service.
 import { HabitService } from "./modules/habits/application/habit-service.js";
 import { HabitStatsService } from "./modules/habits/application/habit-stats-service.js";
 import { WeeklyReviewService } from "./modules/habits/application/weekly-review-service.js";
+import { createHealthRouter } from "./modules/health/api/router.js";
 import { createSqliteNewsArticleRepository } from "./modules/news/adapters/sqlite/sqlite-news-article-repository.js";
 import { createSqliteRssFeedRepository } from "./modules/news/adapters/sqlite/sqlite-rss-feed-repository.js";
 import { createNewsRouter } from "./modules/news/api/router.js";
@@ -47,6 +49,7 @@ import { ExerciseService } from "./modules/workouts/application/exercise-service
 import { WorkoutHistoryService } from "./modules/workouts/application/workout-history-service.js";
 import { WorkoutService } from "./modules/workouts/application/workout-service.js";
 import { WorkoutSessionService } from "./modules/workouts/application/workout-session-service.js";
+import { authMiddleware } from "./shared/auth-middleware.js";
 import { createDatabase } from "./shared/db.js";
 import { runMigrations } from "./shared/migrations/runner.js";
 
@@ -107,7 +110,7 @@ const app = express();
 app.use((_req, res, next) => {
   res.setHeader("Access-Control-Allow-Origin", `http://localhost:${FRONTEND_PORT}`);
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-auth-token");
   if (_req.method === "OPTIONS") {
     res.status(204).end();
     return;
@@ -117,9 +120,9 @@ app.use((_req, res, next) => {
 
 app.use(express.json());
 
-app.get("/api/health", (_req, res) => {
-  res.json({ status: "ok", port: PORT });
-});
+app.use("/api/health", createHealthRouter(db));
+app.use("/api/auth", createAuthRouter());
+app.use("/api", authMiddleware);
 
 app.use("/api/routine", createRoutineRouter(taskRepo));
 app.use(

@@ -11,8 +11,8 @@ export interface Task {
   endTime: string;
   status: TaskStatus;
   notes?: string;
-  reminderMinutesBefore?: number;
-  reminderSound: boolean;
+  reminderMinutesBefore?: number | null;
+  reminderSilent: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -24,8 +24,8 @@ export interface NewTaskInput {
   startTime: string;
   endTime: string;
   notes?: string;
-  reminderMinutesBefore?: number;
-  reminderSound?: boolean;
+  reminderMinutesBefore?: number | null;
+  reminderSilent?: boolean;
 }
 
 export type HabitFrequency = "daily" | "weekly";
@@ -60,6 +60,11 @@ export interface HabitLog {
   habitId: string;
   date: string;
   completedAt: string;
+}
+
+export interface NewHabitLogInput {
+  habitId: string;
+  date: string;
 }
 
 export interface HabitWithStreak extends Habit {
@@ -356,9 +361,89 @@ export interface ResourceWithProgress extends LearningResource {
   skillAreaName: string;
 }
 
+export interface SkillAreaSummary {
+  skillArea: SkillArea;
+  totalResources: number;
+  totalMinutesSpent: number;
+  totalSessions: number;
+}
+
 export interface BackupInfo {
   filename: string;
   path: string;
   sizeBytes: number;
   createdAt: string;
 }
+
+export type FeedStatus = "active" | "inactive";
+
+export interface RssFeed {
+  id: string;
+  title: string;
+  url: string;
+  status: FeedStatus;
+  lastFetchedAt?: string;
+  lastFetchError?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NewRssFeedInput {
+  title: string;
+  url: string;
+}
+
+export interface NewsArticle {
+  id: string;
+  feedId: string;
+  title: string;
+  url: string;
+  summary?: string;
+  publishedAt?: string;
+  fetchedAt: string;
+  isRead: boolean;
+}
+
+export interface FeedWithArticleCount extends RssFeed {
+  articleCount: number;
+}
+
+export type NotificationSoundType = "default" | "gentle" | "urgent" | "chime" | "bell";
+
+export type NotificationStatus = "scheduled" | "sent" | "cancelled" | "expired";
+
+export interface Notification {
+  id: string;
+  taskId: string;
+  userId: string;
+  reminderTime: string;
+  soundType: NotificationSoundType;
+  status: NotificationStatus;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NewNotificationInput {
+  taskId: string;
+  userId?: string;
+  reminderTime: string;
+  soundType?: NotificationSoundType;
+}
+
+export interface UpdateNotificationInput {
+  reminderTime?: string;
+  soundType?: NotificationSoundType;
+  status?: NotificationStatus;
+}
+
+export interface NotificationWithTask extends Notification {
+  taskTitle: string;
+  taskDate: string;
+  taskStartTime: string;
+}
+
+export {
+  getClientDateString,
+  getClientMonthString,
+  getClientCurrentMinute,
+} from "./date-utils.js";

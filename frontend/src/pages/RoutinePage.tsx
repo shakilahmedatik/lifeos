@@ -1,10 +1,18 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import type { Task, NewTaskInput, TaskCategory, TaskStatus } from "../../../packages/contracts/src/index.js";
-import { api } from "../lib/api.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type {
+  NewNotificationInput,
+  NewTaskInput,
+  Task,
+  TaskCategory,
+  TaskStatus,
+} from "../../../packages/contracts/src/index.js";
+import { getClientDateString } from "../../../packages/contracts/src/index.js";
+import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
-import { PlusIcon, CalendarIcon, RefreshCwIcon, XIcon } from "../components/ui/icons.js";
+import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
+import { CalendarIcon, PlusIcon, RefreshCwIcon, XIcon } from "../components/ui/icons.js";
+import { api } from "../lib/api.js";
 
 const CATEGORY_STYLES: Record<TaskCategory, string> = {
   work: "border-l-blue-500/70",
@@ -23,7 +31,7 @@ const STATUS_VARIANTS: Record<TaskStatus, "info" | "success" | "warning" | "defa
 };
 
 export default function RoutinePage() {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = getClientDateString();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [date, setDate] = useState(today);
@@ -33,8 +41,12 @@ export default function RoutinePage() {
   const [startTime, setStartTime] = useState("09:00");
   const [endTime, setEndTime] = useState("10:00");
   const [notes, setNotes] = useState("");
+  const [enableReminder, setEnableReminder] = useState(false);
+  const [reminderMinutesBefore, setReminderMinutesBefore] = useState(15);
+  const [reminderSound, setReminderSound] = useState("default");
   const [error, setError] = useState<string | null>(null);
   const pausedRef = useRef(false);
+  const toast = useAppToast();
 
   const fetchTasks = useCallback(async () => {
     try {
@@ -43,10 +55,11 @@ export default function RoutinePage() {
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load tasks");
+      toast.error("Failed to load tasks");
     } finally {
       setLoading(false);
     }
-  }, [date]);
+  }, [date, toast]);
 
   useEffect(() => {
     fetchTasks();
@@ -74,14 +87,32 @@ export default function RoutinePage() {
         startTime,
         endTime,
         notes: notes.trim() || undefined,
+        ...(enableReminder && {
+          reminderMinutesBefore,
+          reminderSilent: reminderSound === "none",
+        }),
       };
-      await api.createTask(input);
+      const result = await api.createTask(input);
+      if (enableReminder && reminderSound !== "none") {
+        const [y, m, d] = date.split("-").map(Number);
+        const [hh, mm] = startTime.split(":").map(Number);
+        const dt = new Date(y, m - 1, d, hh, mm);
+        dt.setMinutes(dt.getMinutes() - reminderMinutesBefore);
+        await api.createNotification({
+          taskId: result.task.id,
+          reminderTime: dt.toISOString(),
+          soundType: reminderSound as NewNotificationInput["soundType"],
+        });
+      }
       setTitle("");
       setNotes("");
+      setEnableReminder(false);
       setShowForm(false);
+      toast.success("Task created");
       fetchTasks();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to create task");
+      toast.error("Failed to create task");
     }
   };
 
@@ -90,7 +121,7 @@ export default function RoutinePage() {
       await api.updateTaskStatus(id, status);
       fetchTasks();
     } catch {
-      setError("Failed to update task");
+      toast.error("Failed to update task");
     }
   };
 
@@ -99,7 +130,7 @@ export default function RoutinePage() {
       await api.deleteTask(id);
       fetchTasks();
     } catch {
-      setError("Failed to delete task");
+      toast.error("Failed to delete task");
     }
   };
 
@@ -117,11 +148,7 @@ export default function RoutinePage() {
             icon={<RefreshCwIcon size={14} />}
             onClick={fetchTasks}
           />
-          <Button
-            size="sm"
-            icon={<PlusIcon size={14} />}
-            onClick={() => setShowForm(!showForm)}
-          >
+          <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(!showForm)}>
             Add Task
           </Button>
         </div>
@@ -198,6 +225,43 @@ export default function RoutinePage() {
               rows={2}
               className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500 resize-none"
             />
+            <div className="space-y-2">
+              <label className="flex items-center gap-2 text-sm text-gray-400 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={enableReminder}
+                  onChange={(e) => setEnableReminder(e.target.checked)}
+                  className="rounded bg-gray-700/50 border-gray-600/50 accent-blue-500"
+                />
+                <span>Notify me</span>
+              </label>
+              {enableReminder && (
+                <div className="grid grid-cols-2 gap-3 pl-6">
+                  <select
+                    value={reminderMinutesBefore}
+                    onChange={(e) => setReminderMinutesBefore(Number(e.target.value))}
+                    className="bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+                  >
+                    <option value={5}>5 min before</option>
+                    <option value={10}>10 min before</option>
+                    <option value={15}>15 min before</option>
+                    <option value={30}>30 min before</option>
+                    <option value={60}>1 hour before</option>
+                  </select>
+                  <select
+                    value={reminderSound}
+                    onChange={(e) => setReminderSound(e.target.value)}
+                    className="bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+                  >
+                    <option value="default">Default</option>
+                    <option value="gentle">Gentle</option>
+                    <option value="urgent">Urgent</option>
+                    <option value="chime">Chime</option>
+                    <option value="none">Silent</option>
+                  </select>
+                </div>
+              )}
+            </div>
           </form>
         </Card>
       )}
@@ -232,9 +296,7 @@ export default function RoutinePage() {
             >
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-gray-200 truncate">
-                    {task.title}
-                  </span>
+                  <span className="text-sm font-medium text-gray-200 truncate">{task.title}</span>
                   <Badge variant={STATUS_VARIANTS[task.status]} size="sm">
                     {task.status.replace("_", " ")}
                   </Badge>

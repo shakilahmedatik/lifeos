@@ -61,8 +61,8 @@ export function createHabitsRouter(
   });
 
   router.post("/:id/log", (req, res) => {
-    const today = todayInDhaka();
-    const log = habitLogService.logHabit({ habitId: req.params.id, date: today });
+    const date = req.body.date || todayInDhaka();
+    const log = habitLogService.logHabit({ habitId: req.params.id, date });
     res.status(201).json(log);
   });
 

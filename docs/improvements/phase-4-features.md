@@ -526,85 +526,6 @@ Add a "Download CSV" button above each list:
 
 ---
 
-## 5b-rev. Add CSV Import for All Modules
-
-**Category:** Data portability (export counterpart)
-
-### Problem
-Export exists but there is no import path. Users cannot migrate data *into* LifeOS from Excel, Google Sheets, or other tools. Without import, the CSV export feature is one-directional.
-
-### Implementation Plan
-
-#### Backend: CSV parse + validate + upsert
-
-**New file:** `backend/src/shared/csv-import.ts`
-
-```ts
-export function parseCsv(content: string): Record<string, string>[] {
-  const lines = content.split("\n").filter((l) => l.trim());
-  if (lines.length < 2) return [];
-  const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
-  return lines.slice(1).map((line) => {
-    // naive split; replace with a real CSV parser if fields contain commas
-    const values = line.match(/(".*?"|[^,]+)/g)?.map((v) => v.trim().replace(/^"|"$/g, "")) || [];
-    const row: Record<string, string> = {};
-    headers.forEach((h, i) => { row[h] = (values[i] || "").trim(); });
-    return row;
-  });
-}
-```
-
-Import endpoint on each router uses `multer` (or raw body) to receive the file, calls `parseCsv`, and writes rows inside a transaction. Reuse the module's Zod schema to reject bad rows and return a per-row error report:
-
-```ts
-router.post("/import", async (req, res) => {
-  const csv = parseCsv(req.body);
-  let imported = 0, errors: string[] = [];
-  for (const row of csv) {
-    const parsed = NewTaskInputSchema.safeParse(row);
-    if (!parsed.success) { errors.push(`Row ${imported + 1}: ${parsed.error.message}`); continue; }
-    db.prepare("INSERT INTO tasks ...").run(parsed.data);
-    imported++;
-  }
-  res.json({ imported, errors });
-});
-```
-
-#### Frontend: drag/drop importer
-
-**New file:** `frontend/src/components/ui/CsvImport.tsx`
-
-```tsx
-export function CsvImport({ endpoint, onDone }: { endpoint: string; onDone?: () => void }) {
-  const [state, setState] = useState<"idle" | "error" | "success">("idle");
-  const [report, setReport] = useState<{ imported: number; errors: string[] } | null>(null);
-  const onDrop = async (file: File) => {
-    const text = await file.text();
-    const res = await fetch(endpoint, { method: "POST", body: text, headers: { "Content-Type": "text/csv" } });
-    const data = await res.json();
-    if (data.errors?.length) { setState("error"); setReport(data); }
-    else { setState("success"); setReport(data); onDone?.(); }
-  };
-  return (
-    <div onDragOver={(e) => e.preventDefault()} onDrop={(e) => { e.preventDefault(); onDrop(e.dataTransfer.files[0]!); }}>
-      {state === "error" && <p className="text-sm text-danger">{report?.errors.join(", ")}</p>}
-      {state === "success" && <p className="text-sm text-success">Imported {report?.imported} rows.</p>}
-      <p className="text-xs text-muted">Drop a CSV here to import.</p>
-    </div>
-  );
-}
-```
-
-Place the importer above each list in `RoutinePage`, `HabitsPage`, `FinancePage`, `WorkoutsPage`.
-
-### Verification
-1. Export a CSV, edit one row, re-import. Confirm the edit is applied (update-or-insert semantics).
-2. Import a CSV with a validation error. Confirm the error report lists the bad row and the good rows are still imported.
-3. Import a 1000-row CSV. Confirm it completes without blocking the UI.
-3. Add a task with a comma in the title (`"Buy milk, eggs"`). Confirm the CSV correctly quotes the field.
-
----
-
 ## 6. Add Confirmation Dialog Before Destructive Actions
 
 ### Problem
@@ -704,79 +625,60 @@ Replace every `onClick={() => handleDelete(task.id)}` with `onClick={() => setDe
 
 ---
 
-## 7. Add Basic Authentication (Optional but Recommended)
+## 7. Add Automated Backup Endpoint, Restore Endpoint, and Scheduled Backup
+
+> [!NOTE]
+> *Basic Authentication was already implemented as part of Phase 1.7 baseline security.*
 
 ### Problem
-The app has no authentication. If the backend port is exposed (LAN, shared machine, or port forwarding), anyone can read/write all data. For a personal productivity tool, this is a data privacy risk.
+The `GET /api/backup` endpoint exists but is never scheduled automatically, and there is no database restore path (`POST /api/backup/restore`) if data corruption occurs.
 
 ### Implementation Plan
 
-#### 7a. Add a simple password gate (not full auth)
+#### 7a. Add Backup Download & Restore Endpoints
 
-Since this is a single-user local app, full user auth (OAuth, JWT sessions) is overkill. A simple shared password gate is sufficient.
-
-**New file:** `backend/src/shared/auth-middleware.ts`
+**File:** `backend/src/modules/backup/api/router.ts`
 
 ```ts
-import type { Request, Response, NextFunction } from "express";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import express from "express";
 
-const AUTH_PASSWORD = process.env.AUTH_PASSWORD;
+export function createBackupRouter(dbPath: string) {
+  const router = express.Router();
 
-export function authMiddleware(req: Request, res: Response, next: NextFunction) {
-  if (!AUTH_PASSWORD) return next(); // No password set — open access
+  router.get("/", (req, res) => {
+    const backupPath = dbPath + ".backup";
+    fs.copyFileSync(dbPath, backupPath);
 
-  const token = req.headers["x-auth-token"] || req.query.token;
-  if (token === AUTH_PASSWORD) return next();
+    const walPath = dbPath + "-wal";
+    if (fs.existsSync(walPath)) {
+      fs.copyFileSync(walPath, backupPath + "-wal");
+    }
 
-  res.status(401).json({ error: "Unauthorized" });
+    res.download(backupPath, `lifeos-backup-${new Date().toISOString().slice(0, 10)}.sqlite`, (err) => {
+      try { fs.unlinkSync(backupPath); } catch {}
+      if (err) res.status(500).json({ error: "Backup failed" });
+    });
+  });
+
+  // Restore database from uploaded file
+  router.post("/restore", express.raw({ type: "application/octet-stream", limit: "50mb" }), (req, res) => {
+    try {
+      const backupDir = path.join(path.dirname(dbPath), "backups");
+      const preRestoreBackup = path.join(backupDir, `pre-restore-${Date.now()}.sqlite`);
+      fs.copyFileSync(dbPath, preRestoreBackup);
+
+      fs.writeFileSync(dbPath, req.body);
+      res.json({ message: "Database restored successfully. Please restart the app.", safetyBackup: preRestoreBackup });
+    } catch (err) {
+      res.status(500).json({ error: "Restore failed: " + String(err) });
+    }
+  });
+
+  return router;
 }
 ```
-
-**File:** `.env`
-
-```bash
-# Optional: set a password to gate access. Leave empty for open access.
-AUTH_PASSWORD=
-```
-
-#### 7b. Apply to all API routes
-
-```ts
-// backend/src/index.ts
-import { authMiddleware } from "./shared/auth-middleware.js";
-
-app.use("/api", authMiddleware);
-```
-
-#### 7c. Frontend: store token in memory, send with every request
-
-```ts
-// frontend/src/lib/api.ts
-let authToken: string | null = null;
-
-export function setAuthToken(token: string) { authToken = token; }
-
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const headers = { ...options?.headers };
-  if (authToken) headers["x-auth-token"] = authToken;
-  // ... existing fetch logic
-}
-```
-
-**Frontend login screen:** If `GET /api/settings` returns 401, show a simple password input screen.
-
-### Verification
-1. Leave `AUTH_PASSWORD` empty. App works as before (open access).
-2. Set `AUTH_PASSWORD=secret`. Reload. Verify API calls return 401.
-3. Enter password in frontend. Verify access is restored.
-4. Verify password is not logged or stored in localStorage.
-
----
-
-## 8. Add Automated Backup Endpoint and Scheduled Backup
-
-### Problem
-The existing `GET /api/backup` endpoint (if it exists) is never called automatically. If the DB corrupts or the user accidentally deletes data, there's no recovery path.
 
 ### Implementation Plan
 
@@ -1001,14 +903,14 @@ Keep the existing `ToastContext` if it's working. The value of Zustand is for ne
 
 ---
 
-## 11. Add Bulk Data Management (Archive / Purge)
+## 10. Add Bulk Data Management (Archive / Purge)
 
 ### Problem
 A productivity app accumulates data over years. Habits logged daily for 5 years = 1,825 rows. Transactions added weekly = hundreds per year. There is no way to archive old data or purge it, so the database grows without bound. Queries like `SELECT * FROM tasks` will eventually slow down, and the backup file grows.
 
 ### Implementation Plan
 
-#### 11a. Add archive button for each module
+#### 10a. Add archive button for each module
 
 **File:** `frontend/src/pages/RoutinePage.tsx` (example)
 
@@ -1031,16 +933,16 @@ A productivity app accumulates data over years. Habits logged daily for 5 years 
   confirmLabel="Archive"
   onConfirm={async () => {
     await api.archiveTasks({ before: getClientDateString() });
-    toast.success(`Archived ${count} tasks`);
+    toast.success(`Archived tasks`);
     fetchTasks();
   }}
   onCancel={() => setShowArchive(false)}
 />
 ```
 
-#### 11b. Backend: archive tables or soft-delete flag
+#### 10b. Backend: archive tables or soft-delete flag
 
-**Option A (recommended):** Add an `archived` boolean column to relevant tables. The default query filters `WHERE archived = 0`. Archive endpoints set `archived = 1`.
+Add an `archived` boolean column to relevant tables. The default query filters `WHERE archived = 0`. Archive endpoints set `archived = 1`.
 
 ```sql
 ALTER TABLE tasks ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;
@@ -1048,11 +950,11 @@ ALTER TABLE transactions ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE habit_logs ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;
 ```
 
-**Migration (Phase 3.6):** This migration should be version 5 (after v3 from Phase 1.2 column renames and v4 from Phase 3.6 settings table). Do NOT use v3 — that version already renames `reminderMinutesBefore` → `reminder_minutes_before`. Using a different version number prevents conflicts.
+**Migration:** Add Migration `010_archive.sql` (after `008_skills` and `009_settings`):
 
 ```ts
 {
-  version: 5,
+  version: 10,
   name: "add_archived_columns",
   up: (db) => {
     db.exec(`ALTER TABLE tasks ADD COLUMN archived INTEGER NOT NULL DEFAULT 0`);
@@ -1062,17 +964,7 @@ ALTER TABLE habit_logs ADD COLUMN archived INTEGER NOT NULL DEFAULT 0;
 }
 ```
 
-**Note:** If the app uses PostgreSQL-style `IF NOT EXISTS` for ALTER TABLE (SQLite 3.35+), this migration is safe to run multiple times. For older SQLite, add a guard:
-
-```ts
-db.exec(`
-  CREATE TABLE IF NOT EXISTS _archived_migration_guard (id INTEGER PRIMARY KEY);
-`);
-```
-
-**Option B (simpler but irreversible):** `DELETE FROM tasks WHERE date < date('now', '-1 year')`. Only suitable for users who explicitly confirm "permanently delete old data."
-
-#### 11c. Backend archive endpoints
+#### 10c. Backend archive endpoints
 
 ```ts
 // POST /api/routine/archive
@@ -1095,15 +987,6 @@ router.post("/archived/:id/restore", (req, res) => {
 });
 ```
 
-#### 11d. Apply to all data-heavy modules
-
-| Module | Archive condition | Retained for |
-|--------|-------------------|-------------|
-| Routine | Tasks with `status = done` and `date < 30 days ago` | 30 days |
-| Habits | Habit logs with `date < 6 months ago` | 6 months |
-| Finance | Transactions with `date < 1 year ago` | 1 year |
-| Workouts | Sessions older than 6 months | 6 months |
-
 ### Dependencies
 - Phase 3.6 (migration runner) — needed for the `archived` column migration.
 - Phase 4.6 (ConfirmDialog) — archive actions need confirmation.
@@ -1113,174 +996,95 @@ router.post("/archived/:id/restore", (req, res) => {
 1. Create a task dated 60 days ago. Click "Archive old". Confirm task disappears from the dashboard.
 2. Call `GET /api/routine/archived`. Confirm the task appears.
 3. Restore the task. Confirm it reappears on the dashboard.
-4. Verify migration v5 is applied (`SELECT * FROM _migrations` includes version 5).
-5. Verify no existing data is affected (migration runs `ADD COLUMN` which defaults to 0 for existing rows).
+4. Verify migration `010_archive` is applied (`SELECT * FROM _migrations` includes version 10).
 
 ---
 
-## 12. Add CSV Import for All Modules
+## 11. Add CSV Import for All Modules
 
 ### Problem
-Phase 4.5 adds CSV export for all modules, but there is no import path. Users cannot migrate data *into* LifeOS from Excel, Google Sheets, or other tools. Without import, the CSV export feature is one-directional and less useful.
+Phase 4.5 adds CSV export for all modules, but there is no import path. Users cannot migrate data *into* LifeOS from Excel, Google Sheets, or other tools. Naive string-splitting parsers break when fields contain commas or line breaks.
 
 ### Implementation Plan
 
-#### 12a. Backend: add CSV import routes
+#### 11a. Backend: add robust CSV import routes (`fast-csv`)
+
+Use `fast-csv` (or `csv-parser`) on the backend instead of hand-rolled string splitting to correctly parse quoted strings containing commas or newlines.
 
 **New file:** `backend/src/shared/csv-import.ts`
 
 ```ts
-import * as fs from "node:fs";
+import * as csv from "fast-csv";
+import { Readable } from "node:stream";
 
-export function parseCsv(content: string): Record<string, string>[] {
-  const lines = content.split("\n").filter((l) => l.trim());
-  if (lines.length < 2) return [];
-  
-  const headers = lines[0].split(",").map((h) => h.trim().replace(/^"|"$/g, ""));
-  
-  return lines.slice(1).map((line) => {
-    const values = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-    const row: Record<string, string> = {};
-    headers.forEach((header, i) => {
-      row[header] = values[i]?.replace(/^"|"$/g, "").trim() || "";
-    });
-    return row;
+export async function parseCsvStream(buffer: Buffer): Promise<Record<string, string>[]> {
+  return new Promise((resolve, reject) => {
+    const rows: Record<string, string>[] = [];
+    const stream = Readable.from(buffer);
+    stream
+      .pipe(csv.parse({ headers: true, ignoreEmpty: true, trim: true }))
+      .on("data", (row) => rows.push(row))
+      .on("end", () => resolve(rows))
+      .on("error", reject);
   });
-}
-
-export function validateCsvRow(row: Record<string, string>, requiredFields: string[]): string[] {
-  const errors: string[] = [];
-  for (const field of requiredFields) {
-    if (!row[field] || !row[field].trim()) {
-      errors.push(`Missing required field: ${field}`);
-    }
-  }
-  return errors;
 }
 ```
 
-**Example endpoint:** `backend/src/modules/routine/api/router.ts`
+Import endpoints validate each row with Zod schemas (`NewTaskInputSchema`, `NewTransactionInputSchema`):
 
 ```ts
-import multer from "multer"; // For file upload handling
+import multer from "multer";
 const upload = multer({ storage: multer.memoryStorage() });
 
 router.post("/import", upload.single("file"), async (req, res) => {
-  const csvContent = req.file?.buffer?.toString() || "";
-  const rows = parseCsv(csvContent);
-  
-  let imported = 0;
-  let errors = 0;
-  
-  for (const row of rows) {
-    try {
-      const validated = NewTaskInputSchema.parse(row);
-      await taskRepo.create(validated);
-      imported++;
-    } catch {
-      errors++;
+  if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+  const rows = await parseCsvStream(req.file.buffer);
+  let imported = 0, errors: string[] = [];
+
+  for (const [index, row] of rows.entries()) {
+    const parsed = NewTaskInputSchema.safeParse(row);
+    if (!parsed.success) {
+      errors.push(`Row ${index + 1}: ${parsed.error.message}`);
+      continue;
     }
+    taskRepo.create(parsed.data);
+    imported++;
   }
-  
+
   res.json({ imported, errors });
 });
 ```
 
-#### 12b. Frontend: add import UI component
+#### 11b. Frontend: add drag/drop import component (`papaparse`)
 
-**New file:** `frontend/src/components/ui/CsvImport.tsx`
-
-```tsx
-interface CsvImportProps {
-  endpoint: string;
-  onSuccess?: (result: { imported: number; errors: number }) => void;
-}
-
-export function CsvImport({ endpoint, onSuccess }: CsvImportProps) {
-  const [dragging, setDragging] = useState(false);
-  const [uploading, setUploading] = useState(false);
-
-  const handleFile = async (file: File) => {
-    setUploading(true);
-    const formData = new FormData();
-    formData.append("file", file);
-    
-    const res = await fetch(endpoint, { method: "POST", body: formData });
-    const result = await res.json();
-    setUploading(false);
-    
-    if (result.errors > 0) {
-      toast.error(`${result.errors} rows failed validation`);
-    } else {
-      toast.success(`${result.imported} rows imported`);
-    }
-    
-    onSuccess?.(result);
-  };
-
-  return (
-    <div
-      onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        setDragging(false);
-        const file = e.dataTransfer.files[0];
-        if (file) handleFile(file);
-      }}
-      className={`border-2 border-dashed rounded-lg p-4 text-center cursor-pointer transition-colors ${
-        dragging ? "border-accent bg-accent/10" : "border-border hover:border-border-subtle"
-      }`}
-    >
-      <input
-        type="file"
-        accept=".csv"
-        className="hidden"
-        onChange={(e) => {
-          const file = e.target.files?.[0];
-          if (file) handleFile(file);
-        }}
-      />
-      {uploading ? (
-        <p className="text-muted">Uploading...</p>
-      ) : (
-        <p className="text-sm text-secondary">
-          Drag & drop a CSV file here, or click to select
-        </p>
-      )}
-    </div>
-  );
-}
-```
-
-#### 12c. Wire into each page's CardHeader
+On the frontend, use `papaparse` for client-side preview/parsing prior to upload.
 
 ```tsx
-<CardHeader>
-  <CardTitle>Tasks</CardTitle>
-  <div className="flex gap-2">
-    <CsvImport endpoint="/api/routine/import" onSuccess={() => fetchTasks()} />
-    <Button variant="secondary" size="sm" icon={<DownloadIcon size={14} />}>
-      Export CSV
-    </Button>
-  </div>
-</CardHeader>
+import Papa from "papaparse";
+
+export function CsvImport({ endpoint, onSuccess }: { endpoint: string; onSuccess?: () => void }) {
+  // Drag & drop file handler calling POST endpoint with multipart/form-data
+  // ...
+}
 ```
-
-**Modules to support import:**
-
-| Module | CSV columns | Required fields |
-|--------|------------|-----------------|
-| Routine | title, category, date, startTime, endTime, status, notes | title, category, date |
-| Habits | habitName, date, logged (bool) | habitName, date |
-| Finance | date, account, category, amountMinor, note | date, account, category, amountMinor |
-| Workouts | workoutName, date, duration, completed | workoutName, date |
-
-### Dependencies
-- Phase 4.5 (CSV export) — import/export are complementary features.
-- Phase 2.3 (Zod schemas) — use existing schemas for validation.
 
 ### Verification
 1. Export tasks to CSV, modify one row, re-import. Confirm the modified row is updated.
-2. Import a CSV with invalid dates. Confirm the error count reflects bad rows.
-3. Import a large CSV (1000+ rows). Confirm import completes in <2s.
+2. Import a CSV containing fields with embedded commas (e.g. `"Buy milk, eggs"`). Confirm fields are parsed cleanly without offset errors.
+3. Import a CSV with invalid dates. Confirm error report lists exact row numbers.
+
+---
+
+## 12. Accessibility (a11y) Verification for New Feature Components
+
+### Problem
+New interactive feature components introduced in Phase 4 (Workout Timer, Settings forms, CSV Drag & Drop Importer, Confirm Dialogs) must maintain WCAG AA compliance established in Phase 2.1.
+
+### Implementation Plan
+- Modal & Confirm Dialog: ensure focus trap and `Escape` key close handling.
+- Drag & Drop CSV Importer: provide a standard keyboard-accessible `<input type="file">` alternative fallback.
+- Active Workout Timer: ensure timer state changes (rest/set complete) trigger `aria-live="polite"` screen-reader announcements.
+
+### Verification
+1. Run `axe-core` accessibility smoke tests on `SettingsPage`, `ConfirmDialog`, and `CsvImport` components.
+2. Verify screen reader announces timer progress without stealing keyboard focus.

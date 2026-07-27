@@ -1,15 +1,10 @@
+import type { DashboardSummary } from "../../../../../packages/contracts/src/index.ts";
 import { nowIsoInDhaka } from "../../../shared/timezone.js";
 import type { HabitWithStreak } from "../../habits/domain/types.js";
 import type { Task } from "../../routine/domain/types.js";
 import type { DashboardDependencies } from "../ports/dashboard-dependencies.js";
 
-export interface DashboardSummary {
-  now: Task | null;
-  next: Task | null;
-  todayCount: number;
-  todayDoneCount: number;
-  dueHabits: HabitWithStreak[];
-}
+export type { DashboardSummary } from "../../../../packages/contracts/src/index.ts";
 
 function timeToMinutes(time: string): number {
   const [h, m] = time.split(":").map(Number);

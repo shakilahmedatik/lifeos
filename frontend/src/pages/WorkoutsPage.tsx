@@ -1,29 +1,36 @@
 import { useState } from "react";
 import type { NewWorkoutInput } from "../../../packages/contracts/src/index.js";
-import { useWorkouts } from "../modules/workouts/useWorkouts.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
+import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
+import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import Modal from "../components/ui/Modal.js";
-import { PlusIcon, DumbbellIcon } from "../components/ui/icons.js";
+import { DumbbellIcon, PlusIcon } from "../components/ui/icons.js";
+import { useWorkouts } from "../modules/workouts/useWorkouts.js";
 
 export default function WorkoutsPage() {
   const { workouts, loading, createWorkout, deleteWorkout } = useWorkouts();
   const [showForm, setShowForm] = useState(false);
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
+  const toast = useAppToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!name.trim()) return;
-    const input: NewWorkoutInput = {
-      name: name.trim(),
-      description: description.trim() || undefined,
-    };
-    await createWorkout(input);
-    setName("");
-    setDescription("");
-    setShowForm(false);
+    try {
+      const input: NewWorkoutInput = {
+        name: name.trim(),
+        description: description.trim() || undefined,
+      };
+      await createWorkout(input);
+      toast.success("Workout created");
+      setName("");
+      setDescription("");
+      setShowForm(false);
+    } catch {
+      toast.error("Failed to create workout");
+    }
   };
 
   return (
@@ -48,7 +55,13 @@ export default function WorkoutsPage() {
         <Card className="text-center py-8">
           <DumbbellIcon size={32} className="text-gray-600 mx-auto mb-2" />
           <p className="text-gray-500 text-sm">No workouts yet</p>
-          <Button variant="secondary" size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)} className="mt-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<PlusIcon size={14} />}
+            onClick={() => setShowForm(true)}
+            className="mt-3"
+          >
             Create your first workout
           </Button>
         </Card>
@@ -59,17 +72,31 @@ export default function WorkoutsPage() {
               <CardHeader>
                 <CardTitle>{w.name}</CardTitle>
                 <button
-                  onClick={() => deleteWorkout(w.id)}
+                  onClick={async () => {
+                    try {
+                      await deleteWorkout(w.id);
+                      toast.success("Workout deleted");
+                    } catch {
+                      toast.error("Failed to delete workout");
+                    }
+                  }}
                   className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M3 6h18" />
+                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                   </svg>
                 </button>
               </CardHeader>
-              {w.description && (
-                <p className="text-xs text-gray-500">{w.description}</p>
-              )}
+              {w.description && <p className="text-xs text-gray-500">{w.description}</p>}
               {w.scheduledDay && (
                 <Badge variant="default" size="sm" className="mt-2 capitalize">
                   {w.scheduledDay}

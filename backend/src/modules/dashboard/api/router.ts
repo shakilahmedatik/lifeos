@@ -7,8 +7,10 @@ import type { DashboardDependencies } from "../ports/dashboard-dependencies.js";
 export function createDashboardRouter(deps: DashboardDependencies): Router {
   const router = Router();
 
-  router.get("/summary", (_req, res) => {
-    const summary = getDashboardSummary(deps, nowIsoInDhaka());
+  router.get("/summary", (req, res) => {
+    const clientDate = req.query.date as string | undefined;
+    const nowIso = clientDate ? `${clientDate}T${nowIsoInDhaka().slice(11)}` : nowIsoInDhaka();
+    const summary = getDashboardSummary(deps, nowIso);
     res.json(summary);
   });
 

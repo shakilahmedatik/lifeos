@@ -1,17 +1,19 @@
-import { useEffect, useState } from "react";
-import { api } from "../lib/api.js";
-import type { Task } from "../../../packages/contracts/src/index.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import Button from "../components/ui/Button.js";
+import { useCallback, useEffect, useState } from "react";
+import type { NewNotificationInput, Task } from "../../../packages/contracts/src/index.js";
+import { getClientDateString } from "../../../packages/contracts/src/index.js";
+import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
+import Button from "../components/ui/Button.js";
+import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import Modal from "../components/ui/Modal.js";
-import { BellIcon, RefreshCwIcon, PlusIcon } from "../components/ui/icons.js";
+import { BellIcon, PlusIcon, RefreshCwIcon } from "../components/ui/icons.js";
+import { api } from "../lib/api.js";
 
-interface Reminder {
-  taskId: string;
-  minutesBefore: number;
-  sound: string;
-}
+type Reminder = {
+  taskId: Task["id"];
+  minutesBefore: NonNullable<Task["reminderMinutesBefore"]>;
+  sound: "none" | "default";
+};
 
 export default function NotificationsPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -21,10 +23,11 @@ export default function NotificationsPage() {
   const [selectedTask, setSelectedTask] = useState("");
   const [minutesBefore, setMinutesBefore] = useState(15);
   const [sound, setSound] = useState("default");
+  const toast = useAppToast();
 
-  const fetchTasks = async () => {
+  const fetchTasks = useCallback(async () => {
     try {
-      const today = new Date().toISOString().slice(0, 10);
+      const today = getClientDateString();
       const data = await api.getTasks(today);
       setTasks(data);
       const r: Reminder[] = [];
@@ -33,43 +36,61 @@ export default function NotificationsPage() {
           r.push({
             taskId: t.id,
             minutesBefore: t.reminderMinutesBefore,
-            sound: t.reminderSound ? "default" : "none",
+            sound: t.reminderSilent ? "none" : "default",
           });
         }
       }
       setReminders(r);
     } catch {
-      // silently fail
+      toast.error("Failed to load tasks");
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  useEffect(() => { fetchTasks(); }, []);
+  useEffect(() => {
+    fetchTasks();
+  }, [fetchTasks]);
 
   const handleSetReminder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTask) return;
+    const task = tasks.find((t) => t.id === selectedTask);
+    if (!task) return;
     try {
       await api.updateTask(selectedTask, {
         reminderMinutesBefore: minutesBefore,
-        reminderSound: sound === "none",
+        reminderSilent: sound === "none",
       });
+      if (sound !== "none") {
+        const [y, m, d] = task.date.split("-").map(Number);
+        const [hh, mm] = task.startTime.split(":").map(Number);
+        const dt = new Date(y, m - 1, d, hh, mm);
+        dt.setMinutes(dt.getMinutes() - minutesBefore);
+        const input: NewNotificationInput = {
+          taskId: selectedTask,
+          reminderTime: dt.toISOString(),
+          soundType: sound as NewNotificationInput["soundType"],
+        };
+        await api.createNotification(input);
+      }
       setShowForm(false);
       fetchTasks();
     } catch {
-      // silently fail
+      toast.error("Failed to set reminder");
     }
   };
 
   const handleRemoveReminder = async (taskId: string) => {
     try {
+      await api.deleteNotificationsByTaskId(taskId);
       await api.updateTask(taskId, {
-        reminderMinutesBefore: null as unknown as number,
+        reminderMinutesBefore: null,
+        reminderSilent: true,
       });
       fetchTasks();
     } catch {
-      // silently fail
+      toast.error("Failed to remove reminder");
     }
   };
 
@@ -81,7 +102,12 @@ export default function NotificationsPage() {
           <p className="text-sm text-gray-500 mt-1">Manage reminders and notifications</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" icon={<RefreshCwIcon size={14} />} onClick={fetchTasks} />
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<RefreshCwIcon size={14} />}
+            onClick={fetchTasks}
+          />
           <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
             Add Reminder
           </Button>
@@ -111,7 +137,10 @@ export default function NotificationsPage() {
                   const task = tasks.find((t) => t.id === r.taskId);
                   if (!task) return null;
                   return (
-                    <div key={r.taskId} className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0">
+                    <div
+                      key={r.taskId}
+                      className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0"
+                    >
                       <div>
                         <p className="text-sm font-medium text-gray-200">{task.title}</p>
                         <p className="text-xs text-gray-500">
@@ -140,11 +169,18 @@ export default function NotificationsPage() {
                 <p className="text-gray-500 text-sm">No tasks today</p>
               ) : (
                 tasks.map((t) => (
-                  <div key={t.id} className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0">
+                  <div
+                    key={t.id}
+                    className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0"
+                  >
                     <div className="flex items-center gap-2">
                       <Badge
                         variant={
-                          t.status === "done" ? "success" : t.status === "in_progress" ? "info" : "default"
+                          t.status === "done"
+                            ? "success"
+                            : t.status === "in_progress"
+                              ? "info"
+                              : "default"
                         }
                         size="sm"
                       >
@@ -152,9 +188,7 @@ export default function NotificationsPage() {
                       </Badge>
                       <span className="text-sm text-gray-200">{t.title}</span>
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {t.startTime}
-                    </span>
+                    <span className="text-xs text-gray-500">{t.startTime}</span>
                   </div>
                 ))
               )}
@@ -174,9 +208,13 @@ export default function NotificationsPage() {
               required
             >
               <option value="">Select task</option>
-              {tasks.filter((t) => t.status !== "done").map((t) => (
-                <option key={t.id} value={t.id}>{t.title}</option>
-              ))}
+              {tasks
+                .filter((t) => t.status !== "done")
+                .map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.title}
+                  </option>
+                ))}
             </select>
           </div>
           <div>
@@ -208,7 +246,9 @@ export default function NotificationsPage() {
             </select>
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>Cancel</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>
+              Cancel
+            </Button>
             <Button type="submit">Set Reminder</Button>
           </div>
         </form>

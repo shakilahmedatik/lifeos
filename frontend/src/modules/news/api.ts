@@ -1,24 +1,10 @@
-export interface RssFeed {
-  id: string;
-  title: string;
-  url: string;
-  status: "active" | "inactive";
-  lastFetchedAt?: string;
-  lastFetchError?: string;
-  createdAt: string;
-  updatedAt: string;
-}
+import type {
+  NewsArticle as _NewsArticle,
+  RssFeed as _RssFeed,
+} from "../../../../packages/contracts/src/index.js";
 
-export interface NewsArticle {
-  id: string;
-  feedId: string;
-  title: string;
-  url: string;
-  summary?: string;
-  publishedAt?: string;
-  fetchedAt: string;
-  isRead: boolean;
-}
+export type RssFeed = _RssFeed;
+export type NewsArticle = _NewsArticle;
 
 const API_BASE = "/api/news";
 

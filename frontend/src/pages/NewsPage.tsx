@@ -1,11 +1,12 @@
-import { useEffect, useState } from "react";
-import * as newsApi from "../modules/news/api.js";
-import type { RssFeed, NewsArticle } from "../modules/news/api.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import Button from "../components/ui/Button.js";
-import Modal from "../components/ui/Modal.js";
+import { useCallback, useEffect, useState } from "react";
+import type { NewsArticle, RssFeed } from "../../../packages/contracts/src/index.js";
+import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
-import { PlusIcon, NewspaperIcon, RefreshCwIcon } from "../components/ui/icons.js";
+import Button from "../components/ui/Button.js";
+import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
+import Modal from "../components/ui/Modal.js";
+import { NewspaperIcon, PlusIcon, RefreshCwIcon } from "../components/ui/icons.js";
+import * as newsApi from "../modules/news/api.js";
 
 export default function NewsPage() {
   const [feeds, setFeeds] = useState<RssFeed[]>([]);
@@ -15,8 +16,9 @@ export default function NewsPage() {
   const [feedTitle, setFeedTitle] = useState("");
   const [feedUrl, setFeedUrl] = useState("");
   const [filterFeedId, setFilterFeedId] = useState("");
+  const toast = useAppToast();
 
-  const fetchData = async () => {
+  const fetchData = useCallback(async () => {
     try {
       const [fds, arts] = await Promise.all([
         newsApi.fetchFeeds(),
@@ -25,13 +27,15 @@ export default function NewsPage() {
       setFeeds(fds);
       setArticles(arts);
     } catch {
-      // silently fail
+      toast.error("Failed to load news");
     } finally {
       setLoading(false);
     }
-  };
+  }, [toast]);
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const handleAddFeed = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +47,7 @@ export default function NewsPage() {
       setShowForm(false);
       fetchData();
     } catch {
-      // silently fail
+      toast.error("Failed to add feed");
     }
   };
 
@@ -52,7 +56,7 @@ export default function NewsPage() {
       await newsApi.toggleFeedStatus(id);
       fetchData();
     } catch {
-      // silently fail
+      toast.error("Failed to update feed");
     }
   };
 
@@ -61,7 +65,7 @@ export default function NewsPage() {
       await newsApi.deleteFeed(id);
       fetchData();
     } catch {
-      // silently fail
+      toast.error("Failed to delete feed");
     }
   };
 
@@ -70,7 +74,7 @@ export default function NewsPage() {
       await newsApi.markArticleAsRead(id);
       fetchData();
     } catch {
-      // silently fail
+      toast.error("Failed to mark article as read");
     }
   };
 
@@ -86,7 +90,12 @@ export default function NewsPage() {
           <p className="text-sm text-gray-500 mt-1">Stay informed</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" size="sm" icon={<RefreshCwIcon size={14} />} onClick={fetchData} />
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<RefreshCwIcon size={14} />}
+            onClick={fetchData}
+          />
           <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
             Add Feed
           </Button>
@@ -163,7 +172,9 @@ export default function NewsPage() {
                           )}
                         </p>
                       </div>
-                      {!a.isRead && <span className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />}
+                      {!a.isRead && (
+                        <span className="w-2 h-2 rounded-full bg-blue-500 mt-1.5 shrink-0" />
+                      )}
                     </div>
                   </Card>
                 ))
@@ -200,8 +211,16 @@ export default function NewsPage() {
                             onClick={() => handleDeleteFeed(f.id)}
                             className="p-1 rounded text-gray-600 hover:text-red-400 transition-colors"
                           >
-                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+                            <svg
+                              width="12"
+                              height="12"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M18 6 6 18" />
+                              <path d="m6 6 12 12" />
                             </svg>
                           </button>
                         </div>
@@ -239,7 +258,9 @@ export default function NewsPage() {
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>Cancel</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>
+              Cancel
+            </Button>
             <Button type="submit">Add Feed</Button>
           </div>
         </form>

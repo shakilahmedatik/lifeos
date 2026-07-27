@@ -1,15 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
+import type { NotificationWithTask } from "../../../../packages/contracts/src/index.js";
 
-interface Notification {
-  id: string;
-  taskId: string;
-  taskTitle: string;
-  taskDate: string;
-  taskStartTime: string;
-  reminderTime: string;
-  soundType: string;
-  status: string;
-}
+type Notification = NotificationWithTask;
 
 export function NotificationPanel() {
   const [notifications, setNotifications] = useState<Notification[]>([]);

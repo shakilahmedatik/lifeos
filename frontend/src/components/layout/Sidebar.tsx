@@ -1,13 +1,13 @@
 import { NavLink } from "react-router-dom";
 import {
-  HomeIcon,
+  BellIcon,
   CalendarIcon,
   CheckCheckIcon,
   DumbbellIcon,
   GraduationCapIcon,
-  WalletIcon,
+  HomeIcon,
   NewspaperIcon,
-  BellIcon,
+  WalletIcon,
 } from "../ui/icons.js";
 
 const navItems = [

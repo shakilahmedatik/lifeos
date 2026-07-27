@@ -553,7 +553,7 @@ client.lastHeartbeat = Date.now(); // update on activity too
 ## 8. Add Database Indexes for Query Performance
 
 ### Problem
-Phase 4.12 (Bulk Data) and existing queries will degrade significantly as data grows. Without indexes on frequently filtered columns, SQLite must perform full table scans on every query. This affects:
+Phase 4.10 (Bulk Data) and existing queries will degrade significantly as data grows. Without indexes on frequently filtered columns, SQLite must perform full table scans on every query. This affects:
 - `tasks.date` — filtered by date on Dashboard and Routine pages
 - `habit_logs.habit_id + habit_logs.date` — habit streak calculations
 - `transactions.account_id` — Finance page account lookups
@@ -567,11 +567,11 @@ Phase 4.12 (Bulk Data) and existing queries will degrade significantly as data g
 
 **File:** `backend/src/shared/migrations.ts`
 
-Add migration v5 (after v3 from Phase 3.6 and v4 from Phase 4.12):
+Add migration `011_indexes.sql` (after `008_skills`, `009_settings`, and `010_archive`):
 
 ```ts
 {
-  version: 5,
+  version: 11,
   name: "add_query_indexes",
   up: (db) => {
     // Tasks — most frequently queried table
@@ -626,18 +626,16 @@ SQLite does not auto-drop unused indexes, so this is a manual audit.
 
 ### Dependencies
 - Phase 3.6 (migration runner) — indexes are added via migration.
-- Phase 4.12 (archive columns) — `archived` index should be created alongside the archive column migration.
+- Phase 4.10 (archive columns) — `archived` index should be created alongside/after `010_archive.sql`.
 
 ### Verification
-1. Delete the DB, run `pnpm dev`. Confirm `_migrations` includes version 5.
+1. Delete the DB, run `pnpm dev`. Confirm `_migrations` includes version 11.
 2. Run `EXPLAIN QUERY PLAN` on Dashboard task query. Confirm `idx_tasks_date` is used.
 3. Insert 10,000 dummy tasks. Confirm `SELECT * FROM tasks WHERE date = '2025-01-01'` completes in <5ms.
-2. Observe backend log: "Removing stale SSE client ..." should appear once.
-3. Repeat with 500 rapid connects/disconnects. Confirm no leak in `getClientCount()` over time.
 
 ---
 
-## 8. Add Bundle Analysis and Size Budget
+## 9. Add Bundle Analysis and Size Budget
 
 ### Problem
 Phase 3.5 adds code splitting but has no visibility into bundle size. A developer can accidentally import a heavy library (e.g., `moment`, `lodash`) and inflate the main bundle without noticing. Without a size budget, bundle size regressions go undetected.
@@ -732,3 +730,19 @@ Add a CI step after the build:
 1. Run `pnpm --filter @lifeos/frontend size`. Confirm output shows bundle sizes under the limits.
 2. Open `dist/stats.html` in a browser. Confirm visual treemap shows vendor-react as the largest chunk.
 3. Intentionally add `import moment from "moment"` — `pnpm run size` should fail the budget.
+
+---
+
+## 10. Add Background Scheduler Health Monitoring & Recovery
+
+### Problem
+The backend runs background schedulers (`newsScheduler` and `notificationScheduler`). If an uncaught error occurs inside a scheduler loop or network fetch, the scheduler could crash silently without the system noticing.
+
+### Implementation Plan
+- Track last-run timestamp, execution count, and status (`idle`, `running`, `error`) for both schedulers.
+- Extend `GET /api/health` endpoint (from Phase 1.6) to include a `schedulers` health object.
+- Wrap scheduler callbacks in `try/catch` with retry logic and error logging to prevent silent thread crashes.
+
+### Verification
+1. `GET /api/health` returns status of `newsScheduler` and `notificationScheduler` along with last executed timestamp.
+2. Simulated scheduler fetch error logs structured error and retries on next scheduled interval.

@@ -20,8 +20,15 @@ const CreateTaskSchema = z.object({
   startTime: z.string().regex(/^\d{2}:\d{2}$/),
   endTime: z.string().regex(/^\d{2}:\d{2}$/),
   notes: z.string().optional(),
-  reminderMinutesBefore: z.number().int().nonnegative().optional(),
-  reminderSound: z.boolean().optional(),
+  reminderMinutesBefore: z
+    .number()
+    .int()
+    .refine((v) => v === null || [5, 10, 15, 30, 60].includes(v), {
+      message: "reminderMinutesBefore must be one of 5, 10, 15, 30, 60",
+    })
+    .nullable()
+    .optional(),
+  reminderSilent: z.boolean().optional(),
 });
 
 const UpdateTaskSchema = z.object({
@@ -40,8 +47,15 @@ const UpdateTaskSchema = z.object({
     .regex(/^\d{2}:\d{2}$/)
     .optional(),
   notes: z.string().optional(),
-  reminderMinutesBefore: z.number().int().nonnegative().optional(),
-  reminderSound: z.boolean().optional(),
+  reminderMinutesBefore: z
+    .number()
+    .int()
+    .refine((v) => v === null || [5, 10, 15, 30, 60].includes(v), {
+      message: "reminderMinutesBefore must be one of 5, 10, 15, 30, 60",
+    })
+    .nullable()
+    .optional(),
+  reminderSilent: z.boolean().optional(),
 });
 
 const UpdateStatusSchema = z.object({

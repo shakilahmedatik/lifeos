@@ -1,13 +1,18 @@
 import { useState } from "react";
-import type { Habit, NewHabitInput, HabitCategory } from "../../../packages/contracts/src/index.js";
-import { useHabits } from "../modules/habits/useHabits.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
+import type { Habit, HabitCategory, NewHabitInput } from "../../../packages/contracts/src/index.js";
+import { getClientDateString } from "../../../packages/contracts/src/index.js";
+import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
+import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import Modal from "../components/ui/Modal.js";
-import { PlusIcon, CheckCheckIcon } from "../components/ui/icons.js";
+import { CheckCheckIcon, PlusIcon } from "../components/ui/icons.js";
+import { useHabits } from "../modules/habits/useHabits.js";
 
-const CATEGORY_VARIANTS: Record<HabitCategory, "blue" | "purple" | "orange" | "pink" | "success" | "default"> = {
+const CATEGORY_VARIANTS: Record<
+  HabitCategory,
+  "blue" | "purple" | "orange" | "pink" | "success" | "default"
+> = {
   health: "success",
   learning: "purple",
   productivity: "blue",
@@ -23,6 +28,7 @@ export default function HabitsPage() {
   const [frequency, setFrequency] = useState<"daily" | "weekly">("daily");
   const [category, setCategory] = useState<HabitCategory>("general");
   const [editingHabit, setEditingHabit] = useState<Habit | null>(null);
+  const toast = useAppToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -33,16 +39,16 @@ export default function HabitsPage() {
       setName("");
       setShowForm(false);
     } catch {
-      // silently fail
+      toast.error("Failed to create habit");
     }
   };
 
   const handleToggle = async (habitId: string, currentlyLogged: boolean) => {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = getClientDateString();
     try {
       await toggleHabit(habitId, today, currentlyLogged);
     } catch {
-      // silently fail
+      toast.error("Failed to update habit");
     }
   };
 
@@ -68,7 +74,13 @@ export default function HabitsPage() {
         <Card className="text-center py-8">
           <CheckCheckIcon size={32} className="text-gray-600 mx-auto mb-2" />
           <p className="text-gray-500 text-sm">No habits yet</p>
-          <Button variant="secondary" size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)} className="mt-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<PlusIcon size={14} />}
+            onClick={() => setShowForm(true)}
+            className="mt-3"
+          >
             Create your first habit
           </Button>
         </Card>
@@ -80,9 +92,7 @@ export default function HabitsPage() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <span className="w-2 h-2 rounded-full bg-gray-600" />
-                    <span className="text-sm font-medium text-gray-200 truncate">
-                      {habit.name}
-                    </span>
+                    <span className="text-sm font-medium text-gray-200 truncate">{habit.name}</span>
                     <Badge variant={CATEGORY_VARIANTS[habit.category]} size="sm">
                       {habit.category}
                     </Badge>
@@ -100,8 +110,17 @@ export default function HabitsPage() {
                     onClick={() => removeHabit(habit.id)}
                     className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M3 6h18" /><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" /><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M3 6h18" />
+                      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+                      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
                     </svg>
                   </button>
                 </div>

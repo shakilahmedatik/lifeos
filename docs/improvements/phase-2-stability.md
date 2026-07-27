@@ -192,7 +192,7 @@ That represents ~80 lines of inline JSX clutter and a maintenance trap: change t
 **New file:** `frontend/src/components/ui/Input.tsx`
 
 ```tsx
-import type { ReactNode, InputHTMLAttributes, TextareaHTMLAttributes, SelectHTMLAttributes } from "react";
+import { useId, type ReactNode, type InputHTMLAttributes } from "react";
 
 interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   label?: string;
@@ -210,7 +210,8 @@ export function Input({
   id,
   ...props
 }: InputProps) {
-  const inputId = id || `input-${Math.random().toString(36).slice(2, 9)}`;
+  const generatedId = useId();
+  const inputId = id || generatedId;
   return (
     <div className="space-y-1">
       {label && (
@@ -753,3 +754,37 @@ Run `vitest --coverage` and ensure **frontend** coverage climbs to >60%.
 1. `pnpm test` passes all new tests.
 2. `pnpm test:coverage` shows frontend coverage >50%.
 3. Intentionally break an `expect` in one test, confirm it fails.
+
+---
+
+## 6. Add API Rate Limiting Middleware
+
+### Problem
+API endpoints have no rate limiting or abuse protection. A broken loop in the client or aggressive external requests could cause high CPU load or SQLite database contention.
+
+### Implementation Plan
+- Install `express-rate-limit` in `backend/package.json`.
+- Create rate limiter middleware in `backend/src/shared/rate-limiter.ts`:
+  - Global API rate limiter (e.g., 300 requests / 15 mins).
+  - Stricter rate limiter for auth / sensitive actions (e.g., 20 attempts / 15 mins).
+- Attach global limiter to `/api` routes in `backend/src/index.ts`.
+
+### Verification
+1. Sending repeated rapid requests to `/api/health` triggers `429 Too Many Requests` after threshold.
+2. Headers `RateLimit-Limit`, `RateLimit-Remaining` are returned in response.
+
+---
+
+## 7. Add Mobile Responsiveness & Touch UI Guidelines
+
+### Problem
+The frontend layout relies on a fixed desktop sidebar without mobile navigation or touch-optimized UI controls.
+
+### Implementation Plan
+- Update `Sidebar.tsx` to support a collapsible mobile drawer menu with hamburger toggle on small viewports (`< md`).
+- Ensure touch targets across buttons, habit check items, and navigation links meet min 44x44px target sizes.
+- Add responsive layout classes (`grid-cols-1 md:grid-cols-2 lg:grid-cols-3`) across `DashboardPage`, `FinancePage`, `HabitsPage`, and `WorkoutsPage`.
+
+### Verification
+1. Resize window to 375px (iPhone viewport size) and verify mobile drawer menu functions cleanly.
+2. Run axe accessibility smoke tests to ensure mobile navigation elements are screen-reader accessible.

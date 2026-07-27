@@ -1,11 +1,21 @@
-import { useEffect, useState, useCallback, useRef } from "react";
-import type { DashboardSummary, Task } from "../../../packages/contracts/src/index.js";
-import { api } from "../lib/api.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getClientDateString } from "../../../packages/contracts/src/date-utils.js";
+import type {
+  DashboardSummary,
+  HabitWithStreak,
+  Task,
+} from "../../../packages/contracts/src/index.js";
+import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
-import { TimerIcon, RefreshCwIcon, CheckCheckIcon, ArrowRightIcon } from "../components/ui/icons.js";
-import type { HabitWithStreak } from "../../../packages/contracts/src/index.js";
+import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
+import {
+  ArrowRightIcon,
+  CheckCheckIcon,
+  RefreshCwIcon,
+  TimerIcon,
+} from "../components/ui/icons.js";
+import { api } from "../lib/api.js";
 
 const POLL_INTERVAL = 30_000;
 
@@ -14,18 +24,21 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const pausedRef = useRef(false);
+  const toast = useAppToast();
 
   const fetchSummary = useCallback(async () => {
     try {
-      const data = await api.getSummary();
+      const today = getClientDateString();
+      const data = await api.getSummary(today);
       setSummary(data);
       setError(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load dashboard");
+      toast.error("Failed to load dashboard");
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [toast]);
 
   useEffect(() => {
     fetchSummary();
@@ -47,14 +60,15 @@ export default function DashboardPage() {
     const habit = summary.dueHabits.find((h) => h.id === habitId);
     if (!habit) return;
     try {
+      const today = getClientDateString();
       if (habit.loggedToday) {
-        await api.unlogHabit(habitId, new Date().toISOString().slice(0, 10));
+        await api.unlogHabit(habitId, today);
       } else {
-        await api.logHabit(habitId);
+        await api.logHabit(habitId, today);
       }
       fetchSummary();
     } catch {
-      // silently fail
+      toast.error("Failed to update habit");
     }
   };
 
@@ -82,7 +96,10 @@ export default function DashboardPage() {
         <div className="bg-red-900/30 border border-red-800/50 text-red-300 px-4 py-3 rounded-xl text-sm flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-red-500" />
           {error}
-          <button onClick={fetchSummary} className="ml-auto text-red-400 hover:text-red-200 underline text-xs">
+          <button
+            onClick={fetchSummary}
+            className="ml-auto text-red-400 hover:text-red-200 underline text-xs"
+          >
             Retry
           </button>
         </div>
@@ -114,10 +131,7 @@ export default function DashboardPage() {
         <NextCard task={summary?.next ?? null} />
       </div>
 
-      <TaskProgress
-        done={summary?.todayDoneCount ?? 0}
-        total={summary?.todayCount ?? 0}
-      />
+      <TaskProgress done={summary?.todayDoneCount ?? 0} total={summary?.todayCount ?? 0} />
 
       {summary?.dueHabits && summary.dueHabits.length > 0 && (
         <Card>
@@ -138,7 +152,6 @@ export default function DashboardPage() {
           </div>
         </Card>
       )}
-
     </div>
   );
 }
@@ -149,6 +162,8 @@ function NowCard({ task }: { task: Task | null }) {
   useEffect(() => {
     if (!task) return;
     const tick = () => {
+      // Client clock = "when is this task's end time, ticking live" (wall-clock countdown)
+      // Server date = "what day to show tasks for" — that's handled by fetchSummary with ?date=
       const now = new Date();
       const [h, m] = task.endTime.split(":").map(Number);
       const end = new Date(now);
@@ -324,5 +339,3 @@ function HabitChip({
     </button>
   );
 }
-
-

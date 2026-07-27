@@ -1,11 +1,20 @@
 import { useState } from "react";
-import { useLearningSessions, useSkillCategories, useCourseProgress } from "../modules/skills/index.js";
-import type { NewSkillCategoryInput, NewLearningSessionInput, NewCourseProgressInput } from "../modules/skills/types.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
+import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
+import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import Modal from "../components/ui/Modal.js";
-import { PlusIcon, GraduationCapIcon } from "../components/ui/icons.js";
+import { GraduationCapIcon, PlusIcon } from "../components/ui/icons.js";
+import {
+  useCourseProgress,
+  useLearningSessions,
+  useSkillCategories,
+} from "../modules/skills/index.js";
+import type {
+  NewCourseProgressInput,
+  NewLearningSessionInput,
+  NewSkillCategoryInput,
+} from "../modules/skills/types.js";
 
 type Tab = "sessions" | "courses" | "categories";
 
@@ -28,6 +37,7 @@ export default function SkillsPage() {
   const [showCategoryForm, setShowCategoryForm] = useState(false);
   const [categoryName, setCategoryName] = useState("");
   const [categoryDesc, setCategoryDesc] = useState("");
+  const toast = useAppToast();
 
   const tabs: Tab[] = ["sessions", "courses", "categories"];
 
@@ -39,7 +49,12 @@ export default function SkillsPage() {
       skillCategoryId: sessionCategory,
       notes: sessionNotes.trim() || undefined,
     };
-    addSession(input);
+    try {
+      addSession(input);
+      toast.success("Session logged");
+    } catch {
+      toast.error("Failed to log session");
+    }
     setSessionDuration(30);
     setSessionNotes("");
     setShowSessionForm(false);
@@ -53,7 +68,12 @@ export default function SkillsPage() {
       platform: coursePlatform.trim(),
       totalLessons: courseLessons,
     };
-    addCourse(input);
+    try {
+      addCourse(input);
+      toast.success("Course added");
+    } catch {
+      toast.error("Failed to add course");
+    }
     setCourseName("");
     setCoursePlatform("");
     setCourseLessons(0);
@@ -67,7 +87,12 @@ export default function SkillsPage() {
       name: categoryName.trim(),
       description: categoryDesc.trim() || undefined,
     };
-    addCategory(input);
+    try {
+      addCategory(input);
+      toast.success("Category added");
+    } catch {
+      toast.error("Failed to add category");
+    }
     setCategoryName("");
     setCategoryDesc("");
     setShowCategoryForm(false);
@@ -82,7 +107,11 @@ export default function SkillsPage() {
         </div>
         <div className="flex items-center gap-2">
           {tab === "sessions" && (
-            <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowSessionForm(true)}>
+            <Button
+              size="sm"
+              icon={<PlusIcon size={14} />}
+              onClick={() => setShowSessionForm(true)}
+            >
               Log Session
             </Button>
           )}
@@ -92,7 +121,11 @@ export default function SkillsPage() {
             </Button>
           )}
           {tab === "categories" && (
-            <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowCategoryForm(true)}>
+            <Button
+              size="sm"
+              icon={<PlusIcon size={14} />}
+              onClick={() => setShowCategoryForm(true)}
+            >
               Add Category
             </Button>
           )}
@@ -143,8 +176,16 @@ export default function SkillsPage() {
                   onClick={() => removeSession(s.id)}
                   className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
                   </svg>
                 </button>
               </Card>
@@ -169,8 +210,16 @@ export default function SkillsPage() {
                     onClick={() => removeCourse(c.id)}
                     className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors"
                   >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+                    <svg
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                    >
+                      <path d="M18 6 6 18" />
+                      <path d="m6 6 12 12" />
                     </svg>
                   </button>
                 </CardHeader>
@@ -182,7 +231,9 @@ export default function SkillsPage() {
                       style={{ width: `${c.completionPercentage}%` }}
                     />
                   </div>
-                  <span className="text-xs font-medium text-gray-400">{c.completionPercentage}%</span>
+                  <span className="text-xs font-medium text-gray-400">
+                    {c.completionPercentage}%
+                  </span>
                 </div>
               </Card>
             ))
@@ -208,8 +259,16 @@ export default function SkillsPage() {
                   onClick={() => removeCategory(c.id)}
                   className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors"
                 >
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M18 6 6 18" /><path d="m6 6 12 12" />
+                  <svg
+                    width="14"
+                    height="14"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                  >
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
                   </svg>
                 </button>
               </Card>
@@ -218,7 +277,11 @@ export default function SkillsPage() {
         </div>
       )}
 
-      <Modal open={showSessionForm} onClose={() => setShowSessionForm(false)} title="Log Learning Session">
+      <Modal
+        open={showSessionForm}
+        onClose={() => setShowSessionForm(false)}
+        title="Log Learning Session"
+      >
         <form onSubmit={handleAddSession} className="space-y-4">
           <div>
             <label className="block text-sm text-gray-400 mb-1">Duration (minutes)</label>
@@ -241,7 +304,9 @@ export default function SkillsPage() {
             >
               <option value="">Select category</option>
               {categories.map((c) => (
-                <option key={c.id} value={c.id}>{c.name}</option>
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
               ))}
             </select>
           </div>
@@ -255,7 +320,9 @@ export default function SkillsPage() {
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setShowSessionForm(false)}>Cancel</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowSessionForm(false)}>
+              Cancel
+            </Button>
             <Button type="submit">Log Session</Button>
           </div>
         </form>
@@ -265,35 +332,71 @@ export default function SkillsPage() {
         <form onSubmit={handleAddCourse} className="space-y-4">
           <div>
             <label className="block text-sm text-gray-400 mb-1">Course Name</label>
-            <input type="text" value={courseName} onChange={(e) => setCourseName(e.target.value)} className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500" required />
+            <input
+              type="text"
+              value={courseName}
+              onChange={(e) => setCourseName(e.target.value)}
+              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
+              required
+            />
           </div>
           <div>
             <label className="block text-sm text-gray-400 mb-1">Platform</label>
-            <input type="text" value={coursePlatform} onChange={(e) => setCoursePlatform(e.target.value)} className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500" />
+            <input
+              type="text"
+              value={coursePlatform}
+              onChange={(e) => setCoursePlatform(e.target.value)}
+              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
+            />
           </div>
           <div>
             <label className="block text-sm text-gray-400 mb-1">Total Lessons</label>
-            <input type="number" value={courseLessons} onChange={(e) => setCourseLessons(Number(e.target.value))} min={0} className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50" />
+            <input
+              type="number"
+              value={courseLessons}
+              onChange={(e) => setCourseLessons(Number(e.target.value))}
+              min={0}
+              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+            />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setShowCourseForm(false)}>Cancel</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowCourseForm(false)}>
+              Cancel
+            </Button>
             <Button type="submit">Add Course</Button>
           </div>
         </form>
       </Modal>
 
-      <Modal open={showCategoryForm} onClose={() => setShowCategoryForm(false)} title="Add Category">
+      <Modal
+        open={showCategoryForm}
+        onClose={() => setShowCategoryForm(false)}
+        title="Add Category"
+      >
         <form onSubmit={handleAddCategory} className="space-y-4">
           <div>
             <label className="block text-sm text-gray-400 mb-1">Name</label>
-            <input type="text" value={categoryName} onChange={(e) => setCategoryName(e.target.value)} className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500" required />
+            <input
+              type="text"
+              value={categoryName}
+              onChange={(e) => setCategoryName(e.target.value)}
+              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
+              required
+            />
           </div>
           <div>
             <label className="block text-sm text-gray-400 mb-1">Description</label>
-            <textarea value={categoryDesc} onChange={(e) => setCategoryDesc(e.target.value)} rows={2} className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500 resize-none" />
+            <textarea
+              value={categoryDesc}
+              onChange={(e) => setCategoryDesc(e.target.value)}
+              rows={2}
+              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500 resize-none"
+            />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setShowCategoryForm(false)}>Cancel</Button>
+            <Button variant="secondary" type="button" onClick={() => setShowCategoryForm(false)}>
+              Cancel
+            </Button>
             <Button type="submit">Add Category</Button>
           </div>
         </form>

@@ -20,10 +20,12 @@ import type {
   NewHabitInput,
   NewLearningLogInput,
   NewLearningResourceInput,
+  NewNotificationInput,
   NewSkillAreaInput,
   NewTransactionInput,
   NewWorkoutExerciseInput,
   NewWorkoutInput,
+  Notification,
   ResourceWithProgress,
   SkillArea,
   Task,
@@ -36,16 +38,40 @@ import type {
   WorkoutWithExercises,
 } from "../../../packages/contracts/src/index.js";
 
+const STORAGE_KEY = "lifeos_auth_token";
+
+export function getAuthToken(): string | null {
+  if (typeof window === "undefined") return null;
+  return localStorage.getItem(STORAGE_KEY);
+}
+
+export function setAuthToken(token: string | null) {
+  if (token) {
+    localStorage.setItem(STORAGE_KEY, token);
+  } else {
+    localStorage.removeItem(STORAGE_KEY);
+  }
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
-  if (!res.ok) throw new Error(`API error: ${res.status} ${res.statusText}`);
+  const headers: Record<string, string> = {
+    ...(options?.headers as Record<string, string>),
+  };
+  const token = getAuthToken();
+  if (token) headers["x-auth-token"] = token;
+  const res = await fetch(url, { ...options, headers });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`API error ${res.status}: ${body || res.statusText}`);
+  }
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
 export const api = {
   // Dashboard
-  getSummary: () => request<DashboardSummary>("/api/dashboard/summary"),
+  getSummary: (date?: string) =>
+    request<DashboardSummary>(`/api/dashboard/summary${date ? `?date=${date}` : ""}`),
 
   // Routine
   getTasks: (date: string) => request<Task[]>(`/api/routine/tasks?date=${date}`),
@@ -87,8 +113,12 @@ export const api = {
       body: JSON.stringify(patch),
     }),
   deleteHabit: (id: string) => request<void>(`/api/habits/${id}`, { method: "DELETE" }),
-  logHabit: (habitId: string) =>
-    request<HabitLog>(`/api/habits/${habitId}/log`, { method: "POST" }),
+  logHabit: (habitId: string, date?: string) =>
+    request<HabitLog>(`/api/habits/${habitId}/log`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: date ? JSON.stringify({ date }) : undefined,
+    }),
   unlogHabit: (habitId: string, date: string) =>
     request<void>(`/api/habits/${habitId}/log/${date}`, { method: "DELETE" }),
   getTodayHabits: () => request<HabitWithStreak[]>("/api/habits/today"),
@@ -198,4 +228,14 @@ export const api = {
 
   // Backup
   downloadBackup: () => request<{ filename: string; path: string }>("/api/backup"),
+
+  // Notifications
+  createNotification: (input: NewNotificationInput) =>
+    request<Notification>("/api/notifications", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  deleteNotificationsByTaskId: (taskId: string) =>
+    request<void>(`/api/notifications/task/${taskId}`, { method: "POST" }),
 };

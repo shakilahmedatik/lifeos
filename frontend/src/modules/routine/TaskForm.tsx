@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { NewTaskInput } from "../../../../packages/contracts/src/index.js";
+import { getClientDateString } from "../../../../packages/contracts/src/index.js";
 
 interface TaskFormProps {
   onSubmit: (input: NewTaskInput) => void;
@@ -7,7 +8,7 @@ interface TaskFormProps {
 }
 
 export default function TaskForm({ onSubmit, defaultDate }: TaskFormProps) {
-  const today = defaultDate ?? new Date().toISOString().slice(0, 10);
+  const today = defaultDate ?? getClientDateString();
   const [title, setTitle] = useState("");
   const [category, setCategory] = useState<NewTaskInput["category"]>("general");
   const [date, setDate] = useState(today);

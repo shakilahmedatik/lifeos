@@ -448,9 +448,18 @@ The backend has 9 modules × multiple endpoints each (health, routine, habits, f
 
 ### Implementation Plan
 
-#### 8a. Generate OpenAPI spec from Zod schemas
+---
 
-Since Phase 2.3 introduces Zod schemas in `packages/contracts/src/schemas.ts`, the most maintainable approach is to derive OpenAPI from those schemas. Use `@asteasolutions/zod-to-openapi`:
+## 7. Add OpenAPI Specification for All Routes
+
+### Problem
+API endpoints lack formal interactive documentation. External tooling or frontend client code generation requires an OpenAPI 3.0 specification.
+
+### Implementation Plan
+
+#### 7a. Generate OpenAPI spec from Zod schemas
+
+Since Phase 2.3 introduces Zod schemas in `packages/contracts/src/schemas.ts`, derive OpenAPI from those schemas using `@asteasolutions/zod-to-openapi`:
 
 **New file:** `packages/contracts/src/openapi.ts`
 
@@ -460,7 +469,6 @@ import { z } from "zod";
 
 const registry = new OpenAPIRegistry();
 
-// Register each endpoint's request/response schemas
 registry.registerPath({
   method: "get",
   path: "/api/health",
@@ -485,9 +493,6 @@ registry.registerPath({
   },
 });
 
-// Repeat for every endpoint. For a full automated approach, write a utility that
-// iterates over all Zod schemas and generates paths automatically.
-
 export function generateOpenApiSpec() {
   const generator = new OpenApiGeneratorV3(registry.definitions);
   return generator.generateDocument({
@@ -502,30 +507,9 @@ export function generateOpenApiSpec() {
 }
 ```
 
-**Alternative (simpler, recommended):** Write a Markdown file in `docs/api.md` that documents routes manually, then auto-generate OpenAPI from it in CI. For a solo project, manually curated docs are faster to write than Zod-to-OpenAPI wiring. But if you already have Zod schemas, the automated path is worth the setup cost.
+#### 7b. Expose OpenAPI spec & Swagger UI
 
-#### 8b. Expose OpenAPI spec via an endpoint
-
-**File:** `backend/src/modules/health/api/router.ts` (add)
-
-```ts
-import { generateOpenApiSpec } from "@lifeos/contracts";
-
-router.get("/openapi.json", (_req, res) => {
-  const spec = generateOpenApiSpec();
-  res.json(spec);
-});
-```
-
-Or serve a static `openapi.json` file from `backend/src/`:
-
-```bash
-curl http://localhost:3000/api/openapi.json > openapi.json
-```
-
-#### 8c. Add Swagger UI for interactive docs
-
-**New file:** `backend/src/modules/health/api/swagger.ts`
+**File:** `backend/src/modules/health/api/swagger.ts`
 
 ```ts
 import swaggerUi from "swagger-ui-express";
@@ -541,40 +525,9 @@ app.use(
 );
 ```
 
-**Install:** `pnpm add swagger-ui-express` in `backend/`.
-
-#### 8d. Document each module's endpoints
-
-For each module, register paths in the OpenAPI registry. Minimum viable documentation per endpoint:
-
-| Field | Required | Notes |
-|-------|----------|-------|
-| `method` + `path` | Yes | Exact Express route pattern |
-| `summary` | Yes | One-line description |
-| `parameters` | For query/param inputs | Type, required, description |
-| `requestBody` | For POST/PATCH | Reference to the Zod schema |
-| `responses` | Yes | At minimum 200 and 4xx |
-
-#### 8e. Keep docs in sync via CI check
-
-Add a CI step that verifies the OpenAPI spec is up to date:
-
-```yaml
-- name: Check OpenAPI spec
-  run: |
-    pnpm --filter @lifeos/backend generate-openapi
-    git diff --exit-code openapi.json
-```
-
-### Dependencies
-- Phase 2.3 (Zod validation schemas) — OpenAPI generation builds on existing schemas.
-- Phase 1.6 (health endpoint) — the OpenAPI endpoint sits alongside the health route.
-
 ### Verification
 1. Start the backend. Navigate to `http://localhost:3000/api/docs`. Confirm Swagger UI loads.
-2. Expand `GET /api/health`. Click "Try it out" — confirm the response schema matches the actual API.
-3. Run the CI check with an out-of-date spec. Confirm it fails.
-4. Run `curl http://localhost:3000/api/openapi.json | jq '.info.title'` — returns `"LifeOS API"`.
+2. `curl http://localhost:3000/api/openapi.json | jq '.info.title'` — returns `"LifeOS API"`.
 
 ---
 
@@ -586,30 +539,42 @@ Add a CI step that verifies the OpenAPI spec is up to date:
 - [ ] `pnpm test` passes.
 - [ ] `pnpm build` passes.
 - [ ] No `any` types introduced.
-- [ ] New files have a matching test (or a `// TODO: test` comment explaining why a test is not possible).
-- [ ] Changes to a backend module include an update to the corresponding specs file in `openspec/specs/`.
-- [ ] If schema changed, a new migration is added in `backend/src/shared/migrations.ts`.
-- [ ] New or modified API routes are reflected in the OpenAPI spec (`packages/contracts/src/openapi.ts` or `docs/api/openapi.json`).
+- [ ] New files have a matching test.
+- [ ] Changes to backend modules update corresponding specs in `openspec/specs/`.
+- [ ] Schema changes include a new migration in `backend/src/shared/migrations.ts`.
+- [ ] Modified API routes are reflected in the OpenAPI spec.
 
 ### Monthly Checklist
 
-- [ ] Review `backend/data/` size. If growing large, consider archiving old rows.
+- [ ] Run SQLite `VACUUM;` to reclaim unused disk space and optimize database file layout.
+- [ ] Purge news articles older than 60 days to prevent unbounded DB growth.
+- [ ] Review `backend/data/` size. If growing large, archive old rows (Phase 4.10).
 - [ ] Review `openspec/changes/` — move completed changes to `implemented/`.
-- [ ] Run `pnpm outdated` and decide whether to upgrade major versions.
+- [ ] Run `pnpm outdated` and decide whether to upgrade dependencies.
 - [ ] Verify backups: `GET /api/backup` returns a valid file.
-- [ ] Check `backend/data/backups/` — confirm daily backups are being created and old ones pruned.
+- [ ] Check `backend/data/backups/` — confirm daily backups are created and old ones pruned.
 - [ ] Review error logs (structured JSON) for recurring issues.
-- [ ] Verify OpenAPI spec is up to date: `git diff --exit-code openapi.json` or check Swagger UI matches current routes.
 
 ### Quarterly Checklist
 
-- [ ] Audit overused Tailwind classes: run `rg 'gray-7|gray-8|gray-9' frontend/src` and fix any new hardcodes.
+- [ ] Audit overused Tailwind classes: run `rg 'gray-7|gray-8|gray-9' frontend/src`.
 - [ ] Audit duplicate types between contracts and domain folders.
-- [ ] Review and update this `docs/improvements/` index to reflect completed vs. pending phases.
-- [ ] **Dedicated a11y audit:** Tab through every page with keyboard only. Verify focus rings are visible, all interactive elements are reachable, and screen readers announce content correctly. Use axe DevTools or Lighthouse a11y audit. Target: 0 critical violations, WCAG AA compliance.
-- [ ] Run Lighthouse performance audit. Verify bundle size budgets (Phase 3.8) are not exceeded.
-- [ ] Review `AUTH_PASSWORD` usage — if set, rotate quarterly. If not set, confirm the app is only accessible on localhost.
-- [ ] Review OpenAPI spec for dead endpoints (routes that changed but the spec was not updated).
+- [ ] **Dedicated a11y audit:** Tab through every page with keyboard only. Target: 0 critical violations, WCAG AA compliance.
+- [ ] Run Lighthouse performance audit. Verify bundle size budgets (Phase 3.9) are not exceeded.
+
+---
+
+## 9. Add Offline / PWA Shell Support (Optional)
+
+### Problem
+When internet access is unavailable or offline, the web SPA requires assets to be cached locally to render the shell interface.
+
+### Implementation Plan
+- Configure `vite-plugin-pwa` in `frontend/vite.config.ts`.
+- Add web app manifest (`manifest.json`) and service worker for SPA shell caching.
+
+### Verification
+1. Disconnect network in browser DevTools. Reload app — shell renders offline cleanly.
 
 ---
 
@@ -622,10 +587,6 @@ Add a CI step that verifies the OpenAPI spec is up to date:
 | CI passes on main | Green check on the last 10 commits. |
 | Duplicate DB guard active | Running with wrong `DATABASE_PATH` throws, not silently creates a new DB. |
 | No unintended ignored files | `git ls-files --others --ignored --exclude-standard` shows only expected artifacts. |
-| Migrations work | Delete DB, run app, verify `settings` table exists. Run again — no duplicate migration. |
+| Migrations work | Delete DB, run app, verify `settings` table exists. |
 | Backups run daily | Restart app twice on same day — only one backup file created. |
-| Auth works (if enabled) | Set `AUTH_PASSWORD=test`, verify 401 without token, 200 with token. |
-| Error logs structured | Trigger an error — verify JSON log output with timestamp, level, message. |
 | OpenAPI spec exists | `GET /api/openapi.json` returns valid OpenAPI 3.0 document. Swagger UI renders at `/api/docs`. |
-| API docs match routes | Every Express route in `backend/src/modules/**/api/router.ts` has a corresponding entry in the OpenAPI spec. |
-| `.nvmrc` present | `node --version` matches the version in `.nvmrc` (checked by CI). |

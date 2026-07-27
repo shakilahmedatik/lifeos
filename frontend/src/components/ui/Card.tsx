@@ -33,16 +33,16 @@ export default function Card({
   );
 }
 
-export function CardHeader({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={`flex items-center justify-between mb-3 ${className}`}>
-      {children}
-    </div>
-  );
+export function CardHeader({
+  children,
+  className = "",
+}: { children: ReactNode; className?: string }) {
+  return <div className={`flex items-center justify-between mb-3 ${className}`}>{children}</div>;
 }
 
-export function CardTitle({ children, className = "" }: { children: ReactNode; className?: string }) {
-  return (
-    <h3 className={`text-sm font-semibold text-gray-200 ${className}`}>{children}</h3>
-  );
+export function CardTitle({
+  children,
+  className = "",
+}: { children: ReactNode; className?: string }) {
+  return <h3 className={`text-sm font-semibold text-gray-200 ${className}`}>{children}</h3>;
 }
