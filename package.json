@@ -17,13 +17,7 @@
     "esbuild",
     "@biomejs/biome"
   ],
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "better-sqlite3",
-      "esbuild",
-      "@biomejs/biome"
-    ]
-  },
+
   "devDependencies": {
     "@biomejs/biome": "^2.5.5",
     "jsdom": "^29.1.1",

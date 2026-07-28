@@ -16,6 +16,7 @@ interface BadgeProps {
   variant?: BadgeVariant;
   size?: "sm" | "md";
   className?: string;
+  onClick?: () => void;
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
@@ -40,10 +41,12 @@ export default function Badge({
   variant = "default",
   size = "sm",
   className = "",
+  onClick,
 }: BadgeProps) {
   return (
     <span
-      className={`inline-flex items-center font-medium rounded-full ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+      className={`inline-flex items-center font-medium rounded-full ${variantStyles[variant]} ${sizeStyles[size]} ${className} ${onClick ? "cursor-pointer" : ""}`}
+      onClick={onClick}
     >
       {children}
     </span>

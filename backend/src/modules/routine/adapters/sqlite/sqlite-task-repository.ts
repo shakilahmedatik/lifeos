@@ -18,6 +18,7 @@ interface TaskRow {
   reminder_sound: number;
   recurrence: TaskRecurrence;
   subtasks?: string | null;
+  reference_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -48,6 +49,7 @@ function rowToTask(row: TaskRow, dateOverride?: string): Task {
     recurrence: row.recurrence ?? "none",
     isOvernight: isOvernightTask(startTime, endTime),
     subtasks: parseSubtasks(row.subtasks),
+    referenceId: row.reference_id ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -105,8 +107,8 @@ export class SqliteTaskRepository implements TaskRepository {
 
     this.db
       .prepare(
-        `INSERT INTO tasks (id, title, category, date, start_time, end_time, status, notes, reminder_minutes_before, reminder_sound, recurrence, subtasks, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO tasks (id, title, category, date, start_time, end_time, status, notes, reminder_minutes_before, reminder_sound, recurrence, subtasks, reference_id, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -120,6 +122,7 @@ export class SqliteTaskRepository implements TaskRepository {
         input.reminderSilent ? 0 : 1,
         input.recurrence ?? "none",
         subtasksJson,
+        input.referenceId ?? null,
         now,
         now,
       );
@@ -173,6 +176,10 @@ export class SqliteTaskRepository implements TaskRepository {
     if (patch.subtasks !== undefined) {
       fields.push("subtasks = ?");
       values.push(JSON.stringify(patch.subtasks));
+    }
+    if (patch.referenceId !== undefined) {
+      fields.push("reference_id = ?");
+      values.push(patch.referenceId ?? null);
     }
 
     if (fields.length === 0) return existing;

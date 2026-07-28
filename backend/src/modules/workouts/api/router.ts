@@ -1,3 +1,13 @@
+import {
+  CompleteSessionInputSchema,
+  NewExerciseInputSchema,
+  NewExerciseLogInputSchema,
+  NewWorkoutExerciseInputSchema,
+  NewWorkoutInputSchema,
+  StartSessionInputSchema,
+  UpdateExerciseSchema,
+  UpdateWorkoutSchema,
+} from "@lifeos/contracts";
 import { Router } from "express";
 
 import type { ExerciseService } from "../application/exercise-service.js";
@@ -19,6 +29,11 @@ export function createWorkoutsRouter(
     res.json(exercises);
   });
 
+  router.get("/exercises/:id/progress", (req, res) => {
+    const progress = workoutHistoryService.getExerciseProgress(req.params.id);
+    res.json(progress);
+  });
+
   router.get("/exercises/:id", (req, res) => {
     const exercise = exerciseService.getExercise(req.params.id);
     if (!exercise) {
@@ -29,25 +44,45 @@ export function createWorkoutsRouter(
   });
 
   router.post("/exercises", (req, res) => {
+    const parsed = NewExerciseInputSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid input", details: parsed.error.format() });
+      return;
+    }
+
     try {
-      const exercise = exerciseService.createExercise(req.body);
+      const exercise = exerciseService.createExercise(parsed.data);
       res.status(201).json(exercise);
     } catch (error) {
       if (error instanceof Error && error.message === "Exercise with this name already exists") {
         res.status(409).json({ error: error.message });
         return;
       }
-      throw error;
+      res.status(500).json({ error: "Failed to create exercise" });
     }
   });
 
   router.patch("/exercises/:id", (req, res) => {
-    const exercise = exerciseService.updateExercise(req.params.id, req.body);
-    if (!exercise) {
-      res.status(404).json({ error: "Exercise not found" });
+    const parsed = UpdateExerciseSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid input", details: parsed.error.format() });
       return;
     }
-    res.json(exercise);
+
+    try {
+      const exercise = exerciseService.updateExercise(req.params.id, parsed.data);
+      if (!exercise) {
+        res.status(404).json({ error: "Exercise not found" });
+        return;
+      }
+      res.json(exercise);
+    } catch (error) {
+      if (error instanceof Error && error.message === "Exercise with this name already exists") {
+        res.status(409).json({ error: error.message });
+        return;
+      }
+      res.status(500).json({ error: "Failed to update exercise" });
+    }
   });
 
   router.delete("/exercises/:id", (req, res) => {
@@ -75,15 +110,27 @@ export function createWorkoutsRouter(
   });
 
   router.post("/sessions", (req, res) => {
-    const session = workoutSessionService.startSession(req.body.workoutId);
+    const parsed = StartSessionInputSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid input", details: parsed.error.format() });
+      return;
+    }
+
+    const session = workoutSessionService.startSession(parsed.data.workoutId);
     res.status(201).json(session);
   });
 
   router.patch("/sessions/:id/complete", (req, res) => {
+    const parsed = CompleteSessionInputSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid input", details: parsed.error.format() });
+      return;
+    }
+
     const session = workoutSessionService.completeSession(
       req.params.id,
-      req.body.durationSeconds,
-      req.body.notes,
+      parsed.data.durationSeconds,
+      parsed.data.notes,
     );
     if (!session) {
       res.status(404).json({ error: "Session not found" });
@@ -108,7 +155,14 @@ export function createWorkoutsRouter(
       res.status(404).json({ error: "Session not found" });
       return;
     }
-    const log = workoutSessionService.addExerciseLog(req.params.id, req.body);
+
+    const parsed = NewExerciseLogInputSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid input", details: parsed.error.format() });
+      return;
+    }
+
+    const log = workoutSessionService.addExerciseLog(req.params.id, parsed.data);
     res.status(201).json(log);
   });
 
@@ -155,12 +209,24 @@ export function createWorkoutsRouter(
   });
 
   router.post("/", (req, res) => {
-    const workout = workoutService.createWorkout(req.body);
+    const parsed = NewWorkoutInputSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid input", details: parsed.error.format() });
+      return;
+    }
+
+    const workout = workoutService.createWorkout(parsed.data);
     res.status(201).json(workout);
   });
 
   router.patch("/:id", (req, res) => {
-    const workout = workoutService.updateWorkout(req.params.id, req.body);
+    const parsed = UpdateWorkoutSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid input", details: parsed.error.format() });
+      return;
+    }
+
+    const workout = workoutService.updateWorkout(req.params.id, parsed.data);
     if (!workout) {
       res.status(404).json({ error: "Workout not found" });
       return;
@@ -184,16 +250,31 @@ export function createWorkoutsRouter(
       res.status(404).json({ error: "Workout not found" });
       return;
     }
-    const exercise = workoutService.addExerciseToWorkout(
-      req.params.id,
-      req.body.exerciseId,
-      req.body,
-    );
+
+    const exerciseId = req.body.exerciseId;
+    if (typeof exerciseId !== "string" || !exerciseId) {
+      res.status(400).json({ error: "exerciseId is required" });
+      return;
+    }
+
+    const parsed = NewWorkoutExerciseInputSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid input", details: parsed.error.format() });
+      return;
+    }
+
+    const exercise = workoutService.addExerciseToWorkout(req.params.id, exerciseId, parsed.data);
     res.status(201).json(exercise);
   });
 
   router.patch("/:workoutId/exercises/:exerciseId", (req, res) => {
-    const exercise = workoutService.updateWorkoutExercise(req.params.exerciseId, req.body);
+    const parsed = NewWorkoutExerciseInputSchema.partial().safeParse(req.body);
+    if (!parsed.success) {
+      res.status(400).json({ error: "Invalid input", details: parsed.error.format() });
+      return;
+    }
+
+    const exercise = workoutService.updateWorkoutExercise(req.params.exerciseId, parsed.data);
     if (!exercise) {
       res.status(404).json({ error: "Exercise not found" });
       return;
@@ -208,6 +289,21 @@ export function createWorkoutsRouter(
       return;
     }
     res.status(204).send();
+  });
+
+  router.put("/:id/exercises/reorder", (req, res) => {
+    try {
+      const { exerciseIds } = req.body;
+      if (!Array.isArray(exerciseIds) || !exerciseIds.every((id) => typeof id === "string")) {
+        res.status(400).json({ error: "exerciseIds must be an array of strings" });
+        return;
+      }
+      workoutService.reorderExercises(req.params.id, exerciseIds);
+      res.json({ success: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to reorder exercises";
+      res.status(500).json({ error: message });
+    }
   });
 
   return router;

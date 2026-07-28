@@ -23,4 +23,5 @@ export interface WorkoutRepository {
   removeExercise(id: string): boolean;
   getExerciseById(id: string): WorkoutExercise | undefined;
   getExercisesByWorkoutId(workoutId: string): WorkoutExercise[];
+  reorderExercises(workoutId: string, exerciseIds: string[]): void;
 }

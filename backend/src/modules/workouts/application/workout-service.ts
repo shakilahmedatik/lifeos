@@ -59,4 +59,8 @@ export class WorkoutService {
   getWorkoutsByDay(day: string): Workout[] {
     return this.workoutRepo.getByScheduledDay(day);
   }
+
+  reorderExercises(workoutId: string, exerciseIds: string[]): void {
+    this.workoutRepo.reorderExercises(workoutId, exerciseIds);
+  }
 }

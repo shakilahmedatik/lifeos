@@ -49,7 +49,7 @@ describe("WorkoutHistory", () => {
 
   it("renders workout history title", () => {
     render(<WorkoutHistory />);
-    expect(screen.getByText("Workout History")).toBeDefined();
+    expect(screen.getByText("Recent Sessions")).toBeDefined();
   });
 
   it("shows total workouts", () => {
@@ -60,12 +60,12 @@ describe("WorkoutHistory", () => {
 
   it("shows total time", () => {
     render(<WorkoutHistory />);
-    expect(screen.getByText(/105 min/)).toBeDefined();
+    expect(screen.getByText("105")).toBeDefined();
   });
 
   it("shows average duration", () => {
     render(<WorkoutHistory />);
-    expect(screen.getByText(/53 min/)).toBeDefined();
+    expect(screen.getByText("53")).toBeDefined();
   });
 
   it("shows recent sessions", () => {
@@ -75,8 +75,8 @@ describe("WorkoutHistory", () => {
 
   it("shows session dates", () => {
     render(<WorkoutHistory />);
-    expect(screen.getByText(/7\/22\/2026/)).toBeDefined();
-    expect(screen.getByText(/7\/21\/2026/)).toBeDefined();
+    expect(screen.getByText(/July 22, 2026/)).toBeDefined();
+    expect(screen.getByText(/July 21, 2026/)).toBeDefined();
   });
 
   it("shows completed status", () => {
@@ -88,7 +88,7 @@ describe("WorkoutHistory", () => {
   it("calls onSelectSession when session is clicked", () => {
     const onSelectSession = vi.fn();
     render(<WorkoutHistory onSelectSession={onSelectSession} />);
-    screen.getByText(/7\/22\/2026/).click();
+    screen.getByText(/July 22, 2026/).click();
     expect(onSelectSession).toHaveBeenCalledWith("1");
   });
 });

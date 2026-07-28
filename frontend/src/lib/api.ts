@@ -4,7 +4,6 @@ import type {
   Category,
   CategoryBreakdown,
   DashboardSummary,
-  Exercise,
   FinanceDashboardWidget,
   Habit,
   HabitLog,
@@ -16,15 +15,10 @@ import type {
   NewHabitInput,
   NewNotificationInput,
   NewTransactionInput,
-  NewWorkoutInput,
   Notification,
   Task,
   Transaction,
   WeeklySummary,
-  Workout,
-  WorkoutSession,
-  WorkoutSessionWithLogs,
-  WorkoutWithExercises,
 } from "@lifeos/contracts";
 
 const STORAGE_KEY = "lifeos_auth_token";
@@ -160,27 +154,6 @@ export const api = {
     request<import("@lifeos/contracts").LearningLog[]>(
       `/api/skills/logs/by-resource/${resourceId}`,
     ),
-
-  // Workouts
-  getWorkouts: () => request<Workout[]>("/api/workouts"),
-  createWorkout: (input: NewWorkoutInput) =>
-    request<Workout>("/api/workouts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }),
-  getExercises: () => request<Exercise[]>("/api/workouts/exercises"),
-  getWorkoutWithExercises: (id: string) => request<WorkoutWithExercises>(`/api/workouts/${id}`),
-  startSession: (workoutId: string) =>
-    request<WorkoutSession>("/api/workouts/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ workoutId }),
-    }),
-  completeSession: (id: string) =>
-    request<WorkoutSession>(`/api/workouts/sessions/${id}/complete`, { method: "PATCH" }),
-  getSessionWithLogs: (id: string) =>
-    request<WorkoutSessionWithLogs>(`/api/workouts/sessions/${id}`),
 
   // Finance
   getAccounts: () => request<AccountWithBalance[]>("/api/finance/accounts"),

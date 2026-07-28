@@ -1,7 +1,9 @@
 export type {
   DayOfWeek,
+  EquipmentType,
   Exercise,
   ExerciseLog,
+  ExerciseProgressPoint,
   MuscleGroup,
   NewExerciseInput,
   NewExerciseLogInput,

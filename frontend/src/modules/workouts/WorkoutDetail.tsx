@@ -1,42 +1,77 @@
-import type { NewWorkoutExerciseInput } from "@lifeos/contracts";
+import type { DayOfWeek, NewWorkoutExerciseInput, WorkoutExercise } from "@lifeos/contracts";
 import { useState } from "react";
+import Button from "../../components/ui/Button.js";
+import Card, { CardContent } from "../../components/ui/Card.js";
+import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { addExerciseToWorkout, removeExerciseFromWorkout, updateWorkoutExercise } from "./api.js";
+import { ExerciseFormModal } from "./components/ExerciseFormModal.js";
+import { WorkoutDetailHeader } from "./components/WorkoutDetailHeader.js";
+import { WorkoutEditModal } from "./components/WorkoutEditModal.js";
+import { WorkoutExerciseItem } from "./components/WorkoutExerciseItem.js";
 import { useExercises, useWorkout } from "./useWorkouts.js";
 
 interface WorkoutDetailProps {
   workoutId: string;
   onBack?: () => void;
   onStartSession?: () => void;
+  onDeleted?: () => void;
 }
 
-export function WorkoutDetail({ workoutId, onBack, onStartSession }: WorkoutDetailProps) {
-  const { workout, loading, error, refresh } = useWorkout(workoutId);
+export function WorkoutDetail({
+  workoutId,
+  onBack,
+  onStartSession,
+  onDeleted,
+}: WorkoutDetailProps) {
+  const { workout, loading, error, refresh, deleteWorkout, updateWorkout, reorderExercises } =
+    useWorkout(workoutId);
   const { exercises } = useExercises();
   const [isAddingExercise, setIsAddingExercise] = useState(false);
+  const [editingExerciseId, setEditingExerciseId] = useState<string | null>(null);
+  const [confirmRemoveId, setConfirmRemoveId] = useState<string | null>(null);
+  const [confirmDeleteWorkout, setConfirmDeleteWorkout] = useState(false);
+  const [isEditWorkoutModalOpen, setIsEditWorkoutModalOpen] = useState(false);
+  const [editWorkoutName, setEditWorkoutName] = useState("");
+  const [editWorkoutDesc, setEditWorkoutDesc] = useState("");
+  const [editWorkoutDay, setEditWorkoutDay] = useState<DayOfWeek | "">("");
   const [selectedExerciseId, setSelectedExerciseId] = useState<string>("");
   const [exerciseConfig, setExerciseConfig] = useState<NewWorkoutExerciseInput>({
     sets: 3,
     reps: 10,
     restSeconds: 60,
+    weights: [0, 0, 0],
+    repsArray: [10, 10, 10],
   });
 
-  const handleAddExercise = async () => {
+  const handleSubmitExercise = async () => {
     if (!selectedExerciseId) return;
 
     try {
-      await addExerciseToWorkout(workoutId, selectedExerciseId, exerciseConfig);
+      if (editingExerciseId) {
+        await handleUpdateExercise(editingExerciseId, exerciseConfig);
+      } else {
+        await addExerciseToWorkout(workoutId, selectedExerciseId, exerciseConfig);
+      }
       setSelectedExerciseId("");
-      setExerciseConfig({ sets: 3, reps: 10, restSeconds: 60 });
+      setEditingExerciseId(null);
+      setExerciseConfig({
+        sets: 3,
+        reps: 10,
+        restSeconds: 60,
+        weights: [0, 0, 0],
+        repsArray: [10, 10, 10],
+      });
       setIsAddingExercise(false);
       refresh();
     } catch (err) {
-      console.error("Failed to add exercise:", err);
+      console.error("Failed to save exercise:", err);
     }
   };
 
-  const handleRemoveExercise = async (exerciseId: string) => {
-    if (confirm("Remove this exercise from the workout?")) {
-      await removeExerciseFromWorkout(workoutId, exerciseId);
+  const handleRemoveExercise = async () => {
+    if (confirmRemoveId) {
+      await removeExerciseFromWorkout(workoutId, confirmRemoveId);
+      setConfirmRemoveId(null);
       refresh();
     }
   };
@@ -49,167 +84,170 @@ export function WorkoutDetail({ workoutId, onBack, onStartSession }: WorkoutDeta
     refresh();
   };
 
+  const handleEditClick = (we: WorkoutExercise) => {
+    setEditingExerciseId(we.id);
+    setSelectedExerciseId(we.exerciseId);
+    setExerciseConfig({
+      sets: we.sets,
+      reps: we.reps,
+      restSeconds: we.restSeconds,
+      weights: we.weights || Array(we.sets).fill(we.weight || 0),
+      repsArray: we.repsArray || Array(we.sets).fill(we.reps || 10),
+    });
+    setIsAddingExercise(true);
+  };
+
+  const handleMoveUp = async (index: number) => {
+    if (index === 0 || !workout) return;
+    const newOrder = [...workout.exercises];
+    [newOrder[index - 1], newOrder[index]] = [newOrder[index], newOrder[index - 1]];
+    await reorderExercises(newOrder.map((e) => e.id));
+  };
+
+  const handleMoveDown = async (index: number) => {
+    if (!workout || index === workout.exercises.length - 1) return;
+    const newOrder = [...workout.exercises];
+    [newOrder[index + 1], newOrder[index]] = [newOrder[index], newOrder[index + 1]];
+    await reorderExercises(newOrder.map((e) => e.id));
+  };
+
+  const handleDeleteWorkout = async () => {
+    await deleteWorkout();
+    if (onDeleted) onDeleted();
+    else if (onBack) onBack();
+  };
+
+  const handleSaveWorkout = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editWorkoutName.trim()) return;
+    await updateWorkout({
+      name: editWorkoutName,
+      description: editWorkoutDesc,
+      scheduledDay: editWorkoutDay || undefined,
+    });
+    setIsEditWorkoutModalOpen(false);
+    refresh();
+  };
+
+  const openEditWorkout = () => {
+    if (!workout) return;
+    setEditWorkoutName(workout.name);
+    setEditWorkoutDesc(workout.description || "");
+    setEditWorkoutDay(workout.scheduledDay || "");
+    setIsEditWorkoutModalOpen(true);
+  };
+
   if (loading) {
-    return <div className="p-4">Loading workout...</div>;
+    return <div className="p-4 text-gray-400">Loading workout...</div>;
   }
 
   if (error || !workout) {
-    return <div className="p-4 text-red-500">Error: {error || "Workout not found"}</div>;
+    return <div className="p-4 text-red-400">Error: {error || "Workout not found"}</div>;
   }
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <button type="button" onClick={onBack} className="text-blue-500 hover:text-blue-600">
-          &larr; Back
-        </button>
-        <button
-          type="button"
-          onClick={onStartSession}
-          className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-        >
-          Start Session
-        </button>
-      </div>
+    <div className="space-y-6">
+      <WorkoutDetailHeader
+        workout={workout}
+        onBack={onBack}
+        onOpenEdit={openEditWorkout}
+        onOpenDelete={() => setConfirmDeleteWorkout(true)}
+        onStartSession={onStartSession}
+      />
 
-      <h2 className="text-2xl font-bold mb-2">{workout.name}</h2>
-      {workout.description && <p className="text-gray-600 mb-4">{workout.description}</p>}
-      {workout.scheduledDay && (
-        <p className="text-sm text-gray-500 mb-4">
-          Scheduled: {workout.scheduledDay}
-          {workout.scheduledTime && ` at ${workout.scheduledTime}`}
-        </p>
-      )}
-
-      <div className="mb-4">
-        <div className="flex justify-between items-center mb-2">
-          <h3 className="text-lg font-semibold">Exercises</h3>
-          <button
-            type="button"
-            onClick={() => setIsAddingExercise(true)}
-            className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600"
+      <div>
+        <div className="flex justify-between items-center mb-4">
+          <h3 className="text-lg font-semibold text-gray-200">Exercises</h3>
+          <Button
+            onClick={() => {
+              setIsAddingExercise(true);
+              setEditingExerciseId(null);
+              setSelectedExerciseId("");
+              setExerciseConfig({
+                sets: 3,
+                reps: 10,
+                restSeconds: 60,
+                weights: [0, 0, 0],
+                repsArray: [10, 10, 10],
+              });
+            }}
+            variant="primary"
+            size="sm"
           >
             Add Exercise
-          </button>
+          </Button>
         </div>
 
-        {isAddingExercise && (
-          <div className="mb-4 p-4 border rounded">
-            <select
-              value={selectedExerciseId}
-              onChange={(e) => setSelectedExerciseId(e.target.value)}
-              className="w-full p-2 border rounded mb-2"
-            >
-              <option value="">Select an exercise</option>
-              {exercises.map((exercise) => (
-                <option key={exercise.id} value={exercise.id}>
-                  {exercise.name} ({exercise.muscleGroup})
-                </option>
-              ))}
-            </select>
-            <div className="grid grid-cols-3 gap-2 mb-2">
-              <div>
-                <label htmlFor="sets" className="block text-sm text-gray-600">
-                  Sets
-                </label>
-                <input
-                  id="sets"
-                  type="number"
-                  value={exerciseConfig.sets}
-                  onChange={(e) =>
-                    setExerciseConfig({ ...exerciseConfig, sets: Number(e.target.value) })
-                  }
-                  className="w-full p-2 border rounded"
-                />
-              </div>
-              <div>
-                <label htmlFor="reps" className="block text-sm text-gray-600">
-                  Reps
-                </label>
-                <input
-                  id="reps"
-                  type="number"
-                  value={exerciseConfig.reps}
-                  onChange={(e) =>
-                    setExerciseConfig({ ...exerciseConfig, reps: Number(e.target.value) })
-                  }
-                  className="w-full p-2 border rounded"
-                />
-              </div>
-              <div>
-                <label htmlFor="rest" className="block text-sm text-gray-600">
-                  Rest (sec)
-                </label>
-                <input
-                  id="rest"
-                  type="number"
-                  value={exerciseConfig.restSeconds}
-                  onChange={(e) =>
-                    setExerciseConfig({ ...exerciseConfig, restSeconds: Number(e.target.value) })
-                  }
-                  className="w-full p-2 border rounded"
-                />
-              </div>
-            </div>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={handleAddExercise}
-                className="px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600"
-              >
-                Add
-              </button>
-              <button
-                type="button"
-                onClick={() => setIsAddingExercise(false)}
-                className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        )}
+        <ExerciseFormModal
+          open={isAddingExercise}
+          isEditing={!!editingExerciseId}
+          exercises={exercises}
+          selectedExerciseId={selectedExerciseId}
+          onSelectExercise={setSelectedExerciseId}
+          exerciseConfig={exerciseConfig}
+          onChangeConfig={setExerciseConfig}
+          onSubmit={handleSubmitExercise}
+          onClose={() => setIsAddingExercise(false)}
+        />
 
         {workout.exercises.length === 0 ? (
-          <p className="text-gray-500">No exercises added yet.</p>
+          <Card className="bg-transparent border-dashed">
+            <CardContent className="py-8 text-center text-gray-500">
+              No exercises added yet.
+            </CardContent>
+          </Card>
         ) : (
-          <div className="space-y-2">
-            {workout.exercises.map((we) => {
+          <div className="space-y-3">
+            {workout.exercises.map((we, index) => {
               const exercise = exercises.find((e) => e.id === we.exerciseId);
               return (
-                <div key={we.id} className="p-3 border rounded">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <p className="font-medium">{exercise?.name || "Unknown Exercise"}</p>
-                      <p className="text-sm text-gray-600">
-                        {we.sets} sets &times; {we.reps} reps
-                        {we.weight && ` @ ${we.weight} kg`}
-                        {` | ${we.restSeconds}s rest`}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleUpdateExercise(we.id, { sets: we.sets + 1 })}
-                        className="px-2 py-1 bg-gray-200 rounded text-sm"
-                      >
-                        +1 Set
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveExercise(we.id)}
-                        className="px-2 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600"
-                      >
-                        Remove
-                      </button>
-                    </div>
-                  </div>
-                </div>
+                <WorkoutExerciseItem
+                  key={we.id}
+                  workoutExercise={we}
+                  exercise={exercise}
+                  index={index}
+                  totalCount={workout.exercises.length}
+                  onMoveUp={handleMoveUp}
+                  onMoveDown={handleMoveDown}
+                  onEdit={handleEditClick}
+                  onRemove={(id) => setConfirmRemoveId(id)}
+                />
               );
             })}
           </div>
         )}
       </div>
+
+      <ConfirmDialog
+        open={!!confirmRemoveId}
+        title="Remove Exercise"
+        message="Are you sure you want to remove this exercise from your workout?"
+        confirmLabel="Remove"
+        onConfirm={handleRemoveExercise}
+        onCancel={() => setConfirmRemoveId(null)}
+        variant="danger"
+      />
+      <ConfirmDialog
+        open={confirmDeleteWorkout}
+        title="Delete Workout Plan"
+        message="Are you sure you want to delete this workout plan? This will also remove any sessions tracked against it."
+        confirmLabel="Delete Plan"
+        onConfirm={handleDeleteWorkout}
+        onCancel={() => setConfirmDeleteWorkout(false)}
+        variant="danger"
+      />
+
+      <WorkoutEditModal
+        open={isEditWorkoutModalOpen}
+        name={editWorkoutName}
+        onChangeName={setEditWorkoutName}
+        description={editWorkoutDesc}
+        onChangeDescription={setEditWorkoutDesc}
+        scheduledDay={editWorkoutDay}
+        onChangeScheduledDay={setEditWorkoutDay}
+        onSubmit={handleSaveWorkout}
+        onClose={() => setIsEditWorkoutModalOpen(false)}
+      />
     </div>
   );
 }

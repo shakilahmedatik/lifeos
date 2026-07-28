@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card from "../../components/ui/Card.js";
 import { PlusIcon, XIcon } from "../../components/ui/icons.js";
+import { useWorkouts } from "../workouts/useWorkouts.js";
 
 interface TaskFormProps {
   onSubmit: (input: NewTaskInput) => Promise<void>;
@@ -59,6 +60,9 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
   // Subtasks
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>([]);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [referenceId, setReferenceId] = useState<string>("");
+
+  const { workouts } = useWorkouts();
 
   // Notifications
   const [enableReminder, setEnableReminder] = useState(false);
@@ -112,6 +116,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
     setNotes("");
     setSubtasks([]);
     setNewSubtaskTitle("");
+    setReferenceId("");
     setEnableReminder(false);
     setFormError(null);
   };
@@ -135,6 +140,11 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
       return;
     }
 
+    if (category === "workout" && !referenceId) {
+      setFormError("Please select a workout plan for the workout task");
+      return;
+    }
+
     try {
       setSubmitting(true);
       await onSubmit({
@@ -144,6 +154,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
         startTime,
         endTime,
         recurrence,
+        referenceId: referenceId || undefined,
         notes: notes.trim() || undefined,
         subtasks: subtasks.length > 0 ? subtasks : undefined,
         ...(enableReminder && {
@@ -251,6 +262,30 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
             </select>
           </div>
         </div>
+
+        {category === "workout" && (
+          <div>
+            <label htmlFor="task-workout" className="block text-xs font-medium text-gray-400 mb-1">
+              Select Workout Plan *
+            </label>
+            <select
+              id="task-workout"
+              value={referenceId}
+              onChange={(e) => setReferenceId(e.target.value)}
+              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+              required
+            >
+              <option value="">Select a workout...</option>
+              {workouts
+                .filter((w) => (w.exerciseCount || 0) > 0)
+                .map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+        )}
 
         {/* Start Time & Duration Selection */}
         <div className="space-y-2 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">

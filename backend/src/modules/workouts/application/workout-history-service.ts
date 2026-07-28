@@ -1,4 +1,4 @@
-import type { WorkoutSession, WorkoutStats } from "../domain/types.js";
+import type { ExerciseProgressPoint, WorkoutSession, WorkoutStats } from "../domain/types.js";
 import type { WorkoutSessionRepository } from "../ports/workout-session-repository.js";
 
 export class WorkoutHistoryService {
@@ -28,5 +28,9 @@ export class WorkoutHistoryService {
 
   getRecentSessions(limit: number): WorkoutSession[] {
     return this.sessionRepo.getRecentSessions(limit);
+  }
+
+  getExerciseProgress(exerciseId: string): ExerciseProgressPoint[] {
+    return this.sessionRepo.getExerciseProgress(exerciseId);
   }
 }

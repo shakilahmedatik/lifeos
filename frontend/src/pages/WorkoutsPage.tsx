@@ -1,140 +1,254 @@
-import type { NewWorkoutInput } from "@lifeos/contracts";
-import { useState } from "react";
+import { type SubmitEvent, useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import { DumbbellIcon, PlusIcon } from "../components/ui/icons.js";
+import Card, { CardContent, CardHeader, CardTitle } from "../components/ui/Card.js";
+import { Input } from "../components/ui/Input.js";
+import { ChevronRightIcon, DumbbellIcon, PlusIcon } from "../components/ui/icons.js";
 import Modal from "../components/ui/Modal.js";
+import { CoachMode } from "../modules/workouts/CoachMode.js";
+import { ExerciseLibrary } from "../modules/workouts/ExerciseLibrary.js";
 import { useWorkouts } from "../modules/workouts/useWorkouts.js";
+import { WorkoutDetail } from "../modules/workouts/WorkoutDetail.js";
+import { WorkoutHistoryWithFilter } from "../modules/workouts/WorkoutHistoryWithFilter.js";
+import { WorkoutProgress } from "../modules/workouts/WorkoutProgress.js";
+import { WorkoutSessionDetail } from "../modules/workouts/WorkoutSessionDetail.js";
+
+type Tab = "plans" | "history" | "exercises";
 
 export default function WorkoutsPage() {
-  const { workouts, loading, createWorkout, deleteWorkout } = useWorkouts();
-  const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState("");
-  const [description, setDescription] = useState("");
-  const toast = useAppToast();
+  const [activeTab, setActiveTab] = useState<Tab>("plans");
+  const location = useLocation();
+  const navigate = useNavigate();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  // Views:
+  // plans -> list (default), detail (selectedWorkoutId), coach (isCoaching)
+  // history -> list (default), sessionDetail (selectedSessionId)
+
+  const [selectedWorkoutId, setSelectedWorkoutId] = useState<string | null>(null);
+  const [isCoaching, setIsCoaching] = useState(false);
+  const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
+
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
+
+  const { workouts, loading, error, createWorkout, refresh } = useWorkouts();
+  const { success, error: showError } = useAppToast();
+
+  const [isNewModalOpen, setIsNewModalOpen] = useState(false);
+  const [newWorkoutName, setNewWorkoutName] = useState("");
+  const [newWorkoutDesc, setNewWorkoutDesc] = useState("");
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const startSessionId = searchParams.get("startSession");
+    const taskId = searchParams.get("taskId");
+
+    if (startSessionId && workouts.length > 0) {
+      const workoutExists = workouts.some((w) => w.id === startSessionId);
+      if (workoutExists) {
+        setSelectedWorkoutId(startSessionId);
+        if (taskId) setSelectedTaskId(taskId);
+        setIsCoaching(true);
+        // Remove the query param so it doesn't auto-start again on refresh
+        navigate("/workouts", { replace: true });
+      }
+    }
+  }, [location.search, workouts, navigate]);
+
+  const handleCreateWorkout = async (e: SubmitEvent) => {
     e.preventDefault();
-    if (!name.trim()) return;
+    if (!newWorkoutName.trim()) return;
     try {
-      const input: NewWorkoutInput = {
-        name: name.trim(),
-        description: description.trim() || undefined,
-      };
-      await createWorkout(input);
-      toast.success("Workout created");
-      setName("");
-      setDescription("");
-      setShowForm(false);
+      await createWorkout({ name: newWorkoutName, description: newWorkoutDesc });
+      success("Workout created");
+      setIsNewModalOpen(false);
+      setNewWorkoutName("");
+      setNewWorkoutDesc("");
     } catch {
-      toast.error("Failed to create workout");
+      showError("Failed to create workout");
     }
   };
 
+  const handleFinishCoaching = () => {
+    setIsCoaching(false);
+    setSelectedWorkoutId(null);
+    setSelectedTaskId(null);
+    success("Workout completed!");
+    refresh();
+  };
+
+  // Rendering specific views
+  if (isCoaching && selectedWorkoutId) {
+    return (
+      <CoachMode
+        workoutId={selectedWorkoutId}
+        taskId={selectedTaskId || undefined}
+        onComplete={handleFinishCoaching}
+        onExit={() => {
+          setIsCoaching(false);
+          setSelectedTaskId(null);
+        }}
+      />
+    );
+  }
+
+  if (selectedWorkoutId) {
+    return (
+      <WorkoutDetail
+        workoutId={selectedWorkoutId}
+        onBack={() => setSelectedWorkoutId(null)}
+        onStartSession={() => setIsCoaching(true)}
+        onDeleted={() => {
+          setSelectedWorkoutId(null);
+          refresh();
+        }}
+      />
+    );
+  }
+
+  if (selectedSessionId) {
+    return (
+      <div className="space-y-4">
+        <Button variant="secondary" onClick={() => setSelectedSessionId(null)}>
+          &larr; Back to History
+        </Button>
+        <WorkoutSessionDetail
+          sessionId={selectedSessionId}
+          onDeleted={() => setSelectedSessionId(null)}
+        />
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6 animate-fade-in">
+    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto pb-20">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-100">Workouts</h1>
           <p className="text-sm text-gray-500 mt-1">Track your training</p>
         </div>
-        <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
-          New Workout
-        </Button>
       </div>
 
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {[1, 2].map((i) => (
-            <div key={i} className="h-24 bg-gray-800/60 rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : workouts.length === 0 ? (
-        <Card className="text-center py-8">
-          <DumbbellIcon size={32} className="text-gray-600 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">No workouts yet</p>
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<PlusIcon size={14} />}
-            onClick={() => setShowForm(true)}
-            className="mt-3"
+      <div className="flex space-x-1 border-b border-gray-700/50 pb-px">
+        {(["plans", "history", "exercises"] as Tab[]).map((tab) => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
+              activeTab === tab
+                ? "border-blue-500 text-blue-400"
+                : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600"
+            }`}
           >
-            Create your first workout
-          </Button>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {workouts.map((w) => (
-            <Card key={w.id} hover className="border-l-red-500/50">
-              <CardHeader>
-                <CardTitle>{w.name}</CardTitle>
-                <button
-                  onClick={async () => {
-                    try {
-                      await deleteWorkout(w.id);
-                      toast.success("Workout deleted");
-                    } catch {
-                      toast.error("Failed to delete workout");
-                    }
-                  }}
-                  className="p-1.5 rounded-lg text-gray-600 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                >
-                  <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                  >
-                    <path d="M3 6h18" />
-                    <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
-                    <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
-                  </svg>
-                </button>
-              </CardHeader>
-              {w.description && <p className="text-xs text-gray-500">{w.description}</p>}
-              {w.scheduledDay && (
-                <Badge variant="default" size="sm" className="mt-2 capitalize">
-                  {w.scheduledDay}
-                </Badge>
-              )}
+            {tab}
+          </button>
+        ))}
+      </div>
+
+      {activeTab === "plans" && (
+        <div className="space-y-6">
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-semibold text-gray-200">Your Plans</h2>
+            <Button onClick={() => setIsNewModalOpen(true)} variant="primary">
+              <PlusIcon className="w-4 h-4 mr-2" />
+              New Workout
+            </Button>
+          </div>
+
+          {loading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="h-32 bg-gray-800/60 rounded-xl animate-pulse" />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="p-4 bg-red-500/10 text-red-400 rounded-lg">{error}</div>
+          ) : workouts.length === 0 ? (
+            <Card className="text-center py-12 border-dashed border-gray-700/50">
+              <CardContent>
+                <DumbbellIcon className="w-12 h-12 text-gray-600 mx-auto mb-4" />
+                <p className="text-gray-400 mb-4">No workout plans yet.</p>
+                <Button onClick={() => setIsNewModalOpen(true)} variant="primary">
+                  Create your first workout
+                </Button>
+              </CardContent>
             </Card>
-          ))}
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {workouts.map((w) => (
+                <Card
+                  key={w.id}
+                  className="group cursor-pointer hover:border-blue-500/50 transition-colors"
+                  onClick={() => setSelectedWorkoutId(w.id)}
+                >
+                  <CardHeader className="flex flex-row items-center justify-between pb-2">
+                    <CardTitle className="text-lg">{w.name}</CardTitle>
+                    <ChevronRightIcon className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
+                  </CardHeader>
+                  <CardContent>
+                    {w.description && (
+                      <p className="text-sm text-gray-400 mb-4 line-clamp-2">{w.description}</p>
+                    )}
+                    <div className="flex items-center gap-2">
+                      <Badge variant="default" className="bg-gray-800">
+                        {w.exerciseCount || 0} exercises
+                      </Badge>
+                      {w.scheduledDay && (
+                        <Badge variant="blue" className="bg-blue-900/30 text-blue-400 capitalize">
+                          {w.scheduledDay}
+                        </Badge>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </div>
       )}
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="New Workout">
-        <form onSubmit={handleSubmit} className="space-y-4">
+      {activeTab === "history" && (
+        <div className="space-y-6">
+          <WorkoutProgress />
+          <WorkoutHistoryWithFilter onViewSession={setSelectedSessionId} />
+        </div>
+      )}
+
+      {activeTab === "exercises" && <ExerciseLibrary />}
+
+      <Modal
+        open={isNewModalOpen}
+        onClose={() => setIsNewModalOpen(false)}
+        title="New Workout Plan"
+      >
+        <form onSubmit={handleCreateWorkout} className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Name</label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
-              placeholder="e.g. Upper Body"
+            <label className="block text-sm font-medium text-gray-400 mb-1">Name</label>
+            <Input
+              value={newWorkoutName}
+              onChange={(e) => setNewWorkoutName(e.target.value)}
+              placeholder="e.g. Upper Body Power"
               required
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Description</label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500 resize-none"
-              placeholder="Optional description"
+            <label className="block text-sm font-medium text-gray-400 mb-1">
+              Description (optional)
+            </label>
+            <Input
+              value={newWorkoutDesc}
+              onChange={(e) => setNewWorkoutDesc(e.target.value)}
+              placeholder="Brief description of the workout"
             />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>
+          <div className="flex justify-end gap-3 mt-6">
+            <Button type="button" variant="secondary" onClick={() => setIsNewModalOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit">Create</Button>
+            <Button type="submit" variant="primary">
+              Create Plan
+            </Button>
           </div>
         </form>
       </Modal>

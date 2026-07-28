@@ -7,6 +7,7 @@ interface ExerciseRow {
   id: string;
   name: string;
   muscle_group: string;
+  equipment: string;
   video_url: string | null;
   created_at: string;
   updated_at: string;
@@ -17,6 +18,7 @@ function rowToExercise(row: ExerciseRow): Exercise {
     id: row.id,
     name: row.name,
     muscleGroup: row.muscle_group as Exercise["muscleGroup"],
+    equipment: row.equipment as Exercise["equipment"],
     videoUrl: row.video_url ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -49,10 +51,18 @@ export class SqliteExerciseRepository implements ExerciseRepository {
     const now = new Date().toISOString();
     this.db
       .prepare(
-        `INSERT INTO exercises (id, name, muscle_group, video_url, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO exercises (id, name, muscle_group, equipment, video_url, created_at, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?)`,
       )
-      .run(id, input.name, input.muscleGroup ?? "general", input.videoUrl ?? null, now, now);
+      .run(
+        id,
+        input.name,
+        input.muscleGroup ?? "general",
+        input.equipment ?? "other",
+        input.videoUrl ?? null,
+        now,
+        now,
+      );
 
     return this.getById(id) as Exercise;
   }
@@ -71,6 +81,10 @@ export class SqliteExerciseRepository implements ExerciseRepository {
     if (patch.muscleGroup !== undefined) {
       fields.push("muscle_group = ?");
       values.push(patch.muscleGroup);
+    }
+    if (patch.equipment !== undefined) {
+      fields.push("equipment = ?");
+      values.push(patch.equipment);
     }
     if (patch.videoUrl !== undefined) {
       fields.push("video_url = ?");

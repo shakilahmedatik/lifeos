@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 import type {
@@ -17,6 +18,7 @@ interface WorkoutRow {
   scheduled_time: string | null;
   created_at: string;
   updated_at: string;
+  exercise_count?: number;
 }
 
 interface WorkoutExerciseRow {
@@ -26,6 +28,8 @@ interface WorkoutExerciseRow {
   sets: number;
   reps: number;
   weight: number | null;
+  weight_per_set?: string | null;
+  reps_per_set?: string | null;
   rest_seconds: number;
   order_index: number;
   created_at: string;
@@ -40,6 +44,7 @@ function rowToWorkout(row: WorkoutRow): Workout {
     scheduledTime: row.scheduled_time ?? undefined,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    exerciseCount: row.exercise_count,
   };
 }
 
@@ -51,6 +56,8 @@ function rowToWorkoutExercise(row: WorkoutExerciseRow): WorkoutExercise {
     sets: row.sets,
     reps: row.reps,
     weight: row.weight ?? undefined,
+    weights: row.weight_per_set ? JSON.parse(row.weight_per_set) : undefined,
+    repsArray: row.reps_per_set ? JSON.parse(row.reps_per_set) : undefined,
     restSeconds: row.rest_seconds,
     orderIndex: row.order_index,
     createdAt: row.created_at,
@@ -69,14 +76,27 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
 
   getAll(): Workout[] {
     const rows = this.db
-      .prepare("SELECT * FROM workouts ORDER BY created_at DESC")
+      .prepare(`
+        SELECT w.*, COUNT(we.id) as exercise_count 
+        FROM workouts w 
+        LEFT JOIN workout_exercises we ON w.id = we.workout_id 
+        GROUP BY w.id 
+        ORDER BY w.created_at DESC
+      `)
       .all() as WorkoutRow[];
     return rows.map(rowToWorkout);
   }
 
   getByScheduledDay(day: string): Workout[] {
     const rows = this.db
-      .prepare("SELECT * FROM workouts WHERE scheduled_day = ? ORDER BY scheduled_time")
+      .prepare(`
+        SELECT w.*, COUNT(we.id) as exercise_count 
+        FROM workouts w 
+        LEFT JOIN workout_exercises we ON w.id = we.workout_id 
+        WHERE w.scheduled_day = ? 
+        GROUP BY w.id 
+        ORDER BY w.scheduled_time
+      `)
       .all(day) as WorkoutRow[];
     return rows.map(rowToWorkout);
   }
@@ -136,6 +156,31 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
     return this.getById(id);
   }
 
+  completeSession(id: string, durationSeconds: number): void {
+    this.db
+      .prepare(`
+      UPDATE workout_sessions
+      SET completed_at = ?, duration_seconds = ?
+      WHERE id = ?
+    `)
+      .run(new Date().toISOString(), durationSeconds, id);
+  }
+
+  cancelSession(id: string): void {
+    this.db.prepare("DELETE FROM workout_sessions WHERE id = ?").run(id);
+  }
+
+  reorderExercises(workoutId: string, exerciseIds: string[]): void {
+    const updateOrder = this.db.prepare(
+      "UPDATE workout_exercises SET order_index = ? WHERE id = ? AND workout_id = ?",
+    );
+    this.db.transaction(() => {
+      for (let i = 0; i < exerciseIds.length; i++) {
+        updateOrder.run(i, exerciseIds[i], workoutId);
+      }
+    })();
+  }
+
   delete(id: string): boolean {
     const result = this.db.prepare("DELETE FROM workouts WHERE id = ?").run(id);
     return result.changes > 0;
@@ -160,13 +205,13 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
     exerciseId: string,
     input: NewWorkoutExerciseInput,
   ): WorkoutExercise {
-    const id = crypto.randomUUID();
+    const id = randomUUID();
     const now = new Date().toISOString();
 
     this.db
       .prepare(
-        `INSERT INTO workout_exercises (id, workout_id, exercise_id, sets, reps, weight, rest_seconds, order_index, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        `INSERT INTO workout_exercises (id, workout_id, exercise_id, sets, reps, reps_per_set, weight, weight_per_set, rest_seconds, order_index, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       )
       .run(
         id,
@@ -174,7 +219,9 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
         exerciseId,
         input.sets ?? 3,
         input.reps ?? 10,
+        input.repsArray ? JSON.stringify(input.repsArray) : null,
         input.weight ?? null,
+        input.weights ? JSON.stringify(input.weights) : null,
         input.restSeconds ?? 60,
         input.orderIndex ?? 0,
         now,
@@ -198,9 +245,17 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
       fields.push("reps = ?");
       values.push(patch.reps);
     }
+    if (patch.repsArray !== undefined) {
+      fields.push("reps_per_set = ?");
+      values.push(patch.repsArray ? JSON.stringify(patch.repsArray) : null);
+    }
     if (patch.weight !== undefined) {
       fields.push("weight = ?");
       values.push(patch.weight);
+    }
+    if (patch.weights !== undefined) {
+      fields.push("weight_per_set = ?");
+      values.push(patch.weights ? JSON.stringify(patch.weights) : null);
     }
     if (patch.restSeconds !== undefined) {
       fields.push("rest_seconds = ?");
