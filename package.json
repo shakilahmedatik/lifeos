@@ -2,10 +2,27 @@
   "name": "lifeos",
   "type": "module",
   "private": true,
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=24.0.0",
+    "pnpm": ">=11.0.0"
+  },
   "scripts": {
     "dev": "pnpm --filter @lifeos/backend dev & pnpm --filter @lifeos/frontend dev",
     "check": "biome check .",
     "format": "biome format . --write"
+  },
+  "onlyBuiltDependencies": [
+    "better-sqlite3",
+    "esbuild",
+    "@biomejs/biome"
+  ],
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "better-sqlite3",
+      "esbuild",
+      "@biomejs/biome"
+    ]
   },
   "devDependencies": {
     "@biomejs/biome": "^2.5.5",

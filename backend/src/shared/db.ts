@@ -5,11 +5,16 @@ import Database from "better-sqlite3";
 import { logger } from "./logger.js";
 
 export function createDatabase(dbPath: string): Database.Database {
-  const resolvedPath = resolve(dbPath);
-  mkdirSync(dirname(resolvedPath), { recursive: true });
+  const isMemory = dbPath === ":memory:";
+  const resolvedPath = isMemory ? ":memory:" : resolve(dbPath);
 
-  const size = existsSync(resolvedPath) ? statSync(resolvedPath).size : 0;
-  logger.info("Initializing SQLite database", { path: resolvedPath, sizeBytes: size });
+  if (!isMemory) {
+    mkdirSync(dirname(resolvedPath), { recursive: true });
+    const size = existsSync(resolvedPath) ? statSync(resolvedPath).size : 0;
+    logger.info("Initializing SQLite database", { path: resolvedPath, sizeBytes: size });
+  } else {
+    logger.info("Initializing SQLite in-memory database");
+  }
 
   const db = new Database(resolvedPath);
 

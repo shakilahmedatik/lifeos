@@ -9,4 +9,5 @@ backend/data/backups/
 .DS_Store
 *.log
 coverage
+:memory:
 
