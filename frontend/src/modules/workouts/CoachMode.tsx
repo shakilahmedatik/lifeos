@@ -321,8 +321,8 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
 
             <div className="grid grid-cols-2 gap-4 mb-8 bg-gray-800/40 p-4 rounded-xl border border-gray-700/50">
               <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-400">Reps (Actual)</label>
                 <Input
+                  label="Reps (Actual)"
                   type="number"
                   min="1"
                   value={actualReps}
@@ -331,8 +331,8 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
                 />
               </div>
               <div className="space-y-1">
-                <label className="text-sm font-medium text-gray-400">Weight (Actual)</label>
                 <Input
+                  label="Weight (Actual)"
                   type="number"
                   min="0"
                   step="0.5"
