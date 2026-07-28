@@ -53,7 +53,8 @@ export function ExerciseFormModal({
               min="1"
               value={exerciseConfig.sets}
               onChange={(e) => {
-                const newSets = Number(e.target.value);
+                const parsed = Number(e.target.value);
+                const newSets = Number.isFinite(parsed) ? Math.max(1, Math.trunc(parsed)) : 1;
                 const newWeights = [...(exerciseConfig.weights || [])];
                 if (newSets > newWeights.length) {
                   for (let i = newWeights.length; i < newSets; i++) newWeights.push(0);
