@@ -293,6 +293,11 @@ export function createWorkoutsRouter(
 
   router.put("/:id/exercises/reorder", (req, res) => {
     try {
+      const workout = workoutService.getWorkout(req.params.id);
+      if (!workout) {
+        res.status(404).json({ error: "Workout not found" });
+        return;
+      }
       const { exerciseIds } = req.body;
       if (!Array.isArray(exerciseIds) || !exerciseIds.every((id) => typeof id === "string")) {
         res.status(400).json({ error: "exerciseIds must be an array of strings" });
@@ -305,6 +310,5 @@ export function createWorkoutsRouter(
       res.status(500).json({ error: message });
     }
   });
-
   return router;
 }
