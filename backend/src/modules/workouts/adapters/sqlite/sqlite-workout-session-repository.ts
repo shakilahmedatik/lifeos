@@ -1,7 +1,9 @@
+import { randomUUID } from "node:crypto";
 import type Database from "better-sqlite3";
 
 import type {
   ExerciseLog,
+  ExerciseProgressPoint,
   NewExerciseLogInput,
   WorkoutSession,
   WorkoutSessionWithLogs,
@@ -120,7 +122,7 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
   }
 
   addLog(sessionId: string, input: NewExerciseLogInput): ExerciseLog {
-    const id = crypto.randomUUID();
+    const id = randomUUID();
     const now = new Date().toISOString();
 
     this.db
@@ -141,7 +143,10 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
     const logRow = this.db.prepare("SELECT * FROM exercise_logs WHERE id = ?").get(id) as
       | ExerciseLogRow
       | undefined;
-    return logRow ? rowToExerciseLog(logRow) : (undefined as unknown as ExerciseLog);
+    if (!logRow) {
+      throw new Error("Failed to retrieve created exercise log");
+    }
+    return rowToExerciseLog(logRow);
   }
 
   getLogsBySessionId(sessionId: string): ExerciseLog[] {
@@ -170,5 +175,37 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
       .prepare("SELECT COALESCE(SUM(duration_seconds), 0) as total FROM workout_sessions")
       .get() as { total: number };
     return result.total;
+  }
+
+  getExerciseProgress(exerciseId: string): ExerciseProgressPoint[] {
+    const rows = this.db
+      .prepare(`
+      SELECT
+        el.session_id,
+        ws.started_at as date,
+        MAX(el.actual_weight) as max_weight,
+        AVG(el.actual_reps) as avg_reps,
+        COUNT(*) as total_sets
+      FROM exercise_logs el
+      JOIN workout_sessions ws ON ws.id = el.session_id
+      WHERE el.exercise_id = ? AND ws.completed_at IS NOT NULL
+      GROUP BY el.session_id
+      ORDER BY ws.started_at ASC
+    `)
+      .all(exerciseId) as Array<{
+      session_id: string;
+      date: string;
+      max_weight: number | null;
+      avg_reps: number;
+      total_sets: number;
+    }>;
+
+    return rows.map((row) => ({
+      sessionId: row.session_id,
+      date: row.date,
+      maxWeight: row.max_weight ?? 0,
+      avgReps: Math.round(row.avg_reps * 10) / 10,
+      totalSets: row.total_sets,
+    }));
   }
 }

@@ -94,6 +94,14 @@ function createMockWorkoutRepo(): WorkoutRepository & {
     getExercisesByWorkoutId(workoutId: string) {
       return Array.from(workoutExercises.values()).filter((we) => we.workoutId === workoutId);
     },
+    reorderExercises(workoutId: string, exerciseIds: string[]) {
+      exerciseIds.forEach((id, index) => {
+        const we = workoutExercises.get(id);
+        if (we && we.workoutId === workoutId) {
+          workoutExercises.set(id, { ...we, orderIndex: index });
+        }
+      });
+    },
   };
 }
 

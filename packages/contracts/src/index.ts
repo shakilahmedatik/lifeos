@@ -25,6 +25,7 @@ export interface Task {
   recurrence?: TaskRecurrence;
   isOvernight?: boolean;
   subtasks?: TaskSubtask[];
+  referenceId?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -41,6 +42,7 @@ export interface NewTaskInput {
   reminderSound?: NotificationSoundType;
   recurrence?: TaskRecurrence;
   subtasks?: TaskSubtask[];
+  referenceId?: string;
 }
 
 export type HabitFrequency = "daily" | "weekly";
@@ -136,6 +138,8 @@ export type MuscleGroup =
   | "cardio"
   | "general";
 
+export type EquipmentType = "bodyweight" | "dumbbell" | "barbell" | "machine" | "cable" | "other";
+
 export type DayOfWeek =
   | "monday"
   | "tuesday"
@@ -149,6 +153,7 @@ export interface Exercise {
   id: string;
   name: string;
   muscleGroup: MuscleGroup;
+  equipment?: EquipmentType;
   videoUrl?: string;
   createdAt: string;
   updatedAt: string;
@@ -157,6 +162,7 @@ export interface Exercise {
 export interface NewExerciseInput {
   name: string;
   muscleGroup?: MuscleGroup;
+  equipment?: EquipmentType;
   videoUrl?: string;
 }
 
@@ -166,6 +172,7 @@ export interface Workout {
   description?: string;
   scheduledDay?: DayOfWeek;
   scheduledTime?: string;
+  exerciseCount?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -183,7 +190,9 @@ export interface WorkoutExercise {
   exerciseId: string;
   sets: number;
   reps: number;
+  repsArray?: number[];
   weight?: number;
+  weights?: number[];
   restSeconds: number;
   orderIndex: number;
   createdAt: string;
@@ -193,7 +202,9 @@ export interface NewWorkoutExerciseInput {
   exerciseId?: string;
   sets?: number;
   reps?: number;
+  repsArray?: number[];
   weight?: number;
+  weights?: number[];
   restSeconds?: number;
   orderIndex?: number;
 }
@@ -238,6 +249,14 @@ export interface WorkoutStats {
   totalDuration: number;
   averageDuration: number;
   lastWorkoutDate?: string;
+}
+
+export interface ExerciseProgressPoint {
+  sessionId: string;
+  date: string;
+  maxWeight: number;
+  avgReps: number;
+  totalSets: number;
 }
 
 export type AccountType = "cash" | "bank" | "card" | "savings";

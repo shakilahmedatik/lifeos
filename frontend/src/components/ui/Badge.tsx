@@ -16,6 +16,7 @@ interface BadgeProps {
   variant?: BadgeVariant;
   size?: "sm" | "md";
   className?: string;
+  onClick?: () => void;
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
@@ -40,12 +41,21 @@ export default function Badge({
   variant = "default",
   size = "sm",
   className = "",
+  onClick,
 }: BadgeProps) {
-  return (
-    <span
-      className={`inline-flex items-center font-medium rounded-full ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
-    >
-      {children}
-    </span>
-  );
+  const combinedClassName = `inline-flex items-center font-medium rounded-full ${variantStyles[variant]} ${sizeStyles[size]} ${className} ${
+    onClick
+      ? "cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      : ""
+  }`;
+
+  if (onClick) {
+    return (
+      <button type="button" className={combinedClassName} onClick={onClick}>
+        {children}
+      </button>
+    );
+  }
+
+  return <span className={combinedClassName}>{children}</span>;
 }

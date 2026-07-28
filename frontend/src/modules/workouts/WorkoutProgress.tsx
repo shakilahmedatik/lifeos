@@ -1,3 +1,4 @@
+import Card, { CardContent } from "../../components/ui/Card.js";
 import { useWorkoutSessions, useWorkoutStats } from "./useWorkouts.js";
 
 interface WorkoutProgressProps {
@@ -9,11 +10,15 @@ export function WorkoutProgress({ workoutId }: WorkoutProgressProps) {
   const { sessions, loading: sessionsLoading } = useWorkoutSessions();
 
   if (statsLoading || sessionsLoading) {
-    return <div className="p-4">Loading progress...</div>;
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-24 bg-gray-800/60 rounded-xl" />
+        <div className="h-40 bg-gray-800/60 rounded-xl" />
+      </div>
+    );
   }
 
   const filteredSessions = workoutId ? sessions.filter((s) => s.workoutId === workoutId) : sessions;
-
   const completedSessions = filteredSessions.filter((s) => s.completedAt);
   const totalDuration = completedSessions.reduce((acc, s) => acc + (s.durationSeconds || 0), 0);
   const avgDuration = completedSessions.length > 0 ? totalDuration / completedSessions.length : 0;
@@ -31,69 +36,74 @@ export function WorkoutProgress({ workoutId }: WorkoutProgressProps) {
   const maxSessionsPerDay = Math.max(...sessionsPerDay, 1);
 
   return (
-    <div className="p-4">
-      <h3 className="text-lg font-semibold mb-4">Workout Progress</h3>
-
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-        <div className="p-4 border rounded">
-          <p className="text-sm text-gray-600">Total Workouts</p>
-          <p className="text-2xl font-bold">{completedSessions.length}</p>
-        </div>
-        <div className="p-4 border rounded">
-          <p className="text-sm text-gray-600">Total Time</p>
-          <p className="text-2xl font-bold">{Math.round(totalDuration / 60)} min</p>
-        </div>
-        <div className="p-4 border rounded">
-          <p className="text-sm text-gray-600">Avg Duration</p>
-          <p className="text-2xl font-bold">{Math.round(avgDuration / 60)} min</p>
-        </div>
-        <div className="p-4 border rounded">
-          <p className="text-sm text-gray-600">This Week</p>
-          <p className="text-2xl font-bold">{sessionsPerDay.reduce((a, b) => a + b, 0)}</p>
-        </div>
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="bg-gray-800/40 border-gray-700/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Total Workouts</p>
+            <p className="text-2xl font-bold text-emerald-400">{completedSessions.length}</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-800/40 border-gray-700/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Total Time</p>
+            <p className="text-2xl font-bold text-blue-400">
+              {Math.round(totalDuration / 60)}{" "}
+              <span className="text-sm font-normal text-gray-500">min</span>
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-800/40 border-gray-700/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Avg Duration</p>
+            <p className="text-2xl font-bold text-purple-400">
+              {Math.round(avgDuration / 60)}{" "}
+              <span className="text-sm font-normal text-gray-500">min</span>
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gray-800/40 border-gray-700/50">
+          <CardContent className="p-4 text-center">
+            <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">This Week</p>
+            <p className="text-2xl font-bold text-amber-400">
+              {sessionsPerDay.reduce((a, b) => a + b, 0)}
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
-      <div className="mb-6">
-        <h4 className="text-sm font-medium text-gray-600 mb-2">Last 7 Days</h4>
-        <div className="flex items-end gap-1 h-32">
-          {sessionsPerDay.map((count, index) => (
-            <div
-              key={last7Days[index]}
-              className="flex-1 bg-blue-500 rounded-t"
-              style={{ height: `${(count / maxSessionsPerDay) * 100}%` }}
-              title={`${last7Days[index]}: ${count} sessions`}
-            />
-          ))}
-        </div>
-        <div className="flex gap-1 mt-1">
-          {last7Days.map((date) => (
-            <div key={date} className="flex-1 text-center text-xs text-gray-500">
-              {new Date(date).toLocaleDateString("en", { weekday: "short" })}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {completedSessions.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium text-gray-600 mb-2">Recent Sessions</h4>
-          <div className="space-y-2">
-            {completedSessions.slice(0, 5).map((session) => (
+      <Card className="bg-gray-800/40 border-gray-700/50">
+        <CardContent className="p-4">
+          <h4 className="text-sm font-semibold text-gray-300 mb-6 uppercase tracking-wider">
+            Last 7 Days Activity
+          </h4>
+          <div className="flex items-end gap-2 h-40">
+            {sessionsPerDay.map((count, index) => (
               <div
-                key={session.id}
-                className="flex justify-between items-center p-2 bg-gray-50 rounded"
+                key={last7Days[index]}
+                className="flex-1 rounded-t-lg bg-linear-to-t from-blue-600 to-blue-400 transition-all duration-500 ease-out hover:brightness-110 relative group"
+                style={{
+                  height: `${Math.max((count / maxSessionsPerDay) * 100, count === 0 ? 5 : 10)}%`,
+                }}
               >
-                <span className="text-sm">{new Date(session.startedAt).toLocaleDateString()}</span>
-                <span className="text-sm text-gray-600">
-                  {session.durationSeconds
-                    ? `${Math.round(session.durationSeconds / 60)} min`
-                    : "-"}
-                </span>
+                <div className="absolute -top-8 left-1/2 -translate-x-1/2 opacity-0 group-hover:opacity-100 transition-opacity bg-gray-900 text-xs px-2 py-1 rounded text-white whitespace-nowrap z-10 pointer-events-none">
+                  {count} {count === 1 ? "session" : "sessions"}
+                </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
+          <div className="flex gap-2 mt-2">
+            {last7Days.map((date) => (
+              <div
+                key={date}
+                className="flex-1 text-center text-xs text-gray-500 uppercase tracking-wider font-medium"
+              >
+                {new Date(date).toLocaleDateString("en", { weekday: "short" })}
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }

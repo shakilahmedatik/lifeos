@@ -42,6 +42,7 @@ export const NewTaskInputSchema = z
     reminderSound: NotificationSoundTypeSchema.optional(),
     recurrence: TaskRecurrenceSchema.optional(),
     subtasks: z.array(TaskSubtaskSchema).optional(),
+    referenceId: z.string().optional(),
   })
   .refine((data) => data.startTime !== data.endTime, {
     message: "startTime cannot be equal to endTime",
@@ -60,6 +61,8 @@ export const UpdateTaskSchema = z.object({
   reminderSound: NotificationSoundTypeSchema.optional(),
   recurrence: TaskRecurrenceSchema.optional(),
   subtasks: z.array(TaskSubtaskSchema).optional(),
+  isOvernight: z.boolean().optional(),
+  referenceId: z.string().optional(),
 });
 
 export const UpdateStatusSchema = z.object({
@@ -123,4 +126,97 @@ export const NewNotificationInputSchema = z.object({
   userId: z.string().optional(),
   reminderTime: z.string(),
   soundType: z.enum(["default", "gentle", "urgent", "chime", "bell"]).optional(),
+});
+
+// Workout schemas
+export const MuscleGroupSchema = z.enum([
+  "chest",
+  "back",
+  "shoulders",
+  "biceps",
+  "triceps",
+  "legs",
+  "core",
+  "cardio",
+  "general",
+]);
+
+export const EquipmentTypeSchema = z.enum([
+  "bodyweight",
+  "dumbbell",
+  "barbell",
+  "machine",
+  "cable",
+  "other",
+]);
+
+export const DayOfWeekSchema = z.enum([
+  "monday",
+  "tuesday",
+  "wednesday",
+  "thursday",
+  "friday",
+  "saturday",
+  "sunday",
+]);
+
+export const NewExerciseInputSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+  muscleGroup: MuscleGroupSchema.optional(),
+  equipment: EquipmentTypeSchema.optional(),
+  videoUrl: z.string().url("Must be a valid URL").optional(),
+});
+
+export const UpdateExerciseSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  muscleGroup: MuscleGroupSchema.optional(),
+  equipment: EquipmentTypeSchema.optional(),
+  videoUrl: z.string().url("Must be a valid URL").optional(),
+});
+
+export const NewWorkoutInputSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+  description: z.string().max(500).optional(),
+  scheduledDay: DayOfWeekSchema.optional(),
+  scheduledTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, "Time must be HH:MM")
+    .optional(),
+});
+
+export const UpdateWorkoutSchema = z.object({
+  name: z.string().min(1).max(100).optional(),
+  description: z.string().max(500).optional(),
+  scheduledDay: DayOfWeekSchema.optional(),
+  scheduledTime: z
+    .string()
+    .regex(/^\d{2}:\d{2}$/, "Time must be HH:MM")
+    .optional(),
+});
+
+export const NewWorkoutExerciseInputSchema = z.object({
+  exerciseId: z.string().min(1).optional(),
+  sets: z.number().int().min(1).max(20).optional(),
+  reps: z.number().int().min(1).max(100).optional(),
+  repsArray: z.array(z.number().int().min(1).max(100)).optional(),
+  weight: z.number().min(0).max(1000).optional(),
+  weights: z.array(z.number().min(0).max(1000)).optional(),
+  restSeconds: z.number().int().min(0).max(600).optional(),
+  orderIndex: z.number().int().min(0).optional(),
+});
+
+export const NewExerciseLogInputSchema = z.object({
+  exerciseId: z.string().min(1, "Exercise ID is required"),
+  setNumber: z.number().int().min(1).max(20),
+  actualReps: z.number().int().min(1).max(100),
+  actualWeight: z.number().min(0).max(1000).optional(),
+});
+
+export const StartSessionInputSchema = z.object({
+  workoutId: z.string().min(1, "Workout ID is required"),
+});
+
+export const CompleteSessionInputSchema = z.object({
+  durationSeconds: z.number().int().min(0),
+  notes: z.string().max(1000).optional(),
 });

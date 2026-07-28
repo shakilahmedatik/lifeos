@@ -1,6 +1,7 @@
 import type {
   Exercise,
   ExerciseLog,
+  ExerciseProgressPoint,
   NewExerciseInput,
   NewExerciseLogInput,
   NewWorkoutExerciseInput,
@@ -13,6 +14,8 @@ import type {
   WorkoutWithExercises,
 } from "@lifeos/contracts";
 import { fetchWithAuth } from "../../lib/api.js";
+
+export type { ExerciseProgressPoint };
 
 const API_BASE = "/api/workouts";
 
@@ -91,6 +94,18 @@ export async function removeExerciseFromWorkout(
     method: "DELETE",
   });
   if (!res.ok) throw new Error("Failed to remove exercise from workout");
+}
+
+export async function reorderWorkoutExercises(
+  workoutId: string,
+  exerciseIds: string[],
+): Promise<void> {
+  const res = await fetchWithAuth(`${API_BASE}/${workoutId}/exercises/reorder`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ exerciseIds }),
+  });
+  if (!res.ok) throw new Error("Failed to reorder exercises");
 }
 
 // Exercise Library API
@@ -213,4 +228,17 @@ export async function fetchRecentSessions(limit = 10): Promise<WorkoutSession[]>
   const res = await fetchWithAuth(`${API_BASE}/history/recent?limit=${limit}`);
   if (!res.ok) throw new Error("Failed to fetch recent sessions");
   return res.json();
+}
+
+export async function fetchExerciseProgress(exerciseId: string): Promise<ExerciseProgressPoint[]> {
+  const res = await fetchWithAuth(`${API_BASE}/exercises/${exerciseId}/progress`);
+  if (!res.ok) throw new Error("Failed to fetch exercise progress");
+  return res.json();
+}
+
+export async function cancelSession(sessionId: string) {
+  const res = await fetchWithAuth(`${API_BASE}/sessions/${sessionId}`, {
+    method: "DELETE",
+  });
+  if (!res.ok) throw new Error("Failed to cancel session");
 }

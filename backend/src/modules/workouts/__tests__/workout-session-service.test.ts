@@ -88,6 +88,9 @@ function createMockSessionRepo(): WorkoutSessionRepository & {
     getTotalDuration() {
       return Array.from(sessions.values()).reduce((acc, s) => acc + (s.durationSeconds || 0), 0);
     },
+    getExerciseProgress() {
+      return [];
+    },
   };
 }
 

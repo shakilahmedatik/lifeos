@@ -1,3 +1,5 @@
+import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
+import { DumbbellIcon } from "../../components/ui/icons.js";
 import { useWorkoutSessions, useWorkoutStats, useWorkouts } from "./useWorkouts.js";
 
 interface WorkoutWidgetProps {
@@ -12,10 +14,17 @@ export function WorkoutWidget({ onSelectWorkout, onViewHistory }: WorkoutWidgetP
 
   if (statsLoading || workoutsLoading || sessionsLoading) {
     return (
-      <div className="p-4 border rounded">
-        <h3 className="text-lg font-semibold mb-2">Workouts</h3>
-        <p className="text-gray-500">Loading...</p>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <DumbbellIcon className="w-5 h-5 text-gray-500" />
+            Workouts
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-32 bg-gray-800/60 rounded-xl animate-pulse"></div>
+        </CardContent>
+      </Card>
     );
   }
 
@@ -23,73 +32,112 @@ export function WorkoutWidget({ onSelectWorkout, onViewHistory }: WorkoutWidgetP
   const recentSessions = sessions.slice(0, 3);
 
   return (
-    <div className="p-4 border rounded">
-      <div className="flex justify-between items-center mb-4">
-        <h3 className="text-lg font-semibold">Workouts</h3>
-        <button
-          type="button"
-          onClick={onViewHistory}
-          className="text-sm text-blue-500 hover:text-blue-600"
-        >
-          View History
-        </button>
-      </div>
+    <Card className="flex flex-col h-full">
+      <CardHeader className="flex flex-row items-center justify-between pb-2">
+        <CardTitle className="flex items-center gap-2">
+          <DumbbellIcon className="w-5 h-5 text-emerald-500" />
+          Workouts
+        </CardTitle>
+        {onViewHistory && (
+          <button
+            type="button"
+            onClick={onViewHistory}
+            className="text-sm text-blue-400 hover:text-blue-300 transition-colors"
+          >
+            History &rarr;
+          </button>
+        )}
+      </CardHeader>
 
-      {stats && (
-        <div className="grid grid-cols-2 gap-4 mb-4">
-          <div className="text-center">
-            <p className="text-2xl font-bold">{stats.totalWorkouts}</p>
-            <p className="text-sm text-gray-600">Workouts</p>
+      <CardContent className="flex-1 flex flex-col">
+        {stats && (
+          <div className="grid grid-cols-2 gap-3 mb-6">
+            <div className="bg-gray-800/40 p-3 rounded-lg border border-gray-700/50 text-center">
+              <p className="text-2xl font-bold text-emerald-400">{stats.totalWorkouts}</p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">Workouts</p>
+            </div>
+            <div className="bg-gray-800/40 p-3 rounded-lg border border-gray-700/50 text-center">
+              <p className="text-2xl font-bold text-blue-400">
+                {Math.round(stats.averageDuration / 60)}
+                <span className="text-sm font-normal text-gray-500">m</span>
+              </p>
+              <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">Avg Time</p>
+            </div>
           </div>
-          <div className="text-center">
-            <p className="text-2xl font-bold">{Math.round(stats.averageDuration / 60)}m</p>
-            <p className="text-sm text-gray-600">Avg Duration</p>
-          </div>
-        </div>
-      )}
+        )}
 
-      {upcomingWorkouts.length > 0 && (
-        <div className="mb-4">
-          <h4 className="text-sm font-medium text-gray-600 mb-2">Upcoming</h4>
-          <div className="space-y-1">
-            {upcomingWorkouts.slice(0, 3).map((workout) => (
-              <button
-                type="button"
-                key={workout.id}
-                className="flex justify-between items-center p-2 bg-gray-50 rounded hover:bg-gray-100 w-full text-left"
-                onClick={() => onSelectWorkout?.(workout.id)}
-              >
-                <span className="text-sm">{workout.name}</span>
-                <span className="text-xs text-gray-500">
-                  {workout.scheduledDay}
-                  {workout.scheduledTime && ` ${workout.scheduledTime}`}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {recentSessions.length > 0 && (
-        <div>
-          <h4 className="text-sm font-medium text-gray-600 mb-2">Recent Sessions</h4>
-          <div className="space-y-1">
-            {recentSessions.map((session) => (
-              <div
-                key={session.id}
-                className="flex justify-between items-center p-2 bg-gray-50 rounded"
-              >
-                <span className="text-sm">{new Date(session.startedAt).toLocaleDateString()}</span>
-                <span className="text-xs text-gray-500">
-                  {session.durationSeconds
-                    ? `${Math.round(session.durationSeconds / 60)}m`
-                    : "In Progress"}
-                </span>
+        <div className="space-y-4 flex-1">
+          {upcomingWorkouts.length > 0 && (
+            <div>
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                Upcoming
+              </h4>
+              <div className="space-y-2">
+                {upcomingWorkouts.slice(0, 2).map((workout) => (
+                  <button
+                    type="button"
+                    key={workout.id}
+                    className="flex justify-between items-center p-2.5 bg-gray-800/40 border border-gray-700/50 rounded-lg hover:bg-gray-700/60 hover:border-gray-600 transition-all w-full text-left group"
+                    onClick={() => onSelectWorkout?.(workout.id)}
+                  >
+                    <span className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
+                      {workout.name}
+                    </span>
+                    <span className="text-xs text-blue-400 bg-blue-900/20 px-2 py-0.5 rounded capitalize">
+                      {workout.scheduledDay}
+                    </span>
+                  </button>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {recentSessions.length > 0 && (
+            <div className={upcomingWorkouts.length > 0 ? "pt-2" : ""}>
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+                Recent Sessions
+              </h4>
+              <div className="space-y-2">
+                {recentSessions.map((session) => (
+                  <div
+                    key={session.id}
+                    className="flex justify-between items-center p-2.5 bg-gray-800/40 border border-gray-700/50 rounded-lg"
+                  >
+                    <span className="text-sm text-gray-300">
+                      {new Date(session.startedAt).toLocaleDateString(undefined, {
+                        month: "short",
+                        day: "numeric",
+                      })}
+                    </span>
+                    <span className="text-xs text-gray-400">
+                      {session.durationSeconds ? (
+                        `${Math.round(session.durationSeconds / 60)}m`
+                      ) : (
+                        <span className="text-emerald-400 animate-pulse">In Progress</span>
+                      )}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {upcomingWorkouts.length === 0 && recentSessions.length === 0 && (
+            <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
+              <p className="text-sm text-gray-500">No workout data yet.</p>
+              {onSelectWorkout && (
+                <button
+                  type="button"
+                  onClick={() => onSelectWorkout("new")}
+                  className="mt-2 text-sm text-blue-400 hover:text-blue-300"
+                >
+                  Start a workout
+                </button>
+              )}
+            </div>
+          )}
         </div>
-      )}
-    </div>
+      </CardContent>
+    </Card>
   );
 }

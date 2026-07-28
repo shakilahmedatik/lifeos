@@ -1,6 +1,7 @@
 import type { DashboardSummary, HabitWithStreak, Task } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts/date-utils";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
@@ -8,10 +9,12 @@ import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import {
   ArrowRightIcon,
   CheckCheckIcon,
+  PlayIcon,
   RefreshCwIcon,
   TimerIcon,
 } from "../components/ui/icons.js";
 import { api } from "../lib/api.js";
+import { WorkoutWidget } from "../modules/workouts/WorkoutWidget.js";
 
 const POLL_INTERVAL = 30_000;
 
@@ -21,6 +24,7 @@ export default function DashboardPage() {
   const [error, setError] = useState<string | null>(null);
   const pausedRef = useRef(false);
   const toast = useAppToast();
+  const navigate = useNavigate();
 
   const fetchSummary = useCallback(async () => {
     try {
@@ -123,7 +127,7 @@ export default function DashboardPage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <NowCard task={summary?.now ?? null} />
+        <NowCard task={summary?.now ?? null} navigate={navigate} />
         <NextCard task={summary?.next ?? null} />
       </div>
 
@@ -148,11 +152,18 @@ export default function DashboardPage() {
           </div>
         </Card>
       )}
+
+      <div className="grid grid-cols-1">
+        <WorkoutWidget
+          onSelectWorkout={() => navigate("/workouts")}
+          onViewHistory={() => navigate("/workouts")}
+        />
+      </div>
     </div>
   );
 }
 
-function NowCard({ task }: { task: Task | null }) {
+function NowCard({ task, navigate }: { task: Task | null; navigate: (path: string) => void }) {
   const [countdown, setCountdown] = useState("");
 
   useEffect(() => {
@@ -212,23 +223,39 @@ function NowCard({ task }: { task: Task | null }) {
             {countdown}
           </p>
         </div>
-        <Badge
-          variant={
-            task.category === "work"
-              ? "blue"
-              : task.category === "workout"
-                ? "danger"
-                : task.category === "learning"
-                  ? "purple"
-                  : task.category === "habit"
-                    ? "orange"
-                    : task.category === "personal"
-                      ? "pink"
-                      : "default"
-          }
-        >
-          {task.category}
-        </Badge>
+        <div className="flex flex-col items-end gap-2">
+          <Badge
+            variant={
+              task.category === "work"
+                ? "blue"
+                : task.category === "workout"
+                  ? "danger"
+                  : task.category === "learning"
+                    ? "purple"
+                    : task.category === "habit"
+                      ? "orange"
+                      : task.category === "personal"
+                        ? "pink"
+                        : "default"
+            }
+          >
+            {task.category}
+          </Badge>
+
+          {task.category === "workout" && task.referenceId && (
+            <Button
+              size="sm"
+              variant="primary"
+              className="bg-emerald-600 hover:bg-emerald-500 mt-2 whitespace-nowrap"
+              onClick={() =>
+                navigate(`/workouts?startSession=${task.referenceId}&taskId=${task.id}`)
+              }
+            >
+              <PlayIcon className="w-4 h-4 mr-1.5" />
+              Start Session
+            </Button>
+          )}
+        </div>
       </div>
     </Card>
   );
@@ -262,23 +289,25 @@ function NextCard({ task }: { task: Task | null }) {
           <p className="text-base font-semibold text-gray-100 mt-1">{task.title}</p>
           <p className="text-xs text-gray-500 mt-0.5">Starts at {task.startTime}</p>
         </div>
-        <Badge
-          variant={
-            task.category === "work"
-              ? "blue"
-              : task.category === "workout"
-                ? "danger"
-                : task.category === "learning"
-                  ? "purple"
-                  : task.category === "habit"
-                    ? "orange"
-                    : task.category === "personal"
-                      ? "pink"
-                      : "default"
-          }
-        >
-          {task.category}
-        </Badge>
+        <div className="flex flex-col items-end gap-2">
+          <Badge
+            variant={
+              task.category === "work"
+                ? "blue"
+                : task.category === "workout"
+                  ? "danger"
+                  : task.category === "learning"
+                    ? "purple"
+                    : task.category === "habit"
+                      ? "orange"
+                      : task.category === "personal"
+                        ? "pink"
+                        : "default"
+            }
+          >
+            {task.category}
+          </Badge>
+        </div>
       </div>
     </Card>
   );

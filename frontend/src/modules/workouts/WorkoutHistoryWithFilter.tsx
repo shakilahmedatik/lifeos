@@ -1,17 +1,31 @@
 import { useMemo, useState } from "react";
+import Badge from "../../components/ui/Badge.js";
+import Card, { CardContent } from "../../components/ui/Card.js";
+import { Input } from "../../components/ui/Input.js";
+import { SearchIcon } from "../../components/ui/icons.js";
+import { Select } from "../../components/ui/Select.js";
 import { useWorkoutSessions, useWorkouts } from "./useWorkouts.js";
 
 interface WorkoutHistoryWithFilterProps {
   onSelectSession?: (sessionId: string) => void;
+  onViewSession?: (sessionId: string) => void; // Added for Dashboard wiring compatibility
 }
 
-export function WorkoutHistoryWithFilter({ onSelectSession }: WorkoutHistoryWithFilterProps) {
+export function WorkoutHistoryWithFilter({
+  onSelectSession,
+  onViewSession,
+}: WorkoutHistoryWithFilterProps) {
   const { sessions, loading: sessionsLoading, error: sessionsError } = useWorkoutSessions();
   const { workouts, loading: workoutsLoading } = useWorkouts();
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedWorkoutId, setSelectedWorkoutId] = useState<string>("");
   const [dateFilter, setDateFilter] = useState<string>("");
   const [sortBy, setSortBy] = useState<"date" | "duration">("date");
+
+  const handleSelect = (id: string) => {
+    if (onSelectSession) onSelectSession(id);
+    if (onViewSession) onViewSession(id);
+  };
 
   const filteredSessions = useMemo(() => {
     let result = [...sessions];
@@ -47,118 +61,127 @@ export function WorkoutHistoryWithFilter({ onSelectSession }: WorkoutHistoryWith
   }, [sessions, workouts, searchQuery, selectedWorkoutId, dateFilter, sortBy]);
 
   if (sessionsLoading || workoutsLoading) {
-    return <div className="p-4">Loading history...</div>;
+    return (
+      <div className="space-y-4 animate-pulse">
+        <div className="h-20 bg-gray-800/60 rounded-xl" />
+        <div className="h-64 bg-gray-800/60 rounded-xl" />
+      </div>
+    );
   }
 
   if (sessionsError) {
-    return <div className="p-4 text-red-500">Error: {sessionsError}</div>;
+    return <div className="p-4 bg-red-500/10 text-red-400 rounded-lg">Error: {sessionsError}</div>;
   }
 
   return (
-    <div className="p-4">
-      <h2 className="text-xl font-bold mb-4">Workout History</h2>
-
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-        <div>
-          <label htmlFor="search" className="block text-sm text-gray-600 mb-1">
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="relative">
+          <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">
             Search
           </label>
-          <input
-            id="search"
-            type="text"
-            placeholder="Search workouts..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full p-2 border rounded"
-          />
+          <div className="relative">
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <Input
+              type="text"
+              placeholder="Search..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-9"
+            />
+          </div>
         </div>
         <div>
-          <label htmlFor="workout-filter" className="block text-sm text-gray-600 mb-1">
+          <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">
             Workout
           </label>
-          <select
-            id="workout-filter"
+          <Select
             value={selectedWorkoutId}
             onChange={(e) => setSelectedWorkoutId(e.target.value)}
-            className="w-full p-2 border rounded"
-          >
-            <option value="">All Workouts</option>
-            {workouts.map((workout) => (
-              <option key={workout.id} value={workout.id}>
-                {workout.name}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label htmlFor="date-filter" className="block text-sm text-gray-600 mb-1">
-            Date
-          </label>
-          <input
-            id="date-filter"
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="w-full p-2 border rounded"
+            options={[
+              { value: "", label: "All Workouts" },
+              ...workouts.map((w) => ({ value: w.id, label: w.name })),
+            ]}
           />
         </div>
         <div>
-          <label htmlFor="sort-by" className="block text-sm text-gray-600 mb-1">
+          <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Date</label>
+          <Input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
+        </div>
+        <div>
+          <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">
             Sort By
           </label>
-          <select
-            id="sort-by"
+          <Select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as "date" | "duration")}
-            className="w-full p-2 border rounded"
-          >
-            <option value="date">Date (Newest)</option>
-            <option value="duration">Duration (Longest)</option>
-          </select>
+            options={[
+              { value: "date", label: "Date (Newest)" },
+              { value: "duration", label: "Duration (Longest)" },
+            ]}
+          />
         </div>
       </div>
 
-      <div className="mb-4">
-        <p className="text-sm text-gray-600">
-          {filteredSessions.length} session{filteredSessions.length !== 1 ? "s" : ""} found
-        </p>
+      <div className="flex justify-between items-center">
+        <h3 className="text-lg font-semibold text-gray-200">History</h3>
+        <span className="text-sm text-gray-500">
+          {filteredSessions.length} session{filteredSessions.length !== 1 ? "s" : ""}
+        </span>
       </div>
 
       {filteredSessions.length === 0 ? (
-        <p className="text-gray-500">No sessions match your filters.</p>
+        <Card className="bg-transparent border-dashed">
+          <CardContent className="py-12 text-center text-gray-500">
+            No sessions match your filters.
+          </CardContent>
+        </Card>
       ) : (
-        <div className="space-y-2">
+        <div className="space-y-3">
           {filteredSessions.map((session) => {
             const workout = workouts.find((w) => w.id === session.workoutId);
             return (
               <button
                 type="button"
                 key={session.id}
-                className="p-4 border rounded hover:bg-gray-50 w-full text-left"
-                onClick={() => onSelectSession?.(session.id)}
+                className="w-full text-left"
+                onClick={() => handleSelect(session.id)}
               >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <p className="font-medium">{workout?.name || "Unknown Workout"}</p>
-                    <p className="text-sm text-gray-600">
-                      {new Date(session.startedAt).toLocaleString()}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    {session.durationSeconds && (
-                      <p className="text-sm text-gray-600">
-                        {Math.round(session.durationSeconds / 60)} min
+                <Card className="hover:border-gray-600 transition-colors bg-gray-800/20">
+                  <CardContent className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                      <p className="font-semibold text-gray-200">
+                        {workout?.name || "Unknown Workout"}
                       </p>
-                    )}
-                    <p
-                      className={`text-sm ${
-                        session.completedAt ? "text-green-500" : "text-yellow-500"
-                      }`}
-                    >
-                      {session.completedAt ? "Completed" : "In Progress"}
-                    </p>
-                  </div>
-                </div>
+                      <p className="text-sm text-gray-400 mt-1">
+                        {new Date(session.startedAt).toLocaleString(undefined, {
+                          weekday: "short",
+                          month: "short",
+                          day: "numeric",
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-4">
+                      {session.durationSeconds && (
+                        <p className="text-sm font-medium text-gray-300">
+                          {Math.round(session.durationSeconds / 60)} min
+                        </p>
+                      )}
+                      <Badge
+                        variant={session.completedAt ? "success" : "warning"}
+                        className={
+                          session.completedAt
+                            ? "bg-emerald-900/30 text-emerald-400"
+                            : "bg-yellow-900/30 text-yellow-500"
+                        }
+                      >
+                        {session.completedAt ? "Completed" : "In Progress"}
+                      </Badge>
+                    </div>
+                  </CardContent>
+                </Card>
               </button>
             );
           })}

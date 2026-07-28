@@ -50,8 +50,8 @@ describe("WorkoutList", () => {
 
   it("shows scheduled day", () => {
     render(<WorkoutList />);
-    expect(screen.getByText(/monday/)).toBeDefined();
-    expect(screen.getByText(/wednesday/)).toBeDefined();
+    expect(screen.getByText(/monday/i)).toBeDefined();
+    expect(screen.getByText(/wednesday/i)).toBeDefined();
   });
 
   it("shows create button", () => {
@@ -61,7 +61,7 @@ describe("WorkoutList", () => {
 
   it("shows start buttons", () => {
     render(<WorkoutList />);
-    const startButtons = screen.getAllByText("Start");
+    const startButtons = screen.getAllByText("Start Session");
     expect(startButtons).toHaveLength(2);
   });
 

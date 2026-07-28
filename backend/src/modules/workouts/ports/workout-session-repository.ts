@@ -1,5 +1,6 @@
 import type {
   ExerciseLog,
+  ExerciseProgressPoint,
   NewExerciseLogInput,
   WorkoutSession,
   WorkoutSessionWithLogs,
@@ -18,4 +19,5 @@ export interface WorkoutSessionRepository {
   getRecentSessions(limit: number): WorkoutSession[];
   getTotalSessions(): number;
   getTotalDuration(): number;
+  getExerciseProgress(exerciseId: string): ExerciseProgressPoint[];
 }
