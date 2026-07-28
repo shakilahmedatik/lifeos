@@ -1,4 +1,5 @@
-import type { DayOfWeek } from "@lifeos/contracts";
+import type { DayOfWeek } from "`@lifeos/contracts`";
+import type { FormEvent } from "react";
 import Button from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
 import Modal from "../../../components/ui/Modal.js";
@@ -12,7 +13,7 @@ interface WorkoutEditModalProps {
   onChangeDescription: (val: string) => void;
   scheduledDay: DayOfWeek | "";
   onChangeScheduledDay: (val: DayOfWeek | "") => void;
-  onSubmit: (e: React.FormEvent) => void;
+  onSubmit: (e: FormEvent) => void;
   onClose: () => void;
 }
 
