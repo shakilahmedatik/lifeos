@@ -171,6 +171,20 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
   }
 
   reorderExercises(workoutId: string, exerciseIds: string[]): void {
+    const currentRows = this.db
+      .prepare("SELECT id FROM workout_exercises WHERE workout_id = ?")
+      .all(workoutId) as { id: string }[];
+    const currentIds = currentRows.map((row) => row.id);
+
+    const isDuplicateFree = new Set(exerciseIds).size === exerciseIds.length;
+    const hasSameLength = exerciseIds.length === currentIds.length;
+    const currentSet = new Set(currentIds);
+    const hasCompleteMembership = hasSameLength && exerciseIds.every((id) => currentSet.has(id));
+
+    if (!isDuplicateFree || !hasSameLength || !hasCompleteMembership) {
+      throw new Error("Invalid exerciseIds payload for reordering");
+    }
+
     const updateOrder = this.db.prepare(
       "UPDATE workout_exercises SET order_index = ? WHERE id = ? AND workout_id = ?",
     );

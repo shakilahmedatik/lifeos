@@ -307,6 +307,10 @@ export function createWorkoutsRouter(
       res.json({ success: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to reorder exercises";
+      if (error instanceof Error && error.message.includes("Invalid exerciseIds")) {
+        res.status(400).json({ error: message });
+        return;
+      }
       res.status(500).json({ error: message });
     }
   });
