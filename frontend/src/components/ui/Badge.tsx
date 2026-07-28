@@ -43,12 +43,19 @@ export default function Badge({
   className = "",
   onClick,
 }: BadgeProps) {
-  return (
-    <span
-      className={`inline-flex items-center font-medium rounded-full ${variantStyles[variant]} ${sizeStyles[size]} ${className} ${onClick ? "cursor-pointer" : ""}`}
-      onClick={onClick}
-    >
-      {children}
-    </span>
-  );
+  const combinedClassName = `inline-flex items-center font-medium rounded-full ${variantStyles[variant]} ${sizeStyles[size]} ${className} ${
+    onClick
+      ? "cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+      : ""
+  }`;
+
+  if (onClick) {
+    return (
+      <button type="button" className={combinedClassName} onClick={onClick}>
+        {children}
+      </button>
+    );
+  }
+
+  return <span className={combinedClassName}>{children}</span>;
 }

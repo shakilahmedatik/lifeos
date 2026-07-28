@@ -177,31 +177,34 @@ export default function WorkoutsPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {workouts.map((w) => (
-                <Card
+                <button
+                  type="button"
                   key={w.id}
-                  className="group cursor-pointer hover:border-blue-500/50 transition-colors"
+                  className="w-full text-left"
                   onClick={() => setSelectedWorkoutId(w.id)}
                 >
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-lg">{w.name}</CardTitle>
-                    <ChevronRightIcon className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
-                  </CardHeader>
-                  <CardContent>
-                    {w.description && (
-                      <p className="text-sm text-gray-400 mb-4 line-clamp-2">{w.description}</p>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <Badge variant="default" className="bg-gray-800">
-                        {w.exerciseCount || 0} exercises
-                      </Badge>
-                      {w.scheduledDay && (
-                        <Badge variant="blue" className="bg-blue-900/30 text-blue-400 capitalize">
-                          {w.scheduledDay}
-                        </Badge>
+                  <Card className="group cursor-pointer hover:border-blue-500/50 transition-colors">
+                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                      <CardTitle className="text-lg">{w.name}</CardTitle>
+                      <ChevronRightIcon className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
+                    </CardHeader>
+                    <CardContent>
+                      {w.description && (
+                        <p className="text-sm text-gray-400 mb-4 line-clamp-2">{w.description}</p>
                       )}
-                    </div>
-                  </CardContent>
-                </Card>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="default" className="bg-gray-800">
+                          {w.exerciseCount || 0} exercises
+                        </Badge>
+                        {w.scheduledDay && (
+                          <Badge variant="blue" className="bg-blue-900/30 text-blue-400 capitalize">
+                            {w.scheduledDay}
+                          </Badge>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                </button>
               ))}
             </div>
           )}

@@ -176,42 +176,50 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
   };
 
   const handleCompleteWorkout = useCallback(async () => {
-    isFinishedRef.current = true;
     if (!sessionId || !startTime) return;
 
-    const durationSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000);
-    await completeSession(sessionId, durationSeconds);
-    if (taskId) {
-      await api.updateTaskStatus(taskId, "done").catch(console.error);
+    try {
+      const durationSeconds = Math.floor((Date.now() - startTime.getTime()) / 1000);
+      await completeSession(sessionId, durationSeconds);
+      isFinishedRef.current = true;
+      if (taskId) {
+        await api.updateTaskStatus(taskId, "done").catch(console.error);
+      }
+      playNotificationSound("workout_complete");
+      onComplete();
+    } catch (err) {
+      console.error("Failed to complete session", err);
     }
-    playNotificationSound("workout_complete");
-    onComplete();
   }, [sessionId, startTime, taskId, onComplete]);
 
   const handleCompleteSet = useCallback(async () => {
     if (!sessionId || !currentExercise || !workout) return;
 
-    await addExerciseLog(sessionId, {
-      exerciseId: currentExercise.exerciseId,
-      setNumber: currentSet,
-      actualReps: actualReps,
-      actualWeight: actualWeight,
-    });
+    try {
+      await addExerciseLog(sessionId, {
+        exerciseId: currentExercise.exerciseId,
+        setNumber: currentSet,
+        actualReps: actualReps,
+        actualWeight: actualWeight,
+      });
 
-    if (currentSet < currentExercise.sets) {
-      setCurrentSet(currentSet + 1);
-      startTimer(currentExercise.restSeconds || 60, true);
-    } else {
-      if (currentExerciseIndex < workout.exercises.length - 1) {
-        const nextExerciseIndex = currentExerciseIndex + 1;
-        const nextExercise = workout.exercises[nextExerciseIndex];
-        const restDuration = currentExercise.restSeconds || nextExercise?.restSeconds || 60;
-        setCurrentExerciseIndex(nextExerciseIndex);
-        setCurrentSet(1);
-        startTimer(restDuration, true);
+      if (currentSet < currentExercise.sets) {
+        setCurrentSet(currentSet + 1);
+        startTimer(currentExercise.restSeconds || 60, true);
       } else {
-        handleCompleteWorkout();
+        if (currentExerciseIndex < workout.exercises.length - 1) {
+          const nextExerciseIndex = currentExerciseIndex + 1;
+          const nextExercise = workout.exercises[nextExerciseIndex];
+          const restDuration = currentExercise.restSeconds || nextExercise?.restSeconds || 60;
+          setCurrentExerciseIndex(nextExerciseIndex);
+          setCurrentSet(1);
+          startTimer(restDuration, true);
+        } else {
+          await handleCompleteWorkout();
+        }
       }
+    } catch (err) {
+      console.error("Failed to complete set", err);
     }
   }, [
     sessionId,

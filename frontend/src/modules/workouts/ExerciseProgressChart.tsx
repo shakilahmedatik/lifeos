@@ -43,11 +43,15 @@ export function ExerciseProgressChart({
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
 
+  const { maxWeight, minWeight } = useMemo(() => {
+    if (!progress.length) return { maxWeight: 1, minWeight: 0 };
+    const max = Math.max(...progress.map((p) => p.maxWeight), 1);
+    const min = Math.min(...progress.map((p) => p.maxWeight), 0) * 0.8;
+    return { maxWeight: max, minWeight: min };
+  }, [progress]);
+
   const points = useMemo(() => {
     if (!progress.length) return [];
-
-    const maxWeight = Math.max(...progress.map((p) => p.maxWeight), 1);
-    const minWeight = Math.min(...progress.map((p) => p.maxWeight), 0) * 0.8;
 
     return progress.map((p, i) => {
       const x = (i / Math.max(progress.length - 1, 1)) * chartWidth;
@@ -56,7 +60,7 @@ export function ExerciseProgressChart({
         ((p.maxWeight - minWeight) / Math.max(maxWeight - minWeight, 1)) * chartHeight;
       return { ...p, x, y };
     });
-  }, [progress, chartWidth, chartHeight]);
+  }, [progress, chartWidth, chartHeight, maxWeight, minWeight]);
 
   const linePath = useMemo(() => {
     if (points.length === 0) return "";
@@ -131,9 +135,7 @@ export function ExerciseProgressChart({
                   {/* Grid lines */}
                   {[0, 0.25, 0.5, 0.75, 1].map((ratio) => {
                     const y = chartHeight * ratio;
-                    const val =
-                      Math.max(...progress.map((p) => p.maxWeight)) -
-                      Math.max(...progress.map((p) => p.maxWeight)) * ratio;
+                    const val = maxWeight - (maxWeight - minWeight) * ratio;
                     return (
                       <g key={ratio} className="text-gray-600">
                         <line

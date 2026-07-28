@@ -36,8 +36,13 @@ export function WorkoutList({ onSelectWorkout, onStartSession }: WorkoutListProp
 
   const handleDelete = async () => {
     if (deletingWorkoutId) {
-      await deleteWorkout(deletingWorkoutId);
-      setDeletingWorkoutId(null);
+      try {
+        await deleteWorkout(deletingWorkoutId);
+      } catch (err) {
+        console.error("Failed to delete workout:", err);
+      } finally {
+        setDeletingWorkoutId(null);
+      }
     }
   };
 

@@ -70,9 +70,14 @@ export function WorkoutDetail({
 
   const handleRemoveExercise = async () => {
     if (confirmRemoveId) {
-      await removeExerciseFromWorkout(workoutId, confirmRemoveId);
-      setConfirmRemoveId(null);
-      refresh();
+      try {
+        await removeExerciseFromWorkout(workoutId, confirmRemoveId);
+        refresh();
+      } catch (err) {
+        console.error("Failed to remove exercise:", err);
+      } finally {
+        setConfirmRemoveId(null);
+      }
     }
   };
 
@@ -112,21 +117,32 @@ export function WorkoutDetail({
   };
 
   const handleDeleteWorkout = async () => {
-    await deleteWorkout();
-    if (onDeleted) onDeleted();
-    else if (onBack) onBack();
+    try {
+      await deleteWorkout();
+      if (onDeleted) onDeleted();
+      else if (onBack) onBack();
+    } catch (err) {
+      console.error("Failed to delete workout:", err);
+    } finally {
+      setConfirmDeleteWorkout(false);
+    }
   };
 
   const handleSaveWorkout = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editWorkoutName.trim()) return;
-    await updateWorkout({
-      name: editWorkoutName,
-      description: editWorkoutDesc,
-      scheduledDay: editWorkoutDay || undefined,
-    });
-    setIsEditWorkoutModalOpen(false);
-    refresh();
+    try {
+      await updateWorkout({
+        name: editWorkoutName,
+        description: editWorkoutDesc,
+        scheduledDay: editWorkoutDay || undefined,
+      });
+      refresh();
+    } catch (err) {
+      console.error("Failed to save workout:", err);
+    } finally {
+      setIsEditWorkoutModalOpen(false);
+    }
   };
 
   const openEditWorkout = () => {
