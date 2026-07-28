@@ -72,6 +72,9 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
       window.removeEventListener("beforeunload", handleBeforeUnload);
       if (sessionId && !isFinishedRef.current) {
         cancelSession(sessionId).catch(console.error);
+        if (taskId) {
+          api.updateTaskStatus(taskId, "planned").catch(console.error);
+        }
       }
     };
   }, [sessionId, taskId]);
