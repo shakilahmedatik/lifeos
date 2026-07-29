@@ -1,19 +1,19 @@
 import type { DashboardSummary, HabitWithStreak, Task } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts/date-utils";
+import {
+  ArrowRight as ArrowRightIcon,
+  CheckCheck as CheckCheckIcon,
+  GraduationCap as GraduationCapIcon,
+  Play as PlayIcon,
+  RefreshCw as RefreshCwIcon,
+  Timer as TimerIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import {
-  ArrowRightIcon,
-  CheckCheckIcon,
-  GraduationCapIcon,
-  PlayIcon,
-  RefreshCwIcon,
-  TimerIcon,
-} from "../components/ui/icons.js";
 import { api } from "../lib/api.js";
 import { WorkoutWidget } from "../modules/workouts/WorkoutWidget.js";
 
@@ -194,7 +194,7 @@ function NowCard({ task, navigate }: { task: Task | null; navigate: (path: strin
 
   if (!task) {
     return (
-      <Card className="border-blue-500/20 bg-gradient-to-br from-gray-800/60 to-gray-800/30">
+      <Card className="border-blue-500/20 bg-linear-to-br from-gray-800/60 to-gray-800/30">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-lg bg-blue-500/10">
             <TimerIcon size={20} className="text-blue-400" />
@@ -209,7 +209,7 @@ function NowCard({ task, navigate }: { task: Task | null; navigate: (path: strin
   }
 
   return (
-    <Card className="border-blue-500/40 bg-gradient-to-br from-blue-600/10 to-gray-800/40">
+    <Card className="border-blue-500/40 bg-linear-to-br from-blue-600/10 to-gray-800/40">
       <div className="flex items-start gap-3">
         <div className="p-2 rounded-lg bg-blue-500/20">
           <TimerIcon size={20} className="text-blue-400" />
@@ -277,7 +277,7 @@ function NowCard({ task, navigate }: { task: Task | null; navigate: (path: strin
 function NextCard({ task }: { task: Task | null }) {
   if (!task) {
     return (
-      <Card className="border-gray-700/50 bg-gradient-to-br from-gray-800/60 to-gray-800/30">
+      <Card className="border-gray-700/50 bg-linear-to-br from-gray-800/60 to-gray-800/30">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-lg bg-gray-700/50">
             <ArrowRightIcon size={20} className="text-gray-400" />
@@ -292,7 +292,7 @@ function NextCard({ task }: { task: Task | null }) {
   }
 
   return (
-    <Card className="border-gray-600/50 bg-gradient-to-br from-gray-800/60 to-gray-800/30">
+    <Card className="border-gray-600/50 bg-linear-to-br from-gray-800/60 to-gray-800/30">
       <div className="flex items-start gap-3">
         <div className="p-2 rounded-lg bg-gray-700/50">
           <ArrowRightIcon size={20} className="text-gray-400" />
@@ -340,7 +340,7 @@ function TaskProgress({ done, total }: { done: number; total: number }) {
           </div>
           <div className="h-2 bg-gray-700/50 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-500"
+              className="h-full bg-linear-to-r from-blue-500 to-blue-400 rounded-full transition-all duration-500"
               style={{ width: `${pct}%` }}
             />
           </div>

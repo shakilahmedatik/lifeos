@@ -1,12 +1,14 @@
 import type { NewNotificationInput, Task } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
+import { Bell as BellIcon, Plus as PlusIcon, RefreshCw as RefreshCwIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import { BellIcon, PlusIcon, RefreshCwIcon } from "../components/ui/icons.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
 import Modal from "../components/ui/Modal.js";
+import { Select } from "../components/ui/Select.js";
 import { api } from "../lib/api.js";
 
 type Reminder = {
@@ -131,7 +133,7 @@ export default function NotificationsPage() {
             </CardHeader>
             <div className="space-y-2">
               {reminders.length === 0 ? (
-                <p className="text-gray-500 text-sm">No active reminders</p>
+                <EmptyState title="No active reminders" />
               ) : (
                 reminders.map((r) => {
                   const task = tasks.find((t) => t.id === r.taskId);
@@ -166,7 +168,7 @@ export default function NotificationsPage() {
             </CardHeader>
             <div className="space-y-2">
               {tasks.length === 0 ? (
-                <p className="text-gray-500 text-sm">No tasks today</p>
+                <EmptyState title="No tasks today" />
               ) : (
                 tasks.map((t) => (
                   <div
@@ -200,50 +202,46 @@ export default function NotificationsPage() {
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Set Reminder">
         <form onSubmit={handleSetReminder} className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Task</label>
-            <select
+            <Select
+              label="Task"
               value={selectedTask}
               onChange={(e) => setSelectedTask(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
               required
-            >
-              <option value="">Select task</option>
-              {tasks
-                .filter((t) => t.status !== "done")
-                .map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.title}
-                  </option>
-                ))}
-            </select>
+              options={[
+                { value: "", label: "Select task" },
+                ...tasks
+                  .filter((t) => t.status !== "done")
+                  .map((t) => ({ value: t.id, label: t.title })),
+              ]}
+            />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Remind me before</label>
-            <select
-              value={minutesBefore}
+            <Select
+              label="Remind me before"
+              value={minutesBefore.toString()}
               onChange={(e) => setMinutesBefore(Number(e.target.value))}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-            >
-              <option value={5}>5 minutes</option>
-              <option value={10}>10 minutes</option>
-              <option value={15}>15 minutes</option>
-              <option value={30}>30 minutes</option>
-              <option value={60}>1 hour</option>
-            </select>
+              options={[
+                { value: "5", label: "5 minutes" },
+                { value: "10", label: "10 minutes" },
+                { value: "15", label: "15 minutes" },
+                { value: "30", label: "30 minutes" },
+                { value: "60", label: "1 hour" },
+              ]}
+            />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Sound</label>
-            <select
+            <Select
+              label="Sound"
               value={sound}
               onChange={(e) => setSound(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-            >
-              <option value="default">Default</option>
-              <option value="gentle">Gentle</option>
-              <option value="urgent">Urgent</option>
-              <option value="chime">Chime</option>
-              <option value="none">Silent</option>
-            </select>
+              options={[
+                { value: "default", label: "Default" },
+                { value: "gentle", label: "Gentle" },
+                { value: "urgent", label: "Urgent" },
+                { value: "chime", label: "Chime" },
+                { value: "none", label: "Silent" },
+              ]}
+            />
           </div>
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>

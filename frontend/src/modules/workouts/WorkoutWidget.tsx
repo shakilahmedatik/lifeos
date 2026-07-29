@@ -1,5 +1,5 @@
+import { Dumbbell as DumbbellIcon } from "lucide-react";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
-import { DumbbellIcon } from "../../components/ui/icons.js";
 import { useWorkoutSessions, useWorkoutStats, useWorkouts } from "./useWorkouts.js";
 
 interface WorkoutWidgetProps {

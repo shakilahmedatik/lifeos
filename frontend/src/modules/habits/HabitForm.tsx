@@ -1,5 +1,8 @@
 import type { Habit, NewHabitInput } from "@lifeos/contracts";
 import { useState } from "react";
+import Button from "../../components/ui/Button.js";
+import { Input } from "../../components/ui/Input.js";
+import { Select } from "../../components/ui/Select.js";
 
 interface HabitFormProps {
   habit?: Habit;
@@ -23,64 +26,48 @@ export default function HabitForm({ habit, onSubmit, onCancel }: HabitFormProps)
       className="space-y-4 p-4 bg-white rounded-lg border border-gray-200"
     >
       <div>
-        <label htmlFor="habit-name" className="block text-sm font-medium text-gray-700 mb-1">
-          Name
-        </label>
-        <input
+        <Input
           id="habit-name"
+          label="Name"
           type="text"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
           required
         />
       </div>
       <div>
-        <label htmlFor="habit-frequency" className="block text-sm font-medium text-gray-700 mb-1">
-          Frequency
-        </label>
-        <select
+        <Select
           id="habit-frequency"
+          label="Frequency"
           value={frequency}
           onChange={(e) => setFrequency(e.target.value as Habit["frequency"])}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="daily">Daily</option>
-          <option value="weekly">Weekly</option>
-        </select>
+          options={[
+            { value: "daily", label: "Daily" },
+            { value: "weekly", label: "Weekly" },
+          ]}
+        />
       </div>
       <div>
-        <label htmlFor="habit-category" className="block text-sm font-medium text-gray-700 mb-1">
-          Category
-        </label>
-        <select
+        <Select
           id="habit-category"
+          label="Category"
           value={category}
           onChange={(e) => setCategory(e.target.value as Habit["category"])}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="health">Health</option>
-          <option value="learning">Learning</option>
-          <option value="productivity">Productivity</option>
-          <option value="mindfulness">Mindfulness</option>
-          <option value="fitness">Fitness</option>
-          <option value="general">General</option>
-        </select>
+          options={[
+            { value: "health", label: "Health" },
+            { value: "learning", label: "Learning" },
+            { value: "productivity", label: "Productivity" },
+            { value: "mindfulness", label: "Mindfulness" },
+            { value: "fitness", label: "Fitness" },
+            { value: "general", label: "General" },
+          ]}
+        />
       </div>
       <div className="flex gap-2">
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-        >
-          {habit ? "Update" : "Create"}
-        </button>
-        <button
-          type="button"
-          onClick={onCancel}
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
-        >
+        <Button type="submit">{habit ? "Update" : "Create"}</Button>
+        <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
-        </button>
+        </Button>
       </div>
     </form>
   );

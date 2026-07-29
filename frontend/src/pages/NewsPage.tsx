@@ -1,9 +1,15 @@
 import type { NewsArticle, RssFeed } from "@lifeos/contracts";
+import {
+  Newspaper as NewspaperIcon,
+  Plus as PlusIcon,
+  RefreshCw as RefreshCwIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import { NewspaperIcon, PlusIcon, RefreshCwIcon } from "../components/ui/icons.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
+import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
 import * as newsApi from "../modules/news/api.js";
 
@@ -140,10 +146,7 @@ export default function NewsPage() {
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             <div className="lg:col-span-2 space-y-2">
               {filteredArticles.length === 0 ? (
-                <Card className="text-center py-8">
-                  <NewspaperIcon size={32} className="text-gray-600 mx-auto mb-2" />
-                  <p className="text-gray-500 text-sm">No articles</p>
-                </Card>
+                <EmptyState icon={NewspaperIcon} title="No articles" />
               ) : (
                 filteredArticles.map((a) => (
                   <Card
@@ -187,7 +190,7 @@ export default function NewsPage() {
                 </CardHeader>
                 <div className="space-y-2">
                   {feeds.length === 0 ? (
-                    <p className="text-gray-500 text-xs">No feeds added</p>
+                    <EmptyState title="No feeds added" />
                   ) : (
                     feeds.map((f) => (
                       <div key={f.id} className="flex items-center justify-between py-1">
@@ -236,22 +239,20 @@ export default function NewsPage() {
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Add RSS Feed">
         <form onSubmit={handleAddFeed} className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Title</label>
-            <input
+            <Input
+              label="Title"
               type="text"
               value={feedTitle}
               onChange={(e) => setFeedTitle(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">RSS URL</label>
-            <input
+            <Input
+              label="RSS URL"
               type="url"
               value={feedUrl}
               onChange={(e) => setFeedUrl(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
               placeholder="https://example.com/rss"
               required
             />

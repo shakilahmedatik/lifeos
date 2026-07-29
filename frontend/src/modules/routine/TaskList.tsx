@@ -1,14 +1,15 @@
 import type { Task, TaskStatus, TaskSubtask } from "@lifeos/contracts";
+import {
+  Clock as ClockIcon,
+  Edit as EditIcon,
+  GraduationCap as GraduationCapIcon,
+  Play as PlayIcon,
+  X as XIcon,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Badge from "../../components/ui/Badge.js";
 import Card from "../../components/ui/Card.js";
-import {
-  ClockIcon,
-  EditIcon,
-  GraduationCapIcon,
-  PlayIcon,
-  XIcon,
-} from "../../components/ui/icons.js";
+import { EmptyState } from "../../components/ui/EmptyState.js";
 import TaskCategoryBadge, { CATEGORY_COLORS } from "./TaskCategoryBadge.js";
 
 interface TaskListProps {
@@ -45,13 +46,11 @@ export default function TaskList({
 
   if (tasks.length === 0) {
     return (
-      <Card className="text-center py-10">
-        <ClockIcon size={36} className="text-gray-600 mx-auto mb-3" />
-        <h3 className="text-sm font-semibold text-gray-300">No tasks scheduled for this day</h3>
-        <p className="text-xs text-gray-500 mt-1">
-          Use the "Add Task" button above to plan your day or set up recurring routines.
-        </p>
-      </Card>
+      <EmptyState
+        icon={ClockIcon}
+        title="No tasks scheduled for this day"
+        description='Use the "Add Task" button above to plan your day or set up recurring routines.'
+      />
     );
   }
 

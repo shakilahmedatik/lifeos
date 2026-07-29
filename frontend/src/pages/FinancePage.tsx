@@ -5,12 +5,15 @@ import type {
   Transaction,
 } from "@lifeos/contracts";
 import { getClientDateString, getClientMonthString } from "@lifeos/contracts";
+import { Plus as PlusIcon } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import { PlusIcon } from "../components/ui/icons.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
+import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
+import { Select } from "../components/ui/Select.js";
 import * as financeApi from "../modules/finance/api.js";
 
 export default function FinancePage() {
@@ -126,7 +129,7 @@ export default function FinancePage() {
               </CardHeader>
               <div className="space-y-2">
                 {accounts.length === 0 ? (
-                  <p className="text-gray-500 text-sm">No accounts</p>
+                  <EmptyState title="No accounts" />
                 ) : (
                   accounts.map((a) => (
                     <div key={a.id} className="flex items-center justify-between py-1.5">
@@ -145,7 +148,7 @@ export default function FinancePage() {
               </CardHeader>
               <div className="space-y-2 max-h-64 overflow-y-auto">
                 {transactions.length === 0 ? (
-                  <p className="text-gray-500 text-sm">No transactions</p>
+                  <EmptyState title="No transactions" />
                 ) : (
                   transactions.map((t) => (
                     <div key={t.id} className="flex items-center justify-between py-1.5">
@@ -172,67 +175,56 @@ export default function FinancePage() {
       <Modal open={showForm} onClose={() => setShowForm(false)} title="Add Transaction">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Amount (BDT)</label>
-            <input
+            <Input
+              label="Amount (BDT)"
               type="number"
               value={amount}
               onChange={(e) => setAmount(e.target.value)}
               step="0.01"
               min="0"
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
               required
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Account</label>
-              <select
+              <Select
+                label="Account"
                 value={accountId}
                 onChange={(e) => setAccountId(e.target.value)}
-                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
                 required
-              >
-                <option value="">Select account</option>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: "", label: "Select account" },
+                  ...accounts.map((a) => ({ value: a.id, label: a.name })),
+                ]}
+              />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Category</label>
-              <select
+              <Select
+                label="Category"
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
                 required
-              >
-                <option value="">Select category</option>
-                {categories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+                options={[
+                  { value: "", label: "Select category" },
+                  ...categories.map((c) => ({ value: c.id, label: c.name })),
+                ]}
+              />
             </div>
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Date</label>
-            <input
+            <Input
+              label="Date"
               type="date"
               value={date}
               onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
             />
           </div>
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Note</label>
-            <input
+            <Input
+              label="Note"
               type="text"
               value={note}
               onChange={(e) => setNote(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
               placeholder="Optional note"
             />
           </div>

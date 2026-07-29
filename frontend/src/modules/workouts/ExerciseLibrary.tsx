@@ -1,4 +1,11 @@
 import type { EquipmentType, Exercise, MuscleGroup, NewExerciseInput } from "@lifeos/contracts";
+import {
+  Edit as EditIcon,
+  Plus as PlusIcon,
+  Search as SearchIcon,
+  Trash2 as TrashIcon,
+  Video as VideoIcon,
+} from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
@@ -7,7 +14,6 @@ import Button from "../../components/ui/Button.js";
 import Card, { CardContent } from "../../components/ui/Card.js";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { Input } from "../../components/ui/Input.js";
-import { EditIcon, PlusIcon, SearchIcon, TrashIcon, VideoIcon } from "../../components/ui/icons.js";
 import Modal from "../../components/ui/Modal.js";
 import { Select } from "../../components/ui/Select.js";
 import { useExercises } from "./useWorkouts.js";

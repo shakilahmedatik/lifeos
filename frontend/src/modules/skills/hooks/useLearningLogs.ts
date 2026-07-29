@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { api } from "../../lib/api";
-import type { LearningLog, NewLearningLogInput, UpdateLearningLogInput } from "./types";
+import { api } from "../../../lib/api.js";
+import type { LearningLog, NewLearningLogInput, UpdateLearningLogInput } from "../types.js";
 
 export function useLearningLogs(resourceId?: string) {
   const [logs, setLogs] = useState<LearningLog[]>([]);

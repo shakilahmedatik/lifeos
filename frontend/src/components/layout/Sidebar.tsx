@@ -1,14 +1,14 @@
-import { NavLink } from "react-router-dom";
 import {
-  BellIcon,
-  CalendarIcon,
-  CheckCheckIcon,
-  DumbbellIcon,
-  GraduationCapIcon,
-  HomeIcon,
-  NewspaperIcon,
-  WalletIcon,
-} from "../ui/icons.js";
+  Bell as BellIcon,
+  Calendar as CalendarIcon,
+  CheckCheck as CheckCheckIcon,
+  Dumbbell as DumbbellIcon,
+  GraduationCap as GraduationCapIcon,
+  Home as HomeIcon,
+  Newspaper as NewspaperIcon,
+  Wallet as WalletIcon,
+} from "lucide-react";
+import { NavLink } from "react-router-dom";
 
 const navItems = [
   { to: "/", icon: HomeIcon, label: "Home" },
@@ -35,7 +35,7 @@ export default function Dock() {
             end={item.to === "/"}
             aria-label={item.label}
             className={({ isActive }) =>
-              `relative flex flex-col items-center justify-center min-w-[44px] min-h-[44px] w-11 h-11 sm:w-12 sm:h-12 rounded-xl transition-all duration-200 group ${
+              `relative flex flex-col items-center justify-center min-w-11 min-h-11 w-11 h-11 sm:w-12 sm:h-12 rounded-xl transition-all duration-200 group ${
                 isActive
                   ? "bg-accent/15 text-accent -translate-y-1"
                   : "text-secondary hover:text-primary hover:bg-card-hover/50 hover:-translate-y-1"

@@ -1,11 +1,11 @@
-import Button from "../../../components/ui/Button.js";
 import {
-  CoffeeIcon,
-  DumbbellIcon,
-  FlameIcon,
-  PauseIcon,
-  PlayIcon,
-} from "../../../components/ui/icons.js";
+  Coffee as CoffeeIcon,
+  Dumbbell as DumbbellIcon,
+  Flame as FlameIcon,
+  Pause as PauseIcon,
+  Play as PlayIcon,
+} from "lucide-react";
+import Button from "../../../components/ui/Button.js";
 
 interface TimerState {
   isRunning: boolean;

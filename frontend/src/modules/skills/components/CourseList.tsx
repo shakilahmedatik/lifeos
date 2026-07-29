@@ -1,5 +1,7 @@
-import CourseCard from "./CourseCard";
-import type { LearningResource, ResourceWithProgress } from "./types";
+import { BookOpen } from "lucide-react";
+import EmptyState from "../../../components/ui/EmptyState.js";
+import type { LearningResource, ResourceWithProgress } from "../types.js";
+import CourseCard from "./CourseCard.js";
 
 interface CourseListProps {
   resources: LearningResource[];
@@ -11,10 +13,11 @@ interface CourseListProps {
 export default function CourseList({ resources, progresses, onEdit, onDelete }: CourseListProps) {
   if (resources.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-500 text-sm">No learning resources yet.</p>
-        <p className="text-xs text-gray-600 mt-1">Add your first resource to track progress!</p>
-      </div>
+      <EmptyState
+        icon={BookOpen}
+        title="No learning resources yet."
+        description="Add your first resource to track progress!"
+      />
     );
   }
 

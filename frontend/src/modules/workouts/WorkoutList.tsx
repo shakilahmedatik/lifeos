@@ -1,11 +1,11 @@
 import type { NewWorkoutInput, Workout } from "@lifeos/contracts";
+import { Plus as PlusIcon } from "lucide-react";
 import { useState } from "react";
 import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent } from "../../components/ui/Card.js";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { Input } from "../../components/ui/Input.js";
-import { PlusIcon } from "../../components/ui/icons.js";
 import { useWorkouts } from "./useWorkouts.js";
 
 interface WorkoutListProps {

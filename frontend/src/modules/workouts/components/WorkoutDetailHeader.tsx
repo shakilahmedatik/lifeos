@@ -1,8 +1,8 @@
 import type { WorkoutWithExercises } from "@lifeos/contracts";
+import { Edit as EditIcon, Trash2 as TrashIcon } from "lucide-react";
 import Badge from "../../../components/ui/Badge.js";
 import Button from "../../../components/ui/Button.js";
 import Card, { CardContent } from "../../../components/ui/Card.js";
-import { EditIcon, TrashIcon } from "../../../components/ui/icons.js";
 
 interface WorkoutDetailHeaderProps {
   workout: WorkoutWithExercises;

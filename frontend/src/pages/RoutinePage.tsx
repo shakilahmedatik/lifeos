@@ -6,10 +6,16 @@ import type {
   TaskSubtask,
 } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
+import {
+  Calendar as CalendarIcon,
+  Plus as PlusIcon,
+  RefreshCw as RefreshCwIcon,
+} from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
 import Button from "../components/ui/Button.js";
-import { CalendarIcon, PlusIcon, RefreshCwIcon } from "../components/ui/icons.js";
+import { Input } from "../components/ui/Input.js";
+import { Tabs, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { api } from "../lib/api.js";
 import DeleteConfirmModal from "../modules/routine/DeleteConfirmModal.js";
 import TaskDetailModal from "../modules/routine/TaskDetailModal.js";
@@ -220,30 +226,12 @@ export default function RoutinePage() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
-          {/* View Mode Toggle */}
-          <div className="bg-gray-800/80 p-1 rounded-lg border border-gray-700/50 flex items-center gap-1">
-            <button
-              type="button"
-              onClick={() => setViewMode("list")}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                viewMode === "list" ? "bg-blue-600 text-white" : "text-gray-400 hover:text-gray-200"
-              }`}
-            >
-              List
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setViewMode("timeline")}
-              className={`px-3 py-1 text-xs font-medium rounded-md transition-colors ${
-                viewMode === "timeline"
-                  ? "bg-blue-600 text-white"
-                  : "text-gray-400 hover:text-gray-200"
-              }`}
-            >
-              Timeline
-            </button>
-          </div>
+          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+            <TabsList>
+              <TabsTrigger value="list">List</TabsTrigger>
+              <TabsTrigger value="timeline">Timeline</TabsTrigger>
+            </TabsList>
+          </Tabs>
 
           <Button
             variant="secondary"
@@ -262,16 +250,17 @@ export default function RoutinePage() {
       {/* Date Selector */}
       <div className="flex items-center gap-3 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">
         <CalendarIcon size={18} className="text-blue-400" />
-        <label htmlFor="routine-date-picker" className="text-xs font-medium text-gray-400">
+        <label htmlFor="routine-date-picker" className="text-xs font-medium text-gray-400 shrink-0">
           Viewing Schedule For:
         </label>
-        <input
-          id="routine-date-picker"
-          type="date"
-          value={date}
-          onChange={(e) => setDate(e.target.value)}
-          className="bg-gray-700/60 border border-gray-600/50 text-gray-200 rounded-lg px-3 py-1.5 text-sm focus:outline-none focus:border-blue-500/50"
-        />
+        <div className="w-40">
+          <Input
+            id="routine-date-picker"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+        </div>
         {date === today && (
           <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-medium">
             Today

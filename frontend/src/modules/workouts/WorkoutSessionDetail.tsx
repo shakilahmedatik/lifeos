@@ -1,10 +1,10 @@
 import type { ExerciseLog } from "@lifeos/contracts";
+import { Trash2 as TrashIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
-import { TrashIcon } from "../../components/ui/icons.js";
 import { deleteSession } from "./api.js";
 import { useExercises, useWorkoutSession } from "./useWorkouts.js";
 

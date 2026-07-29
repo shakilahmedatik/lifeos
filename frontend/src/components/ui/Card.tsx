@@ -1,15 +1,18 @@
 import type { ReactNode } from "react";
+import { TiltCard } from "./TiltCard.js";
 
 interface CardProps {
   children: ReactNode;
   className?: string;
   accent?: string;
-  padding?: "sm" | "md" | "lg";
+  padding?: "sm" | "md" | "lg" | "none";
   hover?: boolean;
+  interactive?: boolean;
   onClick?: () => void;
 }
 
 const paddingStyles = {
+  none: "",
   sm: "p-3",
   md: "p-4",
   lg: "p-6",
@@ -21,9 +24,12 @@ export default function Card({
   accent,
   padding = "md",
   hover = false,
+  interactive = false,
   onClick,
 }: CardProps) {
-  return (
+  const isInteractive = interactive || !!onClick || hover || className.includes("hover:");
+
+  const content = (
     <div
       className={`bg-gray-800/60 backdrop-blur-sm border border-gray-700/50 rounded-xl ${paddingStyles[padding]} ${hover ? "hover:bg-gray-800/80 transition-colors duration-200" : ""} ${accent ? `border-l-4 ${accent}` : ""} ${onClick ? "cursor-pointer" : ""} ${className}`}
       onClick={onClick}
@@ -31,6 +37,20 @@ export default function Card({
       {children}
     </div>
   );
+
+  if (isInteractive) {
+    return (
+      <TiltCard className={className} onClick={onClick}>
+        <div
+          className={`bg-gray-800/60 backdrop-blur-sm border border-gray-700/50 rounded-xl h-full w-full ${paddingStyles[padding]} ${hover ? "hover:bg-gray-800/80 transition-colors duration-200" : ""} ${accent ? `border-l-4 ${accent}` : ""}`}
+        >
+          {children}
+        </div>
+      </TiltCard>
+    );
+  }
+
+  return content;
 }
 
 export function CardHeader({

@@ -1,12 +1,18 @@
+import {
+  ChevronRight as ChevronRightIcon,
+  Dumbbell as DumbbellIcon,
+  Plus as PlusIcon,
+} from "lucide-react";
 import { type SubmitEvent, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../components/ui/Card.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
 import { Input } from "../components/ui/Input.js";
-import { ChevronRightIcon, DumbbellIcon, PlusIcon } from "../components/ui/icons.js";
 import Modal from "../components/ui/Modal.js";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { CoachMode } from "../modules/workouts/CoachMode.js";
 import { ExerciseLibrary } from "../modules/workouts/ExerciseLibrary.js";
 import { useWorkouts } from "../modules/workouts/useWorkouts.js";
@@ -15,10 +21,10 @@ import { WorkoutHistoryWithFilter } from "../modules/workouts/WorkoutHistoryWith
 import { WorkoutProgress } from "../modules/workouts/WorkoutProgress.js";
 import { WorkoutSessionDetail } from "../modules/workouts/WorkoutSessionDetail.js";
 
-type Tab = "plans" | "history" | "exercises";
+type Tab = "dashboard" | "history" | "plans" | "exercises";
 
 export default function WorkoutsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("plans");
+  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -122,7 +128,7 @@ export default function WorkoutsPage() {
   }
 
   return (
-    <div className="space-y-6 animate-fade-in max-w-5xl mx-auto pb-20">
+    <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-100">Workouts</h1>
@@ -130,95 +136,102 @@ export default function WorkoutsPage() {
         </div>
       </div>
 
-      <div className="flex space-x-1 border-b border-gray-700/50 pb-px">
-        {(["plans", "history", "exercises"] as Tab[]).map((tab) => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            className={`px-4 py-2 text-sm font-medium capitalize border-b-2 transition-colors ${
-              activeTab === tab
-                ? "border-blue-500 text-blue-400"
-                : "border-transparent text-gray-400 hover:text-gray-300 hover:border-gray-600"
-            }`}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)} variant="underline">
+        <TabsList className="w-full">
+          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="plans">Plans</TabsTrigger>
+          <TabsTrigger value="exercises">Exercises</TabsTrigger>
+        </TabsList>
 
-      {activeTab === "plans" && (
-        <div className="space-y-6">
-          <div className="flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-200">Your Plans</h2>
-            <Button onClick={() => setIsNewModalOpen(true)} variant="primary">
-              <PlusIcon className="w-4 h-4 mr-2" />
-              New Workout
-            </Button>
-          </div>
-
-          {loading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {[1, 2, 3].map((i) => (
-                <div key={i} className="h-32 bg-gray-800/60 rounded-xl animate-pulse" />
-              ))}
+        <TabsContent value="plans">
+          <div className="space-y-6">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-200">Your Plans</h2>
+              <Button onClick={() => setIsNewModalOpen(true)} variant="primary">
+                <PlusIcon className="w-4 h-4 mr-2" />
+                New Workout
+              </Button>
             </div>
-          ) : error ? (
-            <div className="p-4 bg-red-500/10 text-red-400 rounded-lg">{error}</div>
-          ) : workouts.length === 0 ? (
-            <Card className="text-center py-12 border-dashed border-gray-700/50">
-              <CardContent>
-                <DumbbellIcon className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-                <p className="text-gray-400 mb-4">No workout plans yet.</p>
-                <Button onClick={() => setIsNewModalOpen(true)} variant="primary">
-                  Create your first workout
-                </Button>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {workouts.map((w) => (
-                <button
-                  type="button"
-                  key={w.id}
-                  className="w-full text-left"
-                  onClick={() => setSelectedWorkoutId(w.id)}
-                >
-                  <Card className="group cursor-pointer hover:border-blue-500/50 transition-colors">
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                      <CardTitle className="text-lg">{w.name}</CardTitle>
-                      <ChevronRightIcon className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
-                    </CardHeader>
-                    <CardContent>
-                      {w.description && (
-                        <p className="text-sm text-gray-400 mb-4 line-clamp-2">{w.description}</p>
-                      )}
-                      <div className="flex items-center gap-2">
-                        <Badge variant="default" className="bg-gray-800">
-                          {w.exerciseCount || 0} exercises
-                        </Badge>
-                        {w.scheduledDay && (
-                          <Badge variant="blue" className="bg-blue-900/30 text-blue-400 capitalize">
-                            {w.scheduledDay}
-                          </Badge>
+
+            {loading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-32 bg-gray-800/60 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : error ? (
+              <div className="p-4 bg-red-500/10 text-red-400 rounded-lg">{error}</div>
+            ) : workouts.length === 0 ? (
+              <EmptyState
+                icon={DumbbellIcon}
+                title="No workout plans yet."
+                description="Create your first workout plan to get started."
+                action={
+                  <Button onClick={() => setIsNewModalOpen(true)} variant="primary">
+                    Create your first workout
+                  </Button>
+                }
+              />
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {workouts.map((w) => (
+                  <button
+                    type="button"
+                    key={w.id}
+                    className="w-full text-left"
+                    onClick={() => setSelectedWorkoutId(w.id)}
+                  >
+                    <Card className="group cursor-pointer hover:border-blue-500/50 transition-colors">
+                      <CardHeader className="flex flex-row items-center justify-between pb-2">
+                        <CardTitle className="text-lg">{w.name}</CardTitle>
+                        <ChevronRightIcon className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
+                      </CardHeader>
+                      <CardContent>
+                        {w.description && (
+                          <p className="text-sm text-gray-400 mb-4 line-clamp-2">{w.description}</p>
                         )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                </button>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
+                        <div className="flex items-center gap-2">
+                          <Badge variant="default" className="bg-gray-800">
+                            {w.exerciseCount || 0} exercises
+                          </Badge>
+                          {w.scheduledDay && (
+                            <Badge
+                              variant="blue"
+                              className="bg-blue-900/30 text-blue-400 capitalize"
+                            >
+                              {w.scheduledDay}
+                            </Badge>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </TabsContent>
 
-      {activeTab === "history" && (
-        <div className="space-y-6">
-          <WorkoutProgress />
-          <WorkoutHistoryWithFilter onViewSession={setSelectedSessionId} />
-        </div>
-      )}
+        <TabsContent value="dashboard">
+          <div className="space-y-6">
+            <WorkoutProgress
+              onViewHistory={() => setActiveTab("history")}
+              onViewSession={setSelectedSessionId}
+            />
+          </div>
+        </TabsContent>
 
-      {activeTab === "exercises" && <ExerciseLibrary />}
+        <TabsContent value="history">
+          <div className="space-y-6">
+            <WorkoutHistoryWithFilter onViewSession={setSelectedSessionId} />
+          </div>
+        </TabsContent>
+
+        <TabsContent value="exercises">
+          <ExerciseLibrary />
+        </TabsContent>
+      </Tabs>
 
       <Modal
         open={isNewModalOpen}

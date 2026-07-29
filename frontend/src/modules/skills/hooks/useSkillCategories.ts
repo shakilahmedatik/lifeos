@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
-import { api } from "../../lib/api";
-import type { NewSkillAreaInput, SkillArea } from "./types";
+import { api } from "../../../lib/api.js";
+import type { NewSkillAreaInput, SkillArea } from "../types.js";
 
 export function useSkillAreas() {
   const [areas, setAreas] = useState<SkillArea[]>([]);

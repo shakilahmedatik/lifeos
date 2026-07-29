@@ -6,11 +6,13 @@ import type {
   TaskSubtask,
 } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
+import { Plus as PlusIcon, X as XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card from "../../components/ui/Card.js";
-import { PlusIcon, XIcon } from "../../components/ui/icons.js";
-import { useLearningResources } from "../skills/useLearningResources.js";
+import { Input } from "../../components/ui/Input.js";
+import { Select } from "../../components/ui/Select.js";
+import { useLearningResources } from "../skills/hooks/useLearningResources.js";
 import { useWorkouts } from "../workouts/useWorkouts.js";
 
 interface TaskFormProps {
@@ -196,167 +198,107 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
           </div>
         )}
 
-        <div>
-          <label htmlFor="task-title" className="block text-xs font-medium text-gray-400 mb-1">
-            Task Title *
-          </label>
-          <input
-            id="task-title"
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="e.g. Morning Standup or Study Session"
-            className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
-            required
+        <Input
+          id="task-title"
+          label="Task Title *"
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="e.g. Morning Standup or Study Session"
+          required
+        />
+
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Select
+            id="task-category"
+            label="Category"
+            value={category}
+            onChange={(e) => setCategory(e.target.value as TaskCategory)}
+            options={[
+              { value: "general", label: "General" },
+              { value: "work", label: "Work" },
+              { value: "workout", label: "Workout" },
+              { value: "learning", label: "Learning" },
+              { value: "habit", label: "Habit" },
+              { value: "personal", label: "Personal" },
+            ]}
+          />
+
+          <Input
+            id="task-date"
+            label="Date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
+
+          <Select
+            id="task-recurrence"
+            label="Repeat"
+            value={recurrence}
+            onChange={(e) => setRecurrence(e.target.value as TaskRecurrence)}
+            options={[
+              { value: "none", label: "No Repeat" },
+              { value: "daily", label: "Daily" },
+              { value: "weekdays", label: "Weekdays (Sun–Thu BD)" },
+              { value: "weekly", label: "Weekly" },
+            ]}
           />
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <div>
-            <label htmlFor="task-category" className="block text-xs font-medium text-gray-400 mb-1">
-              Category
-            </label>
-            <select
-              id="task-category"
-              value={category}
-              onChange={(e) => setCategory(e.target.value as TaskCategory)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-            >
-              <option value="general">General</option>
-              <option value="work">Work</option>
-              <option value="workout">Workout</option>
-              <option value="learning">Learning</option>
-              <option value="habit">Habit</option>
-              <option value="personal">Personal</option>
-            </select>
-          </div>
-
-          <div>
-            <label htmlFor="task-date" className="block text-xs font-medium text-gray-400 mb-1">
-              Date
-            </label>
-            <input
-              id="task-date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-            />
-          </div>
-
-          <div>
-            <label
-              htmlFor="task-recurrence"
-              className="block text-xs font-medium text-gray-400 mb-1"
-            >
-              Repeat
-            </label>
-            <select
-              id="task-recurrence"
-              value={recurrence}
-              onChange={(e) => setRecurrence(e.target.value as TaskRecurrence)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-            >
-              <option value="none">No Repeat</option>
-              <option value="daily">Daily</option>
-              <option value="weekdays">Weekdays (Sun–Thu BD)</option>
-              <option value="weekly">Weekly</option>
-            </select>
-          </div>
-        </div>
-
         {category === "workout" && (
-          <div>
-            <label htmlFor="task-workout" className="block text-xs font-medium text-gray-400 mb-1">
-              Select Workout Plan *
-            </label>
-            <select
-              id="task-workout"
-              value={referenceId}
-              onChange={(e) => setReferenceId(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-              required
-            >
-              <option value="">Select a workout...</option>
-              {workouts
+          <Select
+            id="task-workout"
+            label="Select Workout Plan *"
+            value={referenceId}
+            onChange={(e) => setReferenceId(e.target.value)}
+            required
+            options={[
+              { value: "", label: "Select a workout..." },
+              ...workouts
                 .filter((w) => (w.exerciseCount || 0) > 0)
-                .map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
-            </select>
-          </div>
+                .map((w) => ({ value: w.id, label: w.name })),
+            ]}
+          />
         )}
 
         {category === "learning" && (
-          <div>
-            <label
-              htmlFor="task-learning-resource"
-              className="block text-xs font-medium text-gray-400 mb-1"
-            >
-              Select Learning Resource (Optional)
-            </label>
-            <select
-              id="task-learning-resource"
-              value={referenceId}
-              onChange={(e) => setReferenceId(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-            >
-              <option value="">No linked resource</option>
-              {learningResources.map((r) => (
-                <option key={r.id} value={r.id}>
-                  {r.title}
-                </option>
-              ))}
-            </select>
-          </div>
+          <Select
+            id="task-learning-resource"
+            label="Select Learning Resource (Optional)"
+            value={referenceId}
+            onChange={(e) => setReferenceId(e.target.value)}
+            options={[
+              { value: "", label: "No linked resource" },
+              ...learningResources.map((r) => ({ value: r.id, label: r.title })),
+            ]}
+          />
         )}
 
         {/* Start Time & Duration Selection */}
         <div className="space-y-2 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label
-                htmlFor="task-start-time"
-                className="block text-xs font-medium text-gray-400 mb-1"
-              >
-                Start Time (Defaults to Current Time)
-              </label>
-              <input
+              <Input
                 id="task-start-time"
+                label="Start Time (Defaults to Current Time)"
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}
-                className={`w-full bg-gray-700/50 border text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none ${
-                  isPastStart
-                    ? "border-amber-500/80 text-amber-300"
-                    : "border-gray-600/50 focus:border-blue-500/50"
-                }`}
+                error={isPastStart ? "⚠️ Selected time is in the past for today." : undefined}
               />
-              {isPastStart && (
-                <p className="text-[11px] text-amber-400 mt-1">
-                  ⚠️ Selected time is in the past for today.
-                </p>
-              )}
             </div>
 
             <div>
-              <label
-                htmlFor="task-end-time"
-                className="block text-xs font-medium text-gray-400 mb-1"
-              >
-                Calculated End Time ({endTime})
-              </label>
-              <input
+              <Input
                 id="task-end-time"
+                label={`Calculated End Time (${endTime})`}
                 type="time"
                 value={endTime}
                 onChange={(e) => {
                   setEndTime(e.target.value);
                   setDurationPreset(-1); // Switch to custom if manually changed
                 }}
-                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
               />
             </div>
           </div>
@@ -390,18 +332,17 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
 
             {durationPreset === -1 && (
               <div className="mt-2 flex items-center gap-2">
-                <label htmlFor="custom-duration-input" className="text-xs text-gray-400">
-                  Custom Minutes:
-                </label>
-                <input
-                  id="custom-duration-input"
-                  type="number"
-                  min="1"
-                  max="1440"
-                  value={customDurationMins}
-                  onChange={(e) => handleCustomDurationChange(Number(e.target.value))}
-                  className="w-24 bg-gray-700/50 border border-gray-600/50 text-gray-200 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500/50"
-                />
+                <span className="text-xs text-gray-400">Custom Minutes:</span>
+                <div className="w-24">
+                  <Input
+                    id="custom-duration-input"
+                    type="number"
+                    min={1}
+                    max={1440}
+                    value={customDurationMins}
+                    onChange={(e) => handleCustomDurationChange(Number(e.target.value))}
+                  />
+                </div>
               </div>
             )}
           </div>

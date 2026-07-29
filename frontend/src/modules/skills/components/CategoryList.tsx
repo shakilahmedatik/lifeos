@@ -1,5 +1,7 @@
-import CategoryCard from "./CategoryCard";
-import type { SkillArea } from "./types";
+import { Folder } from "lucide-react";
+import EmptyState from "../../../components/ui/EmptyState.js";
+import type { SkillArea } from "../types.js";
+import CategoryCard from "./CategoryCard.js";
 
 interface CategoryListProps {
   categories: SkillArea[];
@@ -16,10 +18,11 @@ export default function CategoryList({
 }: CategoryListProps) {
   if (categories.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-500 text-sm">No skill areas yet.</p>
-        <p className="text-xs text-gray-600 mt-1">Create your first area to organize learning!</p>
-      </div>
+      <EmptyState
+        icon={Folder}
+        title="No skill areas yet."
+        description="Create your first area to organize learning!"
+      />
     );
   }
 

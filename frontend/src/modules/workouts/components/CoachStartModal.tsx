@@ -1,6 +1,6 @@
 import type { Exercise, WorkoutWithExercises } from "@lifeos/contracts";
+import { Play as PlayIcon } from "lucide-react";
 import Button from "../../../components/ui/Button.js";
-import { PlayIcon } from "../../../components/ui/icons.js";
 import Modal from "../../../components/ui/Modal.js";
 
 interface CoachStartModalProps {

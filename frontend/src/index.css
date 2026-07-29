@@ -1,15 +1,39 @@
 @import "tailwindcss";
 
 @theme {
+  --color-surface: var(--color-surface);
+  --color-surface-elevated: var(--color-surface-elevated);
+  --color-sidebar: var(--color-sidebar);
+  --color-card: var(--color-card);
+  --color-card-solid: var(--color-card-solid);
+  --color-card-hover: var(--color-card-hover);
+  --color-input: var(--color-input);
+  --color-border: var(--color-border);
+  --color-border-subtle: var(--color-border-subtle);
+  --color-accent: var(--color-accent);
+  --color-accent-hover: var(--color-accent-hover);
+  --color-accent-muted: var(--color-accent-muted);
+  --color-success: var(--color-success);
+  --color-danger: var(--color-danger);
+  --color-warning: var(--color-warning);
+  --color-primary: var(--color-primary);
+  --color-secondary: var(--color-secondary);
+  --color-muted: var(--color-muted);
+}
+
+:root {
   --color-surface: #030712;
+  --color-surface-elevated: #0f172a;
   --color-sidebar: #0f172a;
-  --color-card: #1e293b;
+  --color-card: rgba(30, 41, 59, 0.6);
+  --color-card-solid: #1e293b;
   --color-card-hover: #334155;
   --color-input: #334155;
-  --color-border: #334155;
+  --color-border: rgba(51, 65, 85, 0.5);
   --color-border-subtle: #1e293b;
-  --color-accent: #3b82f6;
-  --color-accent-hover: #2563eb;
+  --color-accent: #f59e0b;
+  --color-accent-hover: #d97706;
+  --color-accent-muted: rgba(245, 158, 11, 0.15);
   --color-success: #22c55e;
   --color-danger: #ef4444;
   --color-warning: #eab308;
@@ -18,17 +42,53 @@
   --color-muted: #6b7280;
 }
 
+html.light {
+  --color-surface: #f8fafc;
+  --color-surface-elevated: #ffffff;
+  --color-sidebar: #ffffff;
+  --color-card: rgba(255, 255, 255, 0.8);
+  --color-card-solid: #ffffff;
+  --color-card-hover: #f1f5f9;
+  --color-input: #f1f5f9;
+  --color-border: rgba(226, 232, 240, 0.8);
+  --color-border-subtle: #f1f5f9;
+  --color-accent: #d97706;
+  --color-accent-hover: #b45309;
+  --color-accent-muted: rgba(217, 119, 6, 0.1);
+  --color-success: #16a34a;
+  --color-danger: #dc2626;
+  --color-warning: #ca8a04;
+  --color-primary: #0f172a;
+  --color-secondary: #475569;
+  --color-muted: #94a3b8;
+}
+
 body {
   margin: 0;
   background: var(--color-surface);
-  color: #f3f4f6;
+  color: var(--color-primary);
+  font-family: "Inter", system-ui, -apple-system, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
+.glass {
+  background: var(--color-card);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--color-border);
+}
+
+.glass-heavy {
+  background: rgba(3, 7, 18, 0.85);
+  backdrop-filter: blur(24px) saturate(1.2);
+  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  border: 1px solid var(--color-border);
+}
+
 * {
   scrollbar-width: thin;
-  scrollbar-color: #334155 transparent;
+  scrollbar-color: var(--color-border) transparent;
 }
 
 *::-webkit-scrollbar {
@@ -40,7 +100,7 @@ body {
 }
 
 *::-webkit-scrollbar-thumb {
-  background-color: #334155;
+  background-color: var(--color-border);
   border-radius: 3px;
 }
 
@@ -55,6 +115,17 @@ body {
   }
 }
 
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
 @keyframes fade-in {
   from {
     opacity: 0;
@@ -64,10 +135,57 @@ body {
   }
 }
 
+@keyframes scale-up {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scale-down {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
 }
 
+.animate-slide-in {
+  animation: slide-in 0.3s ease-out;
+}
+
 .animate-fade-in {
   animation: fade-in 0.2s ease-out;
+}
+
+.animate-scale-up {
+  animation: scale-up 0.3s ease-out;
+}
+
+.animate-scale-down {
+  animation: scale-down 0.3s ease-out;
+}
+
+.animate-shimmer {
+  animation: shimmer 2s infinite linear;
 }

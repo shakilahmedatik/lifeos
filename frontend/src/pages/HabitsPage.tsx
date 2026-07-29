@@ -1,12 +1,15 @@
 import type { Habit, HabitCategory, NewHabitInput } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
+import { CheckCheck as CheckCheckIcon, Plus as PlusIcon } from "lucide-react";
 import { useState } from "react";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
 import Card from "../components/ui/Card.js";
-import { CheckCheckIcon, PlusIcon } from "../components/ui/icons.js";
+import { EmptyState } from "../components/ui/EmptyState.js";
+import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
+import { Select } from "../components/ui/Select.js";
 import { useHabits } from "../modules/habits/useHabits.js";
 
 const CATEGORY_VARIANTS: Record<
@@ -71,19 +74,20 @@ export default function HabitsPage() {
           ))}
         </div>
       ) : habits.length === 0 ? (
-        <Card className="text-center py-8">
-          <CheckCheckIcon size={32} className="text-gray-600 mx-auto mb-2" />
-          <p className="text-gray-500 text-sm">No habits yet</p>
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<PlusIcon size={14} />}
-            onClick={() => setShowForm(true)}
-            className="mt-3"
-          >
-            Create your first habit
-          </Button>
-        </Card>
+        <EmptyState
+          icon={CheckCheckIcon}
+          title="No habits yet"
+          action={
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<PlusIcon size={14} />}
+              onClick={() => setShowForm(true)}
+            >
+              Create your first habit
+            </Button>
+          }
+        />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {habits.map((habit) => (
@@ -133,42 +137,40 @@ export default function HabitsPage() {
       <Modal open={showForm} onClose={() => setShowForm(false)} title="New Habit">
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm text-gray-400 mb-1">Name</label>
-            <input
-              type="text"
+            <Input
+              label="Name"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
               placeholder="e.g. Morning walk"
               required
             />
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Frequency</label>
-              <select
+              <Select
+                label="Frequency"
                 value={frequency}
                 onChange={(e) => setFrequency(e.target.value as "daily" | "weekly")}
-                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-              >
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-              </select>
+                options={[
+                  { value: "daily", label: "Daily" },
+                  { value: "weekly", label: "Weekly" },
+                ]}
+              />
             </div>
             <div>
-              <label className="block text-sm text-gray-400 mb-1">Category</label>
-              <select
+              <Select
+                label="Category"
                 value={category}
                 onChange={(e) => setCategory(e.target.value as HabitCategory)}
-                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-              >
-                <option value="general">General</option>
-                <option value="health">Health</option>
-                <option value="learning">Learning</option>
-                <option value="productivity">Productivity</option>
-                <option value="mindfulness">Mindfulness</option>
-                <option value="fitness">Fitness</option>
-              </select>
+                options={[
+                  { value: "general", label: "General" },
+                  { value: "health", label: "Health" },
+                  { value: "learning", label: "Learning" },
+                  { value: "productivity", label: "Productivity" },
+                  { value: "mindfulness", label: "Mindfulness" },
+                  { value: "fitness", label: "Fitness" },
+                ]}
+              />
             </div>
           </div>
           <div className="flex justify-end gap-2 pt-2">

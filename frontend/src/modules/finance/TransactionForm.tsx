@@ -1,5 +1,8 @@
 import type { Account, Category, NewTransactionInput } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
+import Button from "../../components/ui/Button.js";
+import { Input } from "../../components/ui/Input.js";
+import { Select } from "../../components/ui/Select.js";
 import { createTransaction, fetchActiveAccounts, fetchActiveCategories } from "./api.js";
 
 interface TransactionFormProps {
@@ -68,94 +71,69 @@ export function TransactionForm({ onTransactionCreated }: TransactionFormProps) 
     <form onSubmit={handleSubmit} className="space-y-3 p-4 bg-gray-50 rounded-lg">
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label htmlFor="account-id" className="block text-sm font-medium text-gray-700 mb-1">
-            Account
-          </label>
-          <select
+          <Select
             id="account-id"
+            label="Account"
             value={accountId}
             onChange={(e) => setAccountId(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg"
             required
-          >
-            {accounts.map((account) => (
-              <option key={account.id} value={account.id}>
-                {account.name} ({account.type})
-              </option>
-            ))}
-          </select>
+            options={accounts.map((account) => ({
+              value: account.id,
+              label: `${account.name} (${account.type})`,
+            }))}
+          />
         </div>
 
         <div>
-          <label htmlFor="category-id" className="block text-sm font-medium text-gray-700 mb-1">
-            Category
-          </label>
-          <select
+          <Select
             id="category-id"
+            label="Category"
             value={categoryId}
             onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg"
             required
-          >
-            {categories.map((category) => (
-              <option key={category.id} value={category.id}>
-                {category.name} ({category.kind})
-              </option>
-            ))}
-          </select>
+            options={categories.map((category) => ({
+              value: category.id,
+              label: `${category.name} (${category.kind})`,
+            }))}
+          />
         </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label
-            htmlFor="transaction-data"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Date
-          </label>
-          <input
+          <Input
             id="transaction-data"
+            label="Date"
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
-            className="w-full px-3 py-2 border rounded-lg"
             required
           />
         </div>
 
         <div>
-          <label
-            htmlFor="transaction-amount"
-            className="block text-sm font-medium text-gray-700 mb-1"
-          >
-            Amount (BDT)
-          </label>
-          <input
+          <Input
             id="transaction-amount"
+            label="Amount (BDT)"
             type="number"
             step="0.01"
             min="0.01"
             value={amount}
             onChange={(e) => setAmount(e.target.value)}
             placeholder="0.00"
-            className="w-full px-3 py-2 border rounded-lg"
             required
           />
         </div>
       </div>
 
       <div>
-        <label htmlFor="transaction-note" className="block text-sm font-medium text-gray-700 mb-1">
-          Note (optional)
-        </label>
-        <input
+        <Input
           id="transaction-note"
+          label="Note (optional)"
           type="text"
           value={note}
           onChange={(e) => setNote(e.target.value)}
           placeholder="What was this for?"
-          className="w-full px-3 py-2 border rounded-lg"
         />
       </div>
 
@@ -163,13 +141,9 @@ export function TransactionForm({ onTransactionCreated }: TransactionFormProps) 
         <span className="text-sm text-gray-500">
           {selectedCategory?.kind === "income" ? "📈 Income" : "📉 Expense"}
         </span>
-        <button
-          type="submit"
-          disabled={submitting}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-        >
+        <Button type="submit" disabled={submitting}>
           {submitting ? "Adding..." : "Add Transaction"}
-        </button>
+        </Button>
       </div>
     </form>
   );

@@ -1,11 +1,14 @@
+import { Download, Upload } from "lucide-react";
 import { useRef, useState } from "react";
+import Button from "../../../components/ui/Button.js";
+import Card from "../../../components/ui/Card.js";
 import {
   downloadBackupjson,
   exportBackup,
   importBackup,
   markBackupCompleted,
   shouldShowBackupReminder,
-} from "./backup";
+} from "../backup.js";
 
 interface BackupPanelProps {
   onImportComplete: () => void;
@@ -65,22 +68,23 @@ export default function BackupPanel({ onImportComplete }: BackupPanelProps) {
         </div>
       )}
 
-      <div className="p-4 bg-gray-800/40 border border-gray-700/50 rounded-xl">
+      <Card>
         <h3 className="text-sm font-medium text-gray-200 mb-2">Export Data</h3>
         <p className="text-xs text-gray-500 mb-4">
           Download all your learning data as a JSON file.
         </p>
-        <button
-          type="button"
+        <Button
+          variant="primary"
           onClick={handleExport}
           disabled={exporting}
-          className="px-4 py-2 text-sm bg-green-600/20 text-green-400 border border-green-500/20 rounded-lg hover:bg-green-600/30 transition-colors disabled:opacity-50"
+          loading={exporting}
+          icon={<Download size={16} />}
         >
           {exporting ? "Exporting..." : "Export Backup"}
-        </button>
-      </div>
+        </Button>
+      </Card>
 
-      <div className="p-4 bg-gray-800/40 border border-gray-700/50 rounded-xl">
+      <Card>
         <h3 className="text-sm font-medium text-gray-200 mb-2">Import Data</h3>
         <p className="text-xs text-gray-500 mb-4">
           Import learning data from a backup file. This will replace all existing data.
@@ -93,13 +97,14 @@ export default function BackupPanel({ onImportComplete }: BackupPanelProps) {
           className="hidden"
           id="import-file"
         />
-        <label
-          htmlFor="import-file"
-          className="inline-block px-4 py-2 text-sm bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-lg hover:bg-blue-600/30 transition-colors cursor-pointer"
+        <Button
+          variant="secondary"
+          icon={<Upload size={16} />}
+          onClick={() => fileInputRef.current?.click()}
         >
           Select Backup File
-        </label>
-      </div>
+        </Button>
+      </Card>
 
       {importMessage && (
         <div

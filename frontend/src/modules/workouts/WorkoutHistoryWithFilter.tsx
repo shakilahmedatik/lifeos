@@ -1,8 +1,8 @@
+import { Search as SearchIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 import Badge from "../../components/ui/Badge.js";
 import Card, { CardContent } from "../../components/ui/Card.js";
 import { Input } from "../../components/ui/Input.js";
-import { SearchIcon } from "../../components/ui/icons.js";
 import { Select } from "../../components/ui/Select.js";
 import { useWorkoutSessions, useWorkouts } from "./useWorkouts.js";
 

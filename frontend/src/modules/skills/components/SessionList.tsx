@@ -1,5 +1,7 @@
-import SessionCard from "./SessionCard";
-import type { LearningLog, LearningResource } from "./types";
+import { History } from "lucide-react";
+import EmptyState from "../../../components/ui/EmptyState.js";
+import type { LearningLog, LearningResource } from "../types.js";
+import SessionCard from "./SessionCard.js";
 
 interface SessionListProps {
   logs: LearningLog[];
@@ -13,10 +15,11 @@ export default function SessionList({ logs, resources, onEdit, onDelete }: Sessi
 
   if (logs.length === 0) {
     return (
-      <div className="text-center py-8">
-        <p className="text-gray-500 text-sm">No learning sessions yet.</p>
-        <p className="text-xs text-gray-600 mt-1">Log your first session to get started!</p>
-      </div>
+      <EmptyState
+        icon={History}
+        title="No learning sessions yet."
+        description="Log your first session to get started!"
+      />
     );
   }
 

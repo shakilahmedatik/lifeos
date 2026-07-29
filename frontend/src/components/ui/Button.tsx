@@ -1,21 +1,25 @@
-import type { ButtonHTMLAttributes, ReactNode } from "react";
+import { Loader2 } from "lucide-react";
+import type { HTMLMotionProps } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
+import type { ReactNode } from "react";
+import { cn } from "../../lib/utils.js";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
-interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
+interface ButtonProps extends Omit<HTMLMotionProps<"button">, "ref" | "children"> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
   icon?: ReactNode;
+  children?: ReactNode;
 }
 
 const variantStyles: Record<Variant, string> = {
-  primary: "bg-blue-600 hover:bg-blue-500 text-white shadow-sm shadow-blue-600/20",
-  secondary: "bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700",
-  ghost: "bg-transparent hover:bg-gray-800 text-gray-400 hover:text-gray-200",
-  danger:
-    "bg-red-600/10 hover:bg-red-600/20 text-red-400 hover:text-red-300 border border-red-800/50",
+  primary: "bg-accent hover:bg-accent-hover text-surface shadow-sm shadow-accent/20",
+  secondary: "bg-card-solid hover:bg-card-hover text-secondary border border-border",
+  ghost: "bg-transparent hover:bg-card-hover text-muted hover:text-primary",
+  danger: "bg-danger/10 hover:bg-danger/20 text-danger hover:text-danger border border-danger/20",
 };
 
 const sizeStyles: Record<Size, string> = {
@@ -34,28 +38,27 @@ export default function Button({
   disabled,
   ...props
 }: ButtonProps) {
+  const reduce = useReducedMotion();
+
   return (
-    <button
-      className={`inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:opacity-50 disabled:pointer-events-none ${variantStyles[variant]} ${sizeStyles[size]} ${className}`}
+    <motion.button
+      whileTap={reduce ? undefined : { scale: 0.97 }}
+      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+      className={cn(
+        "inline-flex items-center justify-center font-medium rounded-lg transition-colors duration-200",
+        "focus:outline-none focus:ring-2 focus:ring-accent/40 focus:ring-offset-1 focus:ring-offset-surface",
+        "disabled:opacity-50 disabled:pointer-events-none",
+        variantStyles[variant],
+        sizeStyles[size],
+        className,
+      )}
       disabled={disabled || loading}
       {...props}
     >
-      {loading ? (
-        <svg
-          className="animate-spin"
-          width={16}
-          height={16}
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-        >
-          <path d="M21 12a9 9 0 1 1-6.219-8.56" />
-        </svg>
-      ) : icon ? (
-        icon
-      ) : null}
+      {loading ? <Loader2 className="animate-spin" size={16} /> : icon ? icon : null}
       {children}
-    </button>
+    </motion.button>
   );
 }
+
+export type { ButtonProps, Size as ButtonSize, Variant as ButtonVariant };

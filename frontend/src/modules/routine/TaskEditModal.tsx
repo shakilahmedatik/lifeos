@@ -1,9 +1,11 @@
 import type { Task, TaskCategory, TaskRecurrence, TaskSubtask } from "@lifeos/contracts";
+import { Plus as PlusIcon, X as XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
-import Card from "../../components/ui/Card.js";
-import { PlusIcon, XIcon } from "../../components/ui/icons.js";
-import { useLearningResources } from "../skills/useLearningResources.js";
+import { Input } from "../../components/ui/Input.js";
+import Modal from "../../components/ui/Modal.js";
+import { Select } from "../../components/ui/Select.js";
+import { useLearningResources } from "../skills/hooks/useLearningResources.js";
 import { useWorkouts } from "../workouts/useWorkouts.js";
 import { addMinutesToTime } from "./TaskForm.js";
 import { computeDurationMins } from "./TaskList.js";
@@ -132,20 +134,8 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fade-in">
-      <Card className="w-full max-w-lg border-blue-500/30 shadow-2xl max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between pb-3 border-b border-gray-700/50 mb-4">
-          <h2 className="text-lg font-bold text-gray-100">Edit Task</h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close edit modal"
-            className="p-1.5 rounded-lg text-gray-400 hover:text-gray-200 hover:bg-gray-800"
-          >
-            <XIcon size={18} />
-          </button>
-        </div>
-
+    <Modal open={true} onClose={onClose} title="Edit Task" size="md">
+      <div className="space-y-4">
         {error && (
           <div className="mb-4 p-3 bg-red-900/40 border border-red-800 rounded-lg text-xs text-red-300">
             {error}
@@ -153,81 +143,51 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label
-              htmlFor="edit-task-title"
-              className="block text-xs font-medium text-gray-400 mb-1"
-            >
-              Title *
-            </label>
-            <input
-              id="edit-task-title"
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-              required
-            />
-          </div>
+          <Input
+            id="edit-task-title"
+            label="Title *"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            required
+          />
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label
-                htmlFor="edit-task-category"
-                className="block text-xs font-medium text-gray-400 mb-1"
-              >
-                Category
-              </label>
-              <select
-                id="edit-task-category"
-                value={category}
-                onChange={(e) => setCategory(e.target.value as TaskCategory)}
-                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-              >
-                <option value="general">General</option>
-                <option value="work">Work</option>
-                <option value="workout">Workout</option>
-                <option value="learning">Learning</option>
-                <option value="habit">Habit</option>
-                <option value="personal">Personal</option>
-              </select>
-            </div>
+            <Select
+              id="edit-task-category"
+              label="Category"
+              value={category}
+              onChange={(e) => setCategory(e.target.value as TaskCategory)}
+              options={[
+                { value: "general", label: "General" },
+                { value: "work", label: "Work" },
+                { value: "workout", label: "Workout" },
+                { value: "learning", label: "Learning" },
+                { value: "habit", label: "Habit" },
+                { value: "personal", label: "Personal" },
+              ]}
+            />
 
-            <div>
-              <label
-                htmlFor="edit-task-date"
-                className="block text-xs font-medium text-gray-400 mb-1"
-              >
-                Date
-              </label>
-              <input
-                id="edit-task-date"
-                type="date"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
-                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-              />
-            </div>
+            <Input
+              id="edit-task-date"
+              label="Date"
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+            />
 
-            <div>
-              <label
-                htmlFor="edit-task-recurrence"
-                className="block text-xs font-medium text-gray-400 mb-1"
-              >
-                Repeat
-              </label>
-              <select
-                id="edit-task-recurrence"
-                value={recurrence}
-                onChange={(e) => setRecurrence(e.target.value as TaskRecurrence)}
-                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
-              >
-                <option value="none">No Repeat</option>
-                <option value="daily">Daily</option>
-                <option value="weekdays">Weekdays (Sun–Thu BD)</option>
-                <option value="weekly">Weekly</option>
-              </select>
-            </div>
+            <Select
+              id="edit-task-recurrence"
+              label="Repeat"
+              value={recurrence}
+              onChange={(e) => setRecurrence(e.target.value as TaskRecurrence)}
+              options={[
+                { value: "none", label: "No Repeat" },
+                { value: "daily", label: "Daily" },
+                { value: "weekdays", label: "Weekdays (Sun–Thu BD)" },
+                { value: "weekly", label: "Weekly" },
+              ]}
+            />
           </div>
 
           {category === "workout" && (
@@ -496,7 +456,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
             </Button>
           </div>
         </form>
-      </Card>
-    </div>
+      </div>
+    </Modal>
   );
 }

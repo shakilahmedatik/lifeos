@@ -1,7 +1,7 @@
 import type { Exercise, WorkoutExercise } from "@lifeos/contracts";
+import { ChevronDown as ChevronDownIcon, ChevronUp as ChevronUpIcon } from "lucide-react";
 import Button from "../../../components/ui/Button.js";
 import Card, { CardContent } from "../../../components/ui/Card.js";
-import { ChevronDownIcon, ChevronUpIcon } from "../../../components/ui/icons.js";
 
 interface WorkoutExerciseItemProps {
   workoutExercise: WorkoutExercise;
