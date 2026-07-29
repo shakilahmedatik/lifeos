@@ -220,3 +220,49 @@ export const CompleteSessionInputSchema = z.object({
   durationSeconds: z.number().int().min(0),
   notes: z.string().max(1000).optional(),
 });
+
+// Skills schemas
+export const NewSkillAreaInputSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+});
+
+export const UpdateSkillAreaInputSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name is too long").optional(),
+});
+
+export const LearningResourceTypeSchema = z.enum(["course", "book", "project", "article"]);
+export const LearningUnitSchema = z.enum(["chapters", "videos", "hours"]);
+
+export const NewLearningResourceInputSchema = z.object({
+  skillAreaId: z.string().min(1, "Skill area ID is required"),
+  title: z.string().min(1, "Title is required").max(200, "Title is too long"),
+  type: LearningResourceTypeSchema,
+  totalUnits: z.number().positive().optional(),
+  unit: LearningUnitSchema.optional(),
+});
+
+export const UpdateLearningResourceInputSchema = z.object({
+  skillAreaId: z.string().min(1).optional(),
+  title: z.string().min(1).max(200).optional(),
+  type: LearningResourceTypeSchema.optional(),
+  totalUnits: z.number().positive().nullable().optional(),
+  unit: LearningUnitSchema.nullable().optional(),
+});
+
+export const NewLearningLogInputSchema = z.object({
+  resourceId: z.string().min(1, "Resource ID is required"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
+  minutesSpent: z.number().int().positive("Minutes spent must be positive"),
+  unitsCompleted: z.number().min(0).optional(),
+  notes: z.string().max(1000).optional(),
+});
+
+export const UpdateLearningLogInputSchema = z.object({
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD")
+    .optional(),
+  minutesSpent: z.number().int().positive().optional(),
+  unitsCompleted: z.number().min(0).nullable().optional(),
+  notes: z.string().max(1000).nullable().optional(),
+});

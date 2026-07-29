@@ -10,6 +10,7 @@ import { useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card from "../../components/ui/Card.js";
 import { PlusIcon, XIcon } from "../../components/ui/icons.js";
+import { useLearningResources } from "../skills/useLearningResources.js";
 import { useWorkouts } from "../workouts/useWorkouts.js";
 
 interface TaskFormProps {
@@ -63,6 +64,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
   const [referenceId, setReferenceId] = useState<string>("");
 
   const { workouts } = useWorkouts();
+  const { resources: learningResources } = useLearningResources();
 
   // Notifications
   const [enableReminder, setEnableReminder] = useState(false);
@@ -283,6 +285,30 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
                     {w.name}
                   </option>
                 ))}
+            </select>
+          </div>
+        )}
+
+        {category === "learning" && (
+          <div>
+            <label
+              htmlFor="task-learning-resource"
+              className="block text-xs font-medium text-gray-400 mb-1"
+            >
+              Select Learning Resource (Optional)
+            </label>
+            <select
+              id="task-learning-resource"
+              value={referenceId}
+              onChange={(e) => setReferenceId(e.target.value)}
+              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+            >
+              <option value="">No linked resource</option>
+              {learningResources.map((r) => (
+                <option key={r.id} value={r.id}>
+                  {r.title}
+                </option>
+              ))}
             </select>
           </div>
         )}

@@ -1,54 +1,60 @@
-import type { LearningSession, SkillCategory } from "./types";
+import type { LearningLog, LearningResource } from "./types";
 
 interface SessionCardProps {
-  session: LearningSession;
-  category?: SkillCategory;
-  onEdit: (session: LearningSession) => void;
+  log: LearningLog;
+  resource?: LearningResource;
+  onEdit: (log: LearningLog) => void;
   onDelete: (id: string) => void;
 }
 
-export default function SessionCard({ session, category, onEdit, onDelete }: SessionCardProps) {
-  const formatDate = (timestamp: string) => {
-    return new Date(timestamp).toLocaleDateString("en-US", {
+export default function SessionCard({ log, resource, onEdit, onDelete }: SessionCardProps) {
+  const formatDate = (dateStr: string) => {
+    return new Date(dateStr).toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
     });
   };
 
   return (
-    <div className="p-4 bg-white rounded-lg border border-gray-200 hover:shadow-md transition-shadow">
-      <div className="flex justify-between items-start">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <span className="text-lg font-semibold text-gray-900">{session.duration} min</span>
-            {category && (
-              <span className="px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
-                {category.name}
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-gray-500">{formatDate(session.timestamp)}</p>
-          {session.notes && <p className="mt-2 text-sm text-gray-700">{session.notes}</p>}
+    <div className="p-3 bg-gray-800/40 border border-gray-700/50 rounded-xl flex items-center gap-3">
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-gray-200">{log.minutesSpent} min</span>
+          {resource && (
+            <span className="px-2 py-0.5 text-xs bg-blue-600/20 text-blue-400 rounded-full border border-blue-500/20">
+              {resource.title}
+            </span>
+          )}
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => onEdit(session)}
-            className="text-sm text-blue-600 hover:text-blue-800"
+        {log.notes && <p className="text-xs text-gray-500 mt-0.5 truncate">{log.notes}</p>}
+        <p className="text-xs text-gray-600 mt-0.5">{formatDate(log.date)}</p>
+      </div>
+      <div className="flex gap-1">
+        <button
+          type="button"
+          onClick={() => onEdit(log)}
+          className="p-1.5 rounded-lg text-gray-500 hover:text-blue-400 hover:bg-blue-900/20 transition-colors text-xs"
+        >
+          Edit
+        </button>
+        <button
+          type="button"
+          onClick={() => onDelete(log.id)}
+          className="p-1.5 rounded-lg text-gray-500 hover:text-red-400 hover:bg-red-900/20 transition-colors"
+        >
+          <svg
+            width="14"
+            height="14"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
           >
-            Edit
-          </button>
-          <button
-            type="button"
-            onClick={() => onDelete(session.id)}
-            className="text-sm text-red-600 hover:text-red-800"
-          >
-            Delete
-          </button>
-        </div>
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
+          </svg>
+        </button>
       </div>
     </div>
   );

@@ -1,7 +1,14 @@
 import type { Task, TaskStatus, TaskSubtask } from "@lifeos/contracts";
+import { useNavigate } from "react-router-dom";
 import Badge from "../../components/ui/Badge.js";
 import Card from "../../components/ui/Card.js";
-import { ClockIcon, EditIcon, XIcon } from "../../components/ui/icons.js";
+import {
+  ClockIcon,
+  EditIcon,
+  GraduationCapIcon,
+  PlayIcon,
+  XIcon,
+} from "../../components/ui/icons.js";
 import TaskCategoryBadge, { CATEGORY_COLORS } from "./TaskCategoryBadge.js";
 
 interface TaskListProps {
@@ -34,6 +41,8 @@ export default function TaskList({
   onDelete,
   onToggleSubtask,
 }: TaskListProps) {
+  const navigate = useNavigate();
+
   if (tasks.length === 0) {
     return (
       <Card className="text-center py-10">
@@ -123,6 +132,36 @@ export default function TaskList({
               </div>
 
               <div className="flex items-center gap-2">
+                {task.category === "workout" && task.referenceId && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(`/workouts?startSession=${task.referenceId}&taskId=${task.id}`)
+                    }
+                    className="flex items-center gap-1 text-xs px-2 py-1 bg-emerald-600/20 text-emerald-400 border border-emerald-500/30 rounded-lg hover:bg-emerald-600/30 transition-colors"
+                    title="Start Workout Session"
+                  >
+                    <PlayIcon size={12} />
+                    <span>Start</span>
+                  </button>
+                )}
+
+                {task.category === "learning" && task.referenceId && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      navigate(
+                        `/skills?logSession=${task.referenceId}&taskId=${task.id}&duration=${duration}`,
+                      )
+                    }
+                    className="flex items-center gap-1 text-xs px-2 py-1 bg-purple-600/20 text-purple-300 border border-purple-500/30 rounded-lg hover:bg-purple-600/30 transition-colors"
+                    title="Log Learning Session"
+                  >
+                    <GraduationCapIcon size={12} />
+                    <span>Log Session</span>
+                  </button>
+                )}
+
                 <label htmlFor={`status-select-${task.id}`} className="sr-only">
                   Change status for {task.title}
                 </label>

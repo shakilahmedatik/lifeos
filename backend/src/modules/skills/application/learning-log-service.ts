@@ -30,6 +30,10 @@ export class LearningLogService {
     return this.logRepo.getByDateRange(startDate, endDate);
   }
 
+  updateLog(id: string, patch: Partial<NewLearningLogInput>): LearningLog | undefined {
+    return this.logRepo.update(id, patch);
+  }
+
   delete(id: string): boolean {
     return this.logRepo.delete(id);
   }
@@ -59,7 +63,7 @@ export class LearningLogService {
     if (!area) return undefined;
     const resources = this.resourceRepo.getBySkillArea(skillAreaId);
     const resourceIds = resources.map((r) => r.id);
-    const allLogs = resourceIds.flatMap((rid) => this.logRepo.getByResourceId(rid));
+    const allLogs = this.logRepo.getByResourceIds(resourceIds);
     const totalMinutes = allLogs.reduce((s, l) => s + l.minutesSpent, 0);
     return {
       skillArea: area,

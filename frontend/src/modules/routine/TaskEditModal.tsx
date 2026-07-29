@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card from "../../components/ui/Card.js";
 import { PlusIcon, XIcon } from "../../components/ui/icons.js";
+import { useLearningResources } from "../skills/useLearningResources.js";
+import { useWorkouts } from "../workouts/useWorkouts.js";
 import { addMinutesToTime } from "./TaskForm.js";
 import { computeDurationMins } from "./TaskList.js";
 
@@ -32,12 +34,16 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
 
   const [title, setTitle] = useState(task.title);
   const [category, setCategory] = useState<TaskCategory>(task.category);
+  const [referenceId, setReferenceId] = useState<string>(task.referenceId ?? "");
   const [date, setDate] = useState(task.date);
   const [startTime, setStartTime] = useState(task.startTime);
   const [endTime, setEndTime] = useState(task.endTime);
   const [durationPreset, setDurationPreset] = useState<number>(matchedPreset);
   const [recurrence, setRecurrence] = useState<TaskRecurrence>(task.recurrence ?? "none");
   const [notes, setNotes] = useState(task.notes ?? "");
+
+  const { workouts } = useWorkouts();
+  const { resources: learningResources } = useLearningResources();
 
   // Subtasks
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>(task.subtasks ?? []);
@@ -111,6 +117,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
         startTime,
         endTime,
         recurrence,
+        referenceId: referenceId || undefined,
         notes: notes.trim() || undefined,
         subtasks,
         reminderMinutesBefore: enableReminder ? reminderMinutesBefore : null,
@@ -222,6 +229,54 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
               </select>
             </div>
           </div>
+
+          {category === "workout" && (
+            <div>
+              <label
+                htmlFor="edit-task-workout"
+                className="block text-xs font-medium text-gray-400 mb-1"
+              >
+                Select Workout Plan
+              </label>
+              <select
+                id="edit-task-workout"
+                value={referenceId}
+                onChange={(e) => setReferenceId(e.target.value)}
+                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+              >
+                <option value="">No linked workout</option>
+                {workouts.map((w) => (
+                  <option key={w.id} value={w.id}>
+                    {w.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {category === "learning" && (
+            <div>
+              <label
+                htmlFor="edit-task-learning-resource"
+                className="block text-xs font-medium text-gray-400 mb-1"
+              >
+                Select Learning Resource (Optional)
+              </label>
+              <select
+                id="edit-task-learning-resource"
+                value={referenceId}
+                onChange={(e) => setReferenceId(e.target.value)}
+                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+              >
+                <option value="">No linked resource</option>
+                {learningResources.map((r) => (
+                  <option key={r.id} value={r.id}>
+                    {r.title}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           <div className="space-y-2 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">
             <div className="grid grid-cols-2 gap-3">

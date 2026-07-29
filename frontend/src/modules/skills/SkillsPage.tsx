@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { useAppToast } from "../../components/Toast";
+import { api } from "../../lib/api";
 import BackupPanel from "./BackupPanel";
 import CategoryForm from "./CategoryForm";
 import CategoryList from "./CategoryList";
@@ -7,98 +10,183 @@ import CourseForm from "./CourseForm";
 import CourseList from "./CourseList";
 import SessionForm from "./SessionForm";
 import SessionList from "./SessionList";
-import type { CourseProgress, LearningSession, SkillCategory } from "./types";
-import { useCourseProgress } from "./useCourseProgress";
-import { useLearningSessions } from "./useLearningSessions";
-import { useSkillCategories } from "./useSkillCategories";
+import type {
+  LearningLog,
+  LearningResource,
+  NewLearningLogInput,
+  NewLearningResourceInput,
+  NewSkillAreaInput,
+  ResourceWithProgress,
+  SkillArea,
+} from "./types";
+import { useLearningLogs } from "./useLearningLogs";
+import { useLearningResources } from "./useLearningResources";
+import { useSkillAreas } from "./useSkillCategories";
 
 type Tab = "sessions" | "courses" | "categories" | "backup";
 
 export default function SkillsPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const toast = useAppToast();
+
   const [activeTab, setActiveTab] = useState<Tab>("sessions");
   const [showSessionForm, setShowSessionForm] = useState(false);
-  const [editingSession, setEditingSession] = useState<LearningSession | null>(null);
+  const [editingSession, setEditingSession] = useState<LearningLog | null>(null);
   const [showCourseForm, setShowCourseForm] = useState(false);
-  const [editingCourse, setEditingCourse] = useState<CourseProgress | null>(null);
+  const [editingCourse, setEditingCourse] = useState<LearningResource | null>(null);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
-  const [editingCategory, setEditingCategory] = useState<SkillCategory | null>(null);
+  const [editingCategory, setEditingCategory] = useState<SkillArea | null>(null);
   const [deleteConfirmation, setDeleteConfirmation] = useState<{
     type: "session" | "course" | "category";
     id: string;
     name: string;
   } | null>(null);
 
+  // Routine task automation state
+  const [automationTaskId, setAutomationTaskId] = useState<string | null>(null);
+  const [initialLogResourceId, setInitialLogResourceId] = useState<string | undefined>(undefined);
+  const [initialLogMinutes, setInitialLogMinutes] = useState<number | undefined>(undefined);
+
   const {
-    sessions,
+    logs,
     loading: sessionsLoading,
-    addSession,
-    editSession,
-    removeSession,
-  } = useLearningSessions();
+    error: sessionsError,
+    addLog,
+    editLog,
+    removeLog,
+    refresh: refreshLogs,
+  } = useLearningLogs();
   const {
-    categories,
+    areas,
     loading: categoriesLoading,
-    addCategory,
-    editCategory,
-    removeCategory,
-  } = useSkillCategories();
+    error: categoriesError,
+    addArea,
+    editArea,
+    removeArea,
+    refresh: refreshAreas,
+  } = useSkillAreas();
   const {
-    courses,
-    loading: coursesLoading,
-    addCourse,
-    editCourse,
-    removeCourse,
-    updateProgress,
-  } = useCourseProgress();
+    resources,
+    loading: resourcesLoading,
+    error: resourcesError,
+    addResource,
+    editResource,
+    removeResource,
+    refresh: refreshResources,
+  } = useLearningResources();
 
-  const loading = sessionsLoading || categoriesLoading || coursesLoading;
+  // Batch progress data loaded once
+  const [progressesByResource, setProgressesByResource] = useState<
+    Record<string, ResourceWithProgress | null>
+  >({});
+  const [progressesLoaded, setProgressesLoaded] = useState(false);
 
-  const handleSessionSubmit = (input: {
-    duration: number;
-    skillCategoryId: string;
-    notes?: string;
-  }) => {
+  useEffect(() => {
+    if (resources.length > 0 && !progressesLoaded) {
+      const ids = resources.map((r) => r.id);
+      api
+        .getProgressBatch(ids)
+        .then((progArr) => {
+          const byId: Record<string, ResourceWithProgress | null> = {};
+          for (const p of progArr) {
+            if (p) byId[p.id] = p;
+          }
+          for (const r of resources) {
+            if (!(r.id in byId)) byId[r.id] = null;
+          }
+          setProgressesByResource(byId);
+          setProgressesLoaded(true);
+        })
+        .catch(() => {
+          setProgressesLoaded(true);
+        });
+    }
+  }, [resources, progressesLoaded]);
+
+  const loading = sessionsLoading || categoriesLoading || resourcesLoading;
+
+  const [resourceCounts, setResourceCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    const counts: Record<string, number> = {};
+    for (const r of resources) {
+      counts[r.skillAreaId] = (counts[r.skillAreaId] ?? 0) + 1;
+    }
+    setResourceCounts(counts);
+  }, [resources]);
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(location.search);
+    const logSessionId = searchParams.get("logSession");
+    const taskId = searchParams.get("taskId");
+    const durationStr = searchParams.get("duration");
+
+    if (logSessionId) {
+      setActiveTab("sessions");
+      setInitialLogResourceId(logSessionId);
+      if (durationStr && !Number.isNaN(Number(durationStr))) {
+        setInitialLogMinutes(Number(durationStr));
+      }
+      if (taskId) {
+        setAutomationTaskId(taskId);
+        api.updateTaskStatus(taskId, "in_progress").catch(console.error);
+      }
+      setEditingSession(null);
+      setShowSessionForm(true);
+      navigate("/skills", { replace: true });
+    }
+  }, [location.search, navigate]);
+
+  const handleSessionSubmit = async (input: NewLearningLogInput) => {
     if (editingSession) {
-      editSession(editingSession.id, input);
+      await editLog(editingSession.id, input);
       setEditingSession(null);
     } else {
-      addSession(input);
+      await addLog(input);
+      if (automationTaskId) {
+        await api.updateTaskStatus(automationTaskId, "done").catch(console.error);
+        toast.success("Learning session logged and task marked complete!");
+        setAutomationTaskId(null);
+      }
     }
     setShowSessionForm(false);
+    setInitialLogResourceId(undefined);
+    setInitialLogMinutes(undefined);
   };
 
-  const handleCourseSubmit = (input: { name: string; platform: string; totalLessons: number }) => {
+  const handleCourseSubmit = async (input: NewLearningResourceInput) => {
     if (editingCourse) {
-      editCourse(editingCourse.id, input);
+      await editResource(editingCourse.id, input);
       setEditingCourse(null);
     } else {
-      addCourse(input);
+      await addResource(input);
     }
     setShowCourseForm(false);
   };
 
-  const handleCategorySubmit = (input: { name: string; description?: string }) => {
+  const handleCategorySubmit = async (input: NewSkillAreaInput) => {
     if (editingCategory) {
-      editCategory(editingCategory.id, input);
+      await editArea(editingCategory.id, input);
       setEditingCategory(null);
     } else {
-      addCategory(input);
+      await addArea(input);
     }
     setShowCategoryForm(false);
   };
 
-  const handleDeleteConfirm = () => {
+  const handleDeleteConfirm = async () => {
     if (!deleteConfirmation) return;
 
     switch (deleteConfirmation.type) {
       case "session":
-        removeSession(deleteConfirmation.id);
+        await removeLog(deleteConfirmation.id);
         break;
       case "course":
-        removeCourse(deleteConfirmation.id);
+        await removeResource(deleteConfirmation.id);
         break;
       case "category":
-        removeCategory(deleteConfirmation.id);
+        await removeArea(deleteConfirmation.id);
         break;
     }
     setDeleteConfirmation(null);
@@ -106,19 +194,20 @@ export default function SkillsPage() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: "sessions", label: "Sessions" },
-    { id: "courses", label: "Courses" },
-    { id: "categories", label: "Categories" },
+    { id: "courses", label: "Resources" },
+    { id: "categories", label: "Areas" },
     { id: "backup", label: "Backup" },
   ];
 
   if (loading) {
     return (
-      <div className="container mx-auto px-4 py-8">
-        <div className="animate-pulse">
-          <div className="h-8 bg-gray-200 rounded w-1/4 mb-8" />
-          <div className="space-y-4">
-            <div className="h-4 bg-gray-200 rounded" />
-            <div className="h-4 bg-gray-200 rounded w-3/4" />
+      <div className="space-y-6 animate-fade-in">
+        <div className="animate-pulse space-y-4">
+          <div className="h-8 bg-gray-700/50 rounded w-1/4" />
+          <div className="h-4 bg-gray-700/50 rounded w-1/3" />
+          <div className="space-y-3">
+            <div className="h-20 bg-gray-700/50 rounded-xl" />
+            <div className="h-20 bg-gray-700/50 rounded-xl" />
           </div>
         </div>
       </div>
@@ -126,20 +215,21 @@ export default function SkillsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Skills</h1>
+    <div className="space-y-6 animate-fade-in">
+      <div>
+        <h1 className="text-2xl font-bold text-gray-100">Skills</h1>
+        <p className="text-sm text-gray-500 mt-1">Track your learning journey</p>
+      </div>
 
-      {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 mb-6">
+      <div className="flex gap-1 p-1 bg-gray-800/60 rounded-xl w-fit">
         {tabs.map((tab) => (
           <button
             key={tab.id}
-            type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`px-4 py-2 font-medium text-sm border-b-2 transition-colors ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               activeTab === tab.id
-                ? "border-blue-500 text-blue-600"
-                : "border-transparent text-gray-500 hover:text-gray-700"
+                ? "bg-blue-600/20 text-blue-400 border border-blue-500/20"
+                : "text-gray-500 hover:text-gray-300"
             }`}
           >
             {tab.label}
@@ -147,168 +237,180 @@ export default function SkillsPage() {
         ))}
       </div>
 
-      {/* Tab Content */}
-      <div className="min-h-[400px]">
-        {activeTab === "sessions" && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Learning Sessions</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingSession(null);
-                  setShowSessionForm(true);
-                }}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              >
-                Log Session
-              </button>
-            </div>
+      {(resourcesError || sessionsError || categoriesError) && (
+        <div className="p-4 bg-red-900/20 border border-red-600/30 rounded-xl">
+          <p className="text-sm text-red-400">Failed to load data. Please refresh the page.</p>
+        </div>
+      )}
 
-            {showSessionForm && (
-              <div className="mb-6">
-                <SessionForm
-                  session={editingSession ?? undefined}
-                  categories={categories}
-                  onSubmit={handleSessionSubmit}
-                  onCancel={() => {
-                    setShowSessionForm(false);
-                    setEditingSession(null);
-                  }}
-                />
-              </div>
-            )}
-
-            <SessionList
-              sessions={sessions}
-              categories={categories}
-              onEdit={(session) => {
-                setEditingSession(session);
+      {activeTab === "sessions" && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-200">Learning Sessions</h2>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingSession(null);
                 setShowSessionForm(true);
               }}
-              onDelete={(id) => {
-                const session = sessions.find((s) => s.id === id);
-                setDeleteConfirmation({
-                  type: "session",
-                  id,
-                  name: `Session on ${new Date(session?.timestamp ?? "").toLocaleDateString()}`,
-                });
-              }}
-            />
+              className="px-4 py-2 text-sm bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-lg hover:bg-blue-600/30 transition-colors"
+            >
+              Log Session
+            </button>
           </div>
-        )}
 
-        {activeTab === "courses" && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Course Progress</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingCourse(null);
-                  setShowCourseForm(true);
+          {showSessionForm && (
+            <div className="mb-6 p-4 bg-gray-800/40 border border-gray-700/50 rounded-xl">
+              <SessionForm
+                log={editingSession ?? undefined}
+                resources={resources}
+                initialResourceId={initialLogResourceId}
+                initialMinutesSpent={initialLogMinutes}
+                onSubmit={handleSessionSubmit}
+                onCancel={() => {
+                  if (automationTaskId) {
+                    api.updateTaskStatus(automationTaskId, "planned").catch(console.error);
+                    setAutomationTaskId(null);
+                  }
+                  setShowSessionForm(false);
+                  setEditingSession(null);
+                  setInitialLogResourceId(undefined);
+                  setInitialLogMinutes(undefined);
                 }}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              >
-                Add Course
-              </button>
+              />
             </div>
+          )}
 
-            {showCourseForm && (
-              <div className="mb-6">
-                <CourseForm
-                  course={editingCourse ?? undefined}
-                  onSubmit={handleCourseSubmit}
-                  onCancel={() => {
-                    setShowCourseForm(false);
-                    setEditingCourse(null);
-                  }}
-                />
-              </div>
-            )}
+          <SessionList
+            logs={logs}
+            resources={resources}
+            onEdit={(log) => {
+              setEditingSession(log);
+              setShowSessionForm(true);
+            }}
+            onDelete={(id) => {
+              const log = logs.find((l) => l.id === id);
+              const resource = resources.find((r) => r.id === log?.resourceId);
+              setDeleteConfirmation({
+                type: "session",
+                id,
+                name: `Session on ${log?.date ?? "unknown date"}${resource ? ` (${resource.title})` : ""}`,
+              });
+            }}
+          />
+        </div>
+      )}
 
-            <CourseList
-              courses={courses}
-              onEdit={(course) => {
-                setEditingCourse(course);
+      {activeTab === "courses" && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-200">Learning Resources</h2>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingCourse(null);
                 setShowCourseForm(true);
               }}
-              onDelete={(id) => {
-                const course = courses.find((c) => c.id === id);
-                setDeleteConfirmation({
-                  type: "course",
-                  id,
-                  name: course?.name ?? "Course",
-                });
-              }}
-              onUpdateProgress={updateProgress}
-            />
+              className="px-4 py-2 text-sm bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-lg hover:bg-blue-600/30 transition-colors"
+            >
+              Add Resource
+            </button>
           </div>
-        )}
 
-        {activeTab === "categories" && (
-          <div>
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Skill Categories</h2>
-              <button
-                type="button"
-                onClick={() => {
-                  setEditingCategory(null);
-                  setShowCategoryForm(true);
+          {showCourseForm && (
+            <div className="mb-6 p-4 bg-gray-800/40 border border-gray-700/50 rounded-xl">
+              <CourseForm
+                resource={editingCourse ?? undefined}
+                areas={areas}
+                onSubmit={handleCourseSubmit}
+                onCancel={() => {
+                  setShowCourseForm(false);
+                  setEditingCourse(null);
                 }}
-                className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-              >
-                Create Category
-              </button>
+              />
             </div>
+          )}
 
-            {showCategoryForm && (
-              <div className="mb-6">
-                <CategoryForm
-                  category={editingCategory ?? undefined}
-                  onSubmit={handleCategorySubmit}
-                  onCancel={() => {
-                    setShowCategoryForm(false);
-                    setEditingCategory(null);
-                  }}
-                />
-              </div>
-            )}
+          <CourseList
+            resources={resources}
+            progresses={progressesByResource}
+            onEdit={(resource) => {
+              setEditingCourse(resource);
+              setShowCourseForm(true);
+            }}
+            onDelete={(id) => {
+              const resource = resources.find((r) => r.id === id);
+              setDeleteConfirmation({
+                type: "course",
+                id,
+                name: resource?.title ?? "Resource",
+              });
+            }}
+          />
+        </div>
+      )}
 
-            <CategoryList
-              categories={categories}
-              sessions={sessions}
-              onEdit={(category) => {
-                setEditingCategory(category);
+      {activeTab === "categories" && (
+        <div>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-lg font-semibold text-gray-200">Skill Areas</h2>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingCategory(null);
                 setShowCategoryForm(true);
               }}
-              onDelete={(id) => {
-                const category = categories.find((c) => c.id === id);
-                const _sessionCount = sessions.filter((s) => s.skillCategoryId === id).length;
-                setDeleteConfirmation({
-                  type: "category",
-                  id,
-                  name: category?.name ?? "Category",
-                });
-              }}
-            />
+              className="px-4 py-2 text-sm bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-lg hover:bg-blue-600/30 transition-colors"
+            >
+              Create Area
+            </button>
           </div>
-        )}
 
-        {activeTab === "backup" && (
-          <div>
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Backup & Export</h2>
-            <BackupPanel
-              onImportComplete={() => {
-                // Refresh all data
-                window.location.reload();
-              }}
-            />
-          </div>
-        )}
-      </div>
+          {showCategoryForm && (
+            <div className="mb-6 p-4 bg-gray-800/40 border border-gray-700/50 rounded-xl">
+              <CategoryForm
+                category={editingCategory ?? undefined}
+                onSubmit={handleCategorySubmit}
+                onCancel={() => {
+                  setShowCategoryForm(false);
+                  setEditingCategory(null);
+                }}
+              />
+            </div>
+          )}
 
-      {/* Delete Confirmation Dialog */}
+          <CategoryList
+            categories={areas}
+            resourceCounts={resourceCounts}
+            onEdit={(category) => {
+              setEditingCategory(category);
+              setShowCategoryForm(true);
+            }}
+            onDelete={(id) => {
+              const category = areas.find((a) => a.id === id);
+              setDeleteConfirmation({
+                type: "category",
+                id,
+                name: category?.name ?? "Area",
+              });
+            }}
+          />
+        </div>
+      )}
+
+      {activeTab === "backup" && (
+        <div>
+          <h2 className="text-lg font-semibold text-gray-200 mb-4">Backup & Export</h2>
+          <BackupPanel
+            onImportComplete={() => {
+              refreshLogs();
+              refreshAreas();
+              refreshResources();
+            }}
+          />
+        </div>
+      )}
+
       {deleteConfirmation && (
         <ConfirmDialog
           title={`Delete ${deleteConfirmation.type}`}

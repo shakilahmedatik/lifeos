@@ -1,91 +1,136 @@
 import { useState } from "react";
-import type { LearningSession, NewLearningSessionInput, SkillCategory } from "./types";
+import type { LearningLog, LearningResource, NewLearningLogInput } from "./types";
 
 interface SessionFormProps {
-  session?: LearningSession;
-  categories: SkillCategory[];
-  onSubmit: (input: NewLearningSessionInput) => void;
+  log?: LearningLog;
+  resources: LearningResource[];
+  initialResourceId?: string;
+  initialMinutesSpent?: number;
+  onSubmit: (input: NewLearningLogInput) => void;
   onCancel: () => void;
 }
 
-export default function SessionForm({ session, categories, onSubmit, onCancel }: SessionFormProps) {
-  const [duration, setDuration] = useState(session?.duration ?? 30);
-  const [skillCategoryId, setSkillCategoryId] = useState(
-    session?.skillCategoryId ?? (categories.length > 0 ? categories[0].id : ""),
+export default function SessionForm({
+  log,
+  resources,
+  initialResourceId,
+  initialMinutesSpent,
+  onSubmit,
+  onCancel,
+}: SessionFormProps) {
+  const [date, setDate] = useState(log?.date ?? new Date().toISOString().split("T")[0]);
+  const [minutesSpent, setMinutesSpent] = useState(log?.minutesSpent ?? initialMinutesSpent ?? 30);
+  const [resourceId, setResourceId] = useState(
+    log?.resourceId ?? initialResourceId ?? (resources.length > 0 ? resources[0].id : ""),
   );
-  const [notes, setNotes] = useState(session?.notes ?? "");
+  const [unitsCompleted, setUnitsCompleted] = useState(log?.unitsCompleted ?? "");
+  const [notes, setNotes] = useState(log?.notes ?? "");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ duration, skillCategoryId, notes });
+    onSubmit({
+      date,
+      minutesSpent,
+      resourceId,
+      unitsCompleted: unitsCompleted !== "" ? Number(unitsCompleted) : undefined,
+      notes: notes.trim() || undefined,
+    });
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="space-y-4 p-4 bg-white rounded-lg border border-gray-200"
-    >
-      <div>
-        <label htmlFor="session-duration" className="block text-sm font-medium text-gray-700 mb-1">
-          Duration (minutes)
-        </label>
-        <input
-          id="session-duration"
-          type="number"
-          min="1"
-          value={duration}
-          onChange={(e) => setDuration(Number(e.target.value))}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          required
-        />
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div>
+          <label htmlFor="log-date" className="block text-sm text-gray-400 mb-1">
+            Date
+          </label>
+          <input
+            id="log-date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+            className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+            required
+          />
+        </div>
+        <div>
+          <label htmlFor="log-minutes" className="block text-sm text-gray-400 mb-1">
+            Minutes
+          </label>
+          <input
+            id="log-minutes"
+            type="number"
+            min="1"
+            value={minutesSpent}
+            onChange={(e) => setMinutesSpent(Number(e.target.value))}
+            className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+            required
+          />
+        </div>
       </div>
       <div>
-        <label htmlFor="session-category" className="block text-sm font-medium text-gray-700 mb-1">
-          Skill Category
+        <label htmlFor="log-resource" className="block text-sm text-gray-400 mb-1">
+          Learning Resource
         </label>
         <select
-          id="session-category"
-          value={skillCategoryId}
-          onChange={(e) => setSkillCategoryId(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          id="log-resource"
+          value={resourceId}
+          onChange={(e) => setResourceId(e.target.value)}
+          className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
           required
         >
-          {categories.length === 0 ? (
-            <option value="">No categories available</option>
+          {resources.length === 0 ? (
+            <option value="">No resources available</option>
           ) : (
-            categories.map((cat) => (
-              <option key={cat.id} value={cat.id}>
-                {cat.name}
+            resources.map((r) => (
+              <option key={r.id} value={r.id}>
+                {r.title}
               </option>
             ))
           )}
         </select>
       </div>
       <div>
-        <label htmlFor="session-notes" className="block text-sm font-medium text-gray-700 mb-1">
+        <label htmlFor="log-units" className="block text-sm text-gray-400 mb-1">
+          Units Completed
+        </label>
+        <input
+          id="log-units"
+          type="number"
+          min="0"
+          step="0.5"
+          value={unitsCompleted}
+          onChange={(e) => setUnitsCompleted(e.target.value)}
+          className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
+          placeholder="Optional"
+        />
+      </div>
+      <div>
+        <label htmlFor="log-notes" className="block text-sm text-gray-400 mb-1">
           Notes
         </label>
         <textarea
-          id="session-notes"
+          id="log-notes"
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-          rows={3}
+          className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-100 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500 resize-none"
+          rows={2}
+          placeholder="Optional notes"
         />
       </div>
-      <div className="flex gap-2">
-        <button
-          type="submit"
-          className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
-        >
-          {session ? "Update" : "Log Session"}
-        </button>
+      <div className="flex justify-end gap-2 pt-2">
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
+          className="px-4 py-2 text-sm text-gray-400 hover:text-gray-200 transition-colors"
         >
           Cancel
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 text-sm bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-lg hover:bg-blue-600/30 transition-colors"
+        >
+          {log ? "Update" : "Log Session"}
         </button>
       </div>
     </form>

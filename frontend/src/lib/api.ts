@@ -128,6 +128,15 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
+  updateSkillArea: (id: string, patch: import("@lifeos/contracts").UpdateSkillAreaInput) =>
+    request<import("@lifeos/contracts").SkillArea>(`/api/skills/areas/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  deleteSkillArea: (id: string) => request<void>(`/api/skills/areas/${id}`, { method: "DELETE" }),
+  getSkillAreaSummary: (areaId: string) =>
+    request<import("@lifeos/contracts").SkillAreaSummary>(`/api/skills/summary/${areaId}`),
   getLearningResources: () =>
     request<import("@lifeos/contracts").LearningResource[]>("/api/skills/resources"),
   getResourcesByArea: (areaId: string) =>
@@ -140,6 +149,17 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
+  updateLearningResource: (
+    id: string,
+    patch: import("@lifeos/contracts").UpdateLearningResourceInput,
+  ) =>
+    request<import("@lifeos/contracts").LearningResource>(`/api/skills/resources/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  deleteLearningResource: (id: string) =>
+    request<void>(`/api/skills/resources/${id}`, { method: "DELETE" }),
   getResourceProgress: (id: string) =>
     request<import("@lifeos/contracts").ResourceWithProgress>(
       `/api/skills/resources/${id}/progress`,
@@ -150,9 +170,45 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
+  updateLearningLog: (id: string, patch: import("@lifeos/contracts").UpdateLearningLogInput) =>
+    request<import("@lifeos/contracts").LearningLog>(`/api/skills/logs/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  deleteLearningLog: (id: string) => request<void>(`/api/skills/logs/${id}`, { method: "DELETE" }),
   getLearningLogsByResource: (resourceId: string) =>
     request<import("@lifeos/contracts").LearningLog[]>(
       `/api/skills/logs/by-resource/${resourceId}`,
+    ),
+  getLearningLogsByRange: (startDate: string, endDate: string) =>
+    request<import("@lifeos/contracts").LearningLog[]>(
+      `/api/skills/logs/range?startDate=${startDate}&endDate=${endDate}`,
+    ),
+  // Skills import
+  importBackup: (input: {
+    areas: import("@lifeos/contracts").NewSkillAreaInput[];
+    resources: import("@lifeos/contracts").NewLearningResourceInput[];
+    logs: import("@lifeos/contracts").NewLearningLogInput[];
+  }) =>
+    request<{
+      success: boolean;
+      areasCreated: number;
+      resourcesCreated: number;
+      logsCreated: number;
+    }>("/api/skills/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  getProgressBatch: (resourceIds: string[]) =>
+    request<import("@lifeos/contracts").ResourceWithProgress[]>(
+      "/api/skills/resources/progress-batch",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ resourceIds }),
+      },
     ),
 
   // Finance

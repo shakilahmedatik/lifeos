@@ -1,8 +1,17 @@
 import type { Task, TaskStatus, TaskSubtask } from "@lifeos/contracts";
+import { useNavigate } from "react-router-dom";
 import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
 import Card from "../../components/ui/Card.js";
-import { BellIcon, CalendarIcon, ClockIcon, EditIcon, XIcon } from "../../components/ui/icons.js";
+import {
+  BellIcon,
+  CalendarIcon,
+  ClockIcon,
+  EditIcon,
+  GraduationCapIcon,
+  PlayIcon,
+  XIcon,
+} from "../../components/ui/icons.js";
 import TaskCategoryBadge, { CATEGORY_COLORS } from "./TaskCategoryBadge.js";
 import { computeDurationMins } from "./TaskList.js";
 
@@ -30,6 +39,7 @@ export default function TaskDetailModal({
   onToggleSubtask,
   onStatusChange,
 }: TaskDetailModalProps) {
+  const navigate = useNavigate();
   const duration = computeDurationMins(task.startTime, task.endTime);
   const isOvernight = task.startTime > task.endTime;
   const catStyle = CATEGORY_COLORS[task.category] || CATEGORY_COLORS.general;
@@ -196,6 +206,38 @@ export default function TaskDetailModal({
           </Button>
 
           <div className="flex items-center gap-2">
+            {task.category === "workout" && task.referenceId && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="bg-emerald-600 hover:bg-emerald-500"
+                icon={<PlayIcon size={14} />}
+                onClick={() => {
+                  onClose();
+                  navigate(`/workouts?startSession=${task.referenceId}&taskId=${task.id}`);
+                }}
+              >
+                Start Workout
+              </Button>
+            )}
+
+            {task.category === "learning" && task.referenceId && (
+              <Button
+                variant="primary"
+                size="sm"
+                className="bg-purple-600 hover:bg-purple-500"
+                icon={<GraduationCapIcon size={14} />}
+                onClick={() => {
+                  onClose();
+                  navigate(
+                    `/skills?logSession=${task.referenceId}&taskId=${task.id}&duration=${duration}`,
+                  );
+                }}
+              >
+                Log Session
+              </Button>
+            )}
+
             <Button
               variant="secondary"
               size="sm"

@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import type { Task } from "@lifeos/contracts";
 import { fireEvent, render, screen } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
 import TaskCategoryBadge from "../TaskCategoryBadge.js";
 import TaskList, { computeDurationMins } from "../TaskList.js";
@@ -36,12 +37,14 @@ describe("Routine Component Unit Tests", () => {
     const handleDelete = vi.fn();
 
     render(
-      <TaskList
-        tasks={[sampleTask]}
-        onStatusChange={handleStatus}
-        onEdit={handleEdit}
-        onDelete={handleDelete}
-      />,
+      <MemoryRouter>
+        <TaskList
+          tasks={[sampleTask]}
+          onStatusChange={handleStatus}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+        />
+      </MemoryRouter>,
     );
 
     expect(screen.getByText("Morning Run")).toBeDefined();

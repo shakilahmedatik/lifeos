@@ -13,7 +13,7 @@ export function initSkillsModule(db: Database.Database) {
   const learningLogRepo = new SqliteLearningLogRepository(db);
 
   const skillAreaService = new SkillAreaService(skillAreaRepo);
-  const resourceService = new LearningResourceService(resourceRepo);
+  const resourceService = new LearningResourceService(resourceRepo, skillAreaRepo);
   const learningLogService = new LearningLogService(learningLogRepo, resourceRepo, skillAreaRepo);
 
   const router = createSkillsRouter(skillAreaService, resourceService, learningLogService);

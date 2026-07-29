@@ -1,32 +1,32 @@
 import SessionCard from "./SessionCard";
-import type { LearningSession, SkillCategory } from "./types";
+import type { LearningLog, LearningResource } from "./types";
 
 interface SessionListProps {
-  sessions: LearningSession[];
-  categories: SkillCategory[];
-  onEdit: (session: LearningSession) => void;
+  logs: LearningLog[];
+  resources: LearningResource[];
+  onEdit: (log: LearningLog) => void;
   onDelete: (id: string) => void;
 }
 
-export default function SessionList({ sessions, categories, onEdit, onDelete }: SessionListProps) {
-  const getCategoryById = (id: string) => categories.find((c) => c.id === id);
+export default function SessionList({ logs, resources, onEdit, onDelete }: SessionListProps) {
+  const getResourceById = (id: string) => resources.find((r) => r.id === id);
 
-  if (sessions.length === 0) {
+  if (logs.length === 0) {
     return (
       <div className="text-center py-8">
-        <p className="text-gray-500">No learning sessions yet.</p>
-        <p className="text-sm text-gray-400 mt-1">Log your first session to get started!</p>
+        <p className="text-gray-500 text-sm">No learning sessions yet.</p>
+        <p className="text-xs text-gray-600 mt-1">Log your first session to get started!</p>
       </div>
     );
   }
 
   return (
-    <div className="space-y-3">
-      {sessions.map((session) => (
+    <div className="space-y-2">
+      {logs.map((log) => (
         <SessionCard
-          key={session.id}
-          session={session}
-          category={getCategoryById(session.skillCategoryId)}
+          key={log.id}
+          log={log}
+          resource={getResourceById(log.resourceId)}
           onEdit={onEdit}
           onDelete={onDelete}
         />

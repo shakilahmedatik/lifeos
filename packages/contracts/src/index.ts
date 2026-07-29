@@ -378,6 +378,7 @@ export interface LearningLog {
   unitsCompleted?: number;
   notes?: string;
   createdAt: string;
+  updatedAt: string;
 }
 
 export interface NewLearningLogInput {
@@ -386,6 +387,25 @@ export interface NewLearningLogInput {
   minutesSpent: number;
   unitsCompleted?: number;
   notes?: string;
+}
+
+export interface UpdateSkillAreaInput {
+  name?: string;
+}
+
+export interface UpdateLearningResourceInput {
+  skillAreaId?: string;
+  title?: string;
+  type?: LearningResourceType;
+  totalUnits?: number | null;
+  unit?: LearningUnit | null;
+}
+
+export interface UpdateLearningLogInput {
+  date?: string;
+  minutesSpent?: number;
+  unitsCompleted?: number | null;
+  notes?: string | null;
 }
 
 export interface ResourceWithProgress extends LearningResource {

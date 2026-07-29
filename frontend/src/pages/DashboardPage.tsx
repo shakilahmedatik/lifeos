@@ -9,6 +9,7 @@ import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import {
   ArrowRightIcon,
   CheckCheckIcon,
+  GraduationCapIcon,
   PlayIcon,
   RefreshCwIcon,
   TimerIcon,
@@ -253,6 +254,18 @@ function NowCard({ task, navigate }: { task: Task | null; navigate: (path: strin
             >
               <PlayIcon className="w-4 h-4 mr-1.5" />
               Start Session
+            </Button>
+          )}
+
+          {task.category === "learning" && task.referenceId && (
+            <Button
+              size="sm"
+              variant="primary"
+              className="bg-purple-600 hover:bg-purple-500 mt-2 whitespace-nowrap"
+              onClick={() => navigate(`/skills?logSession=${task.referenceId}&taskId=${task.id}`)}
+            >
+              <GraduationCapIcon className="w-4 h-4 mr-1.5" />
+              Log Session
             </Button>
           )}
         </div>

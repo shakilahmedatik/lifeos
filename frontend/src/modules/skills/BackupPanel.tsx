@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import {
-  downloadBackup,
+  downloadBackupjson,
+  exportBackup,
   importBackup,
   markBackupCompleted,
   shouldShowBackupReminder,
@@ -15,22 +16,30 @@ export default function BackupPanel({ onImportComplete }: BackupPanelProps) {
     type: "success" | "error";
     text: string;
   } | null>(null);
-  const [merge, setMerge] = useState(false);
+  const [exporting, setExporting] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleExport = () => {
-    downloadBackup();
-    markBackupCompleted();
+  const handleExport = async () => {
+    try {
+      setExporting(true);
+      const json = await exportBackup();
+      downloadBackupjson(json);
+      markBackupCompleted();
+    } catch {
+      setImportMessage({ type: "error", text: "Failed to export backup" });
+    } finally {
+      setExporting(false);
+    }
   };
 
-  const handleImport = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const json = event.target?.result as string;
-      const result = importBackup(json, merge);
+      const result = await importBackup(json);
       setImportMessage({
         type: result.success ? "success" : "error",
         text: result.message,
@@ -41,7 +50,6 @@ export default function BackupPanel({ onImportComplete }: BackupPanelProps) {
     };
     reader.readAsText(file);
 
-    // Reset file input
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -50,46 +58,33 @@ export default function BackupPanel({ onImportComplete }: BackupPanelProps) {
   return (
     <div className="space-y-4">
       {shouldShowBackupReminder() && (
-        <div className="p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
-          <p className="text-sm text-yellow-800">
-            <strong>Backup reminder:</strong> You have learning data that hasn't been backed up
-            recently. Consider exporting your data to prevent loss.
+        <div className="p-4 bg-yellow-900/20 border border-yellow-600/30 rounded-xl">
+          <p className="text-sm text-yellow-400">
+            <strong>Backup reminder:</strong> Consider exporting your data to prevent loss.
           </p>
         </div>
       )}
 
-      <div className="p-4 bg-white rounded-lg border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Export Data</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Download all your learning data as a JSON file. This includes sessions, courses, and
-          categories.
+      <div className="p-4 bg-gray-800/40 border border-gray-700/50 rounded-xl">
+        <h3 className="text-sm font-medium text-gray-200 mb-2">Export Data</h3>
+        <p className="text-xs text-gray-500 mb-4">
+          Download all your learning data as a JSON file.
         </p>
         <button
           type="button"
           onClick={handleExport}
-          className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-600"
+          disabled={exporting}
+          className="px-4 py-2 text-sm bg-green-600/20 text-green-400 border border-green-500/20 rounded-lg hover:bg-green-600/30 transition-colors disabled:opacity-50"
         >
-          Export Backup
+          {exporting ? "Exporting..." : "Export Backup"}
         </button>
       </div>
 
-      <div className="p-4 bg-white rounded-lg border border-gray-200">
-        <h3 className="text-lg font-semibold text-gray-900 mb-4">Import Data</h3>
-        <p className="text-sm text-gray-600 mb-4">
-          Import learning data from a backup file. Choose whether to merge with existing data or
-          replace it entirely.
+      <div className="p-4 bg-gray-800/40 border border-gray-700/50 rounded-xl">
+        <h3 className="text-sm font-medium text-gray-200 mb-2">Import Data</h3>
+        <p className="text-xs text-gray-500 mb-4">
+          Import learning data from a backup file. This will replace all existing data.
         </p>
-        <div className="flex items-center gap-4 mb-4">
-          <label className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              checked={merge}
-              onChange={(e) => setMerge(e.target.checked)}
-              className="rounded border-gray-300"
-            />
-            <span className="text-sm text-gray-700">Merge with existing data</span>
-          </label>
-        </div>
         <input
           ref={fileInputRef}
           type="file"
@@ -100,7 +95,7 @@ export default function BackupPanel({ onImportComplete }: BackupPanelProps) {
         />
         <label
           htmlFor="import-file"
-          className="inline-block px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 cursor-pointer"
+          className="inline-block px-4 py-2 text-sm bg-blue-600/20 text-blue-400 border border-blue-500/20 rounded-lg hover:bg-blue-600/30 transition-colors cursor-pointer"
         >
           Select Backup File
         </label>
@@ -108,15 +103,15 @@ export default function BackupPanel({ onImportComplete }: BackupPanelProps) {
 
       {importMessage && (
         <div
-          className={`p-4 rounded-lg ${
+          className={`p-4 rounded-xl ${
             importMessage.type === "success"
-              ? "bg-green-50 border border-green-200"
-              : "bg-red-50 border border-red-200"
+              ? "bg-green-900/20 border border-green-600/30"
+              : "bg-red-900/20 border border-red-600/30"
           }`}
         >
           <p
             className={`text-sm ${
-              importMessage.type === "success" ? "text-green-800" : "text-red-800"
+              importMessage.type === "success" ? "text-green-400" : "text-red-400"
             }`}
           >
             {importMessage.text}
