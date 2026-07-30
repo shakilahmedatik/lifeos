@@ -2,6 +2,7 @@ import {
   NewAccountInputSchema,
   NewCategoryInputSchema,
   NewTransactionInputSchema,
+  TransferInputSchema,
 } from "@lifeos/contracts";
 import { Router } from "express";
 import { validateBody } from "../../../shared/validate.js";
@@ -210,7 +211,7 @@ export function createFinanceRouter(
     res.status(204).send();
   });
 
-  router.post("/transfers", (req, res) => {
+  router.post("/transfers", validateBody(TransferInputSchema), (req, res) => {
     try {
       const { fromAccountId, toAccountId, amountMinor, date, note } = req.body;
       const result = transactionService.createTransfer(

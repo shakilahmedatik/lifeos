@@ -1,6 +1,8 @@
-import { copyFileSync, mkdirSync, statSync } from "node:fs";
+import { copyFileSync, mkdirSync, statSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { Router } from "express";
+
+const MAX_RESTORE_SIZE_BYTES = 100 * 1024 * 1024; // 100MB
 
 export function createBackupRouter(dbPath: string): Router {
   const router = Router();
@@ -30,16 +32,25 @@ export function createBackupRouter(dbPath: string): Router {
 
   router.post("/restore", (req, res) => {
     try {
+      if (!req.body || !Buffer.isBuffer(req.body)) {
+        res.status(400).json({ error: "Request body must be the SQLite file content" });
+        return;
+      }
+
+      if (req.body.length > MAX_RESTORE_SIZE_BYTES) {
+        res.status(413).json({ error: "Backup file exceeds maximum size limit (100MB)" });
+        return;
+      }
+
       const backupDir = resolve(process.cwd(), "data/backups");
       mkdirSync(backupDir, { recursive: true });
       const preRestoreBackup = join(backupDir, `pre-restore-${Date.now()}.sqlite`);
       copyFileSync(dbPath, preRestoreBackup);
 
-      if (req.body && Buffer.isBuffer(req.body)) {
-        copyFileSync(req.body.toString(), dbPath);
-      }
+      writeFileSync(dbPath, req.body);
+
       res.json({
-        message: "Database restore initialized successfully.",
+        message: "Database restored successfully.",
         safetyBackup: preRestoreBackup,
       });
     } catch (err) {

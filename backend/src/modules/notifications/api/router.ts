@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
-import { NewNotificationInputSchema } from "@lifeos/contracts";
+import { NewNotificationInputSchema, UpdateNotificationInputSchema } from "@lifeos/contracts";
 import { Router } from "express";
+import { validateBody } from "../../../shared/validate.js";
 
 import type { NotificationBroadcaster } from "../application/notification-broadcaster.js";
 import type { NotificationService } from "../application/notification-service.js";
@@ -51,15 +52,9 @@ export function createNotificationsRouter(
     res.json(notification);
   });
 
-  router.post("/", (req, res) => {
-    const parsed = NewNotificationInputSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
-
+  router.post("/", validateBody(NewNotificationInputSchema), (req, res) => {
     try {
-      const notification = notificationService.createNotification(parsed.data);
+      const notification = notificationService.createNotification(req.body);
       res.status(201).json(notification);
     } catch (error) {
       if (error instanceof Error) {
@@ -70,7 +65,7 @@ export function createNotificationsRouter(
     }
   });
 
-  router.patch("/:id", (req, res) => {
+  router.patch("/:id", validateBody(UpdateNotificationInputSchema), (req, res) => {
     const notification = notificationService.updateNotification(req.params.id, req.body);
     if (!notification) {
       res.status(404).json({ error: "Notification not found" });

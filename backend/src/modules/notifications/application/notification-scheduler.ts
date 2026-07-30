@@ -1,3 +1,4 @@
+import { logger } from "../../../shared/logger.js";
 import type { NotificationWithTask } from "../domain/types.js";
 import type { NotificationBroadcaster } from "./notification-broadcaster.js";
 import type { NotificationService } from "./notification-service.js";
@@ -20,14 +21,14 @@ export class NotificationScheduler {
       this.checkAndSendNotifications();
     }, intervalMs);
 
-    console.log(`Notification scheduler started with ${intervalMs}ms interval`);
+    logger.info("Notification scheduler started", { intervalMs });
   }
 
   stop(): void {
     if (this.intervalId) {
       clearInterval(this.intervalId);
       this.intervalId = null;
-      console.log("Notification scheduler stopped");
+      logger.info("Notification scheduler stopped");
     }
   }
 
@@ -47,12 +48,15 @@ export class NotificationScheduler {
         this.notificationService.markNotificationAsSent(notification.id);
       }
     } catch (error) {
-      console.error("Error checking notifications:", error);
+      logger.error("Error checking notifications", { error: (error as Error).message });
     }
   }
 
   private async sendNotification(notification: NotificationWithTask): Promise<void> {
-    console.log(`Sending notification: ${notification.taskTitle} at ${notification.reminderTime}`);
+    logger.info("Sending notification", {
+      taskTitle: notification.taskTitle,
+      reminderTime: notification.reminderTime,
+    });
 
     if (this.broadcaster) {
       this.broadcaster.broadcast(notification);
@@ -62,7 +66,7 @@ export class NotificationScheduler {
       try {
         listener(notification);
       } catch (error) {
-        console.error("Error in notification listener:", error);
+        logger.error("Error in notification listener", { error: (error as Error).message });
       }
     }
   }

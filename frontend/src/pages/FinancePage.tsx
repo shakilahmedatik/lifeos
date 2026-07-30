@@ -13,6 +13,7 @@ import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
 import { Select } from "../components/ui/Select.js";
 import * as financeApi from "../modules/finance/api.js";
 
@@ -87,15 +88,15 @@ export default function FinancePage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-100">Finance</h1>
-          <p className="text-sm text-gray-500 mt-1">Track your money</p>
-        </div>
-        <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
-          Add Transaction
-        </Button>
-      </div>
+      <PageHeader
+        title="Finance"
+        description="Track your money"
+        actions={
+          <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
+            Add Transaction
+          </Button>
+        }
+      />
 
       {loading ? (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">

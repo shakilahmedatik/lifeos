@@ -1,3 +1,4 @@
+import { logger } from "../../../shared/logger.js";
 import type { createRssFetchService } from "./rss-fetch-service.js";
 
 export function createNewsScheduler(rssFetchService: ReturnType<typeof createRssFetchService>) {
@@ -14,7 +15,7 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
         fetchIntervalMinutes = intervalMinutes;
       }
 
-      console.log(`Starting news scheduler with ${fetchIntervalMinutes} minute interval`);
+      logger.info("Starting news scheduler", { intervalMinutes: fetchIntervalMinutes });
 
       // Run immediately on start
       this.runFetchCycle();
@@ -32,7 +33,7 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
       if (intervalId) {
         clearInterval(intervalId);
         intervalId = null;
-        console.log("News scheduler stopped");
+        logger.info("News scheduler stopped");
       }
     },
 
@@ -50,13 +51,14 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
 
     async runFetchCycle(): Promise<void> {
       try {
-        console.log("Running news fetch cycle...");
+        logger.info("Running news fetch cycle");
         const result = await rssFetchService.fetchAllActiveFeeds();
-        console.log(
-          `Fetch cycle complete: ${result.totalFeeds} feeds checked, ${result.totalNewArticles} new articles`,
-        );
+        logger.info("News fetch cycle complete", {
+          totalFeeds: result.totalFeeds,
+          newArticles: result.totalNewArticles,
+        });
       } catch (error) {
-        console.error("Error in fetch cycle:", error);
+        logger.error("Error in news fetch cycle", { error: (error as Error).message });
       }
     },
   };

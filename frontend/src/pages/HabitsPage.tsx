@@ -9,6 +9,7 @@ import Card from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
 import { Select } from "../components/ui/Select.js";
 import { useHabits } from "../modules/habits/useHabits.js";
 
@@ -57,15 +58,15 @@ export default function HabitsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-100">Habits</h1>
-          <p className="text-sm text-gray-500 mt-1">Build daily routines</p>
-        </div>
-        <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
-          Add Habit
-        </Button>
-      </div>
+      <PageHeader
+        title="Habits"
+        description="Build daily routines"
+        actions={
+          <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
+            Add Habit
+          </Button>
+        }
+      />
 
       {loading ? (
         <div className="space-y-3">

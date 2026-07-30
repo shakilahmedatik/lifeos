@@ -15,6 +15,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
 import Button from "../components/ui/Button.js";
 import { Input } from "../components/ui/Input.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { api } from "../lib/api.js";
 import DeleteConfirmModal from "../modules/routine/DeleteConfirmModal.js";
@@ -216,36 +217,32 @@ export default function RoutinePage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-100">Routine & Schedule</h1>
-          <p className="text-sm text-gray-400 mt-1">
-            Plan, schedule, and execute your day structured by time blocks
-          </p>
-        </div>
+      <PageHeader
+        title="Routine & Schedule"
+        description="Plan, schedule, and execute your day structured by time blocks"
+        actions={
+          <>
+            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+              <TabsList>
+                <TabsTrigger value="list">List</TabsTrigger>
+                <TabsTrigger value="timeline">Timeline</TabsTrigger>
+              </TabsList>
+            </Tabs>
 
-        <div className="flex items-center gap-2 flex-wrap">
-          <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-            <TabsList>
-              <TabsTrigger value="list">List</TabsTrigger>
-              <TabsTrigger value="timeline">Timeline</TabsTrigger>
-            </TabsList>
-          </Tabs>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<RefreshCwIcon size={14} />}
+              onClick={fetchTasks}
+              aria-label="Refresh task schedule"
+            />
 
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<RefreshCwIcon size={14} />}
-            onClick={fetchTasks}
-            aria-label="Refresh task schedule"
-          />
-
-          <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(!showForm)}>
-            Add Task
-          </Button>
-        </div>
-      </div>
+            <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(!showForm)}>
+              {showForm ? "Cancel" : "Add Task"}
+            </Button>
+          </>
+        }
+      />
 
       {/* Date Selector */}
       <div className="flex items-center gap-3 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">

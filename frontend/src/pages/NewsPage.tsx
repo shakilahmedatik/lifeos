@@ -11,6 +11,7 @@ import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
 import * as newsApi from "../modules/news/api.js";
 
 export default function NewsPage() {
@@ -89,23 +90,23 @@ export default function NewsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-100">News</h1>
-          <p className="text-sm text-gray-500 mt-1">Stay informed</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<RefreshCwIcon size={14} />}
-            onClick={fetchData}
-          />
-          <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
-            Add Feed
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="News"
+        description="Stay informed"
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<RefreshCwIcon size={14} />}
+              onClick={fetchData}
+            />
+            <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
+              Add Feed
+            </Button>
+          </>
+        }
+      />
 
       {loading ? (
         <div className="space-y-3">

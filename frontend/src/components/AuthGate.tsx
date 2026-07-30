@@ -53,8 +53,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       setError("Connection failed");
     }
   };
-  console.log("Checking authentication:", checking);
-
   if (checking) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
@@ -62,7 +60,6 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
-  console.log("Authenticated:", authenticated);
   if (authenticated) return <>{children}</>;
 
   return (

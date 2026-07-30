@@ -12,6 +12,7 @@ import Card, { CardContent, CardHeader, CardTitle } from "../components/ui/Card.
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { CoachMode } from "../modules/workouts/CoachMode.js";
 import { ExerciseLibrary } from "../modules/workouts/ExerciseLibrary.js";
@@ -129,12 +130,7 @@ export default function WorkoutsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-100">Workouts</h1>
-          <p className="text-sm text-gray-500 mt-1">Track your training</p>
-        </div>
-      </div>
+      <PageHeader title="Workouts" description="Track your training" />
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)} variant="underline">
         <TabsList className="w-full">

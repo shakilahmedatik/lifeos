@@ -116,6 +116,17 @@ export const NewTransactionInputSchema = z.object({
   transferPairId: z.string().optional(),
 });
 
+export const TransferInputSchema = z.object({
+  fromAccountId: z.string().min(1, "Source account is required"),
+  toAccountId: z.string().min(1, "Destination account is required"),
+  amountMinor: z
+    .number()
+    .int("Amount must be in minor units (integer)")
+    .positive("Amount must be positive"),
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
+  note: z.string().max(500).optional(),
+});
+
 export const NewRssFeedInputSchema = z.object({
   title: z.string().min(1, "Title is required"),
   url: z.string().url("Must be a valid RSS URL"),
@@ -126,6 +137,12 @@ export const NewNotificationInputSchema = z.object({
   userId: z.string().optional(),
   reminderTime: z.string(),
   soundType: z.enum(["default", "gentle", "urgent", "chime", "bell"]).optional(),
+});
+
+export const UpdateNotificationInputSchema = z.object({
+  reminderTime: z.string().optional(),
+  soundType: z.enum(["default", "gentle", "urgent", "chime", "bell"]).optional(),
+  status: z.enum(["scheduled", "sent", "cancelled", "expired"]).optional(),
 });
 
 // Workout schemas

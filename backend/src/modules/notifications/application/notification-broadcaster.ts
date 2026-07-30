@@ -1,4 +1,5 @@
 import type { Response } from "express";
+import { logger } from "../../../shared/logger.js";
 import type { NotificationSoundType, NotificationWithTask } from "../domain/types.js";
 
 export type WorkoutTimerAlertType = "set_complete" | "rest_complete" | "workout_complete";
@@ -33,7 +34,7 @@ export class NotificationBroadcaster {
     };
 
     this.clients.set(clientId, client);
-    console.log(`SSE client connected: ${clientId}. Total clients: ${this.clients.size}`);
+    logger.info("SSE client connected", { clientId, totalClients: this.clients.size });
 
     response.on("close", () => {
       this.removeClient(clientId);
@@ -42,7 +43,7 @@ export class NotificationBroadcaster {
 
   removeClient(clientId: string): void {
     this.clients.delete(clientId);
-    console.log(`SSE client disconnected: ${clientId}. Total clients: ${this.clients.size}`);
+    logger.info("SSE client disconnected", { clientId, totalClients: this.clients.size });
   }
 
   broadcast(notification: NotificationWithTask): void {
@@ -85,7 +86,7 @@ export class NotificationBroadcaster {
         client.response.write(`data: ${eventData}\n\n`);
         client.lastHeartbeat = Date.now();
       } catch (error) {
-        console.error(`Error sending to client ${clientId}:`, error);
+        logger.error("Error sending to SSE client", { clientId, error: (error as Error).message });
         this.removeClient(clientId);
       }
     }
@@ -103,7 +104,10 @@ export class NotificationBroadcaster {
 
     for (const [clientId, client] of this.clients) {
       if (now - client.lastHeartbeat > STALE_THRESHOLD_MS) {
-        console.warn(`Removing stale SSE client (inactive > 90s): ${clientId}`);
+        logger.info("Removing stale SSE client", {
+          clientId,
+          inactiveMs: now - client.lastHeartbeat,
+        });
         this.removeClient(clientId);
         continue;
       }
@@ -112,7 +116,10 @@ export class NotificationBroadcaster {
         client.response.write(`: heartbeat ${now}\n\n`);
         client.lastHeartbeat = now;
       } catch (error) {
-        console.error(`Heartbeat failed for client ${clientId}:`, error);
+        logger.error("Heartbeat failed for SSE client", {
+          clientId,
+          error: (error as Error).message,
+        });
         this.removeClient(clientId);
       }
     }
@@ -128,12 +135,12 @@ export class NotificationBroadcaster {
       try {
         client.response.end();
       } catch (error) {
-        console.error(`Error closing client ${clientId}:`, error);
+        logger.error("Error closing SSE client", { clientId, error: (error as Error).message });
       }
     }
 
     this.clients.clear();
-    console.log("Notification broadcaster stopped");
+    logger.info("Notification broadcaster stopped");
   }
 
   getClientCount(): number {

@@ -14,6 +14,7 @@ import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
 import { api } from "../lib/api.js";
 import { WorkoutWidget } from "../modules/workouts/WorkoutWidget.js";
 
@@ -106,26 +107,24 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-100">Dashboard</h1>
-          <p className="text-sm text-gray-500 mt-1">
-            {new Date().toLocaleDateString("en-US", {
-              weekday: "long",
-              month: "long",
-              day: "numeric",
-            })}
-          </p>
-        </div>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={<RefreshCwIcon size={14} />}
-          onClick={fetchSummary}
-        >
-          Refresh
-        </Button>
-      </div>
+      <PageHeader
+        title="LifeOS"
+        description={new Date().toLocaleDateString("en-US", {
+          weekday: "long",
+          month: "long",
+          day: "numeric",
+        })}
+        actions={
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={<RefreshCwIcon size={14} />}
+            onClick={fetchSummary}
+          >
+            Refresh
+          </Button>
+        }
+      />
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <NowCard task={summary?.now ?? null} navigate={navigate} />

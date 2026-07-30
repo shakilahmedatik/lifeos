@@ -8,6 +8,7 @@ import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import Modal from "../components/ui/Modal.js";
+import { PageHeader } from "../components/ui/PageHeader.js";
 import { Select } from "../components/ui/Select.js";
 import { api } from "../lib/api.js";
 
@@ -98,23 +99,23 @@ export default function NotificationsPage() {
 
   return (
     <div className="space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-100">Alerts</h1>
-          <p className="text-sm text-gray-500 mt-1">Manage reminders and notifications</p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            icon={<RefreshCwIcon size={14} />}
-            onClick={fetchTasks}
-          />
-          <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
-            Add Reminder
-          </Button>
-        </div>
-      </div>
+      <PageHeader
+        title="Alerts"
+        description="Manage reminders and notifications"
+        actions={
+          <>
+            <Button
+              variant="secondary"
+              size="sm"
+              icon={<RefreshCwIcon size={14} />}
+              onClick={fetchTasks}
+            />
+            <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
+              Add Reminder
+            </Button>
+          </>
+        }
+      />
 
       {loading ? (
         <div className="space-y-3">

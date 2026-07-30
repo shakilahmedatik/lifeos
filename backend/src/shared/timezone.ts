@@ -1,15 +1,29 @@
-const ASIA_DHAKA_OFFSET = 6 * 60; // UTC+6, no DST
+const TIMEZONE_OFFSET_MINUTES = (() => {
+  const envOffset = process.env.TIMEZONE_OFFSET_MINUTES;
+  if (envOffset !== undefined) {
+    const parsed = Number(envOffset);
+    if (!Number.isNaN(parsed) && parsed >= -720 && parsed <= 840) {
+      return parsed;
+    }
+  }
+  return 6 * 60; // UTC+6 (Asia/Dhaka) default
+})();
 
-export function nowInDhaka(): Date {
+export function nowInTimezone(): Date {
   const now = new Date();
   const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  return new Date(utcMs + ASIA_DHAKA_OFFSET * 60000);
+  return new Date(utcMs + TIMEZONE_OFFSET_MINUTES * 60000);
 }
 
-export function todayInDhaka(): string {
-  return nowInDhaka().toISOString().split("T")[0];
+export function todayInTimezone(): string {
+  return nowInTimezone().toISOString().split("T")[0];
 }
 
-export function nowIsoInDhaka(): string {
-  return nowInDhaka().toISOString();
+export function nowIsoInTimezone(): string {
+  return nowInTimezone().toISOString();
 }
+
+// Backward-compatible aliases
+export const nowInDhaka = nowInTimezone;
+export const todayInDhaka = todayInTimezone;
+export const nowIsoInDhaka = nowIsoInTimezone;
