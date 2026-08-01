@@ -9,15 +9,13 @@
  * 2. The user's device timezone may differ from their intended tracking timezone.
  *    A user in UTC whose tasks are in Asia/Dhaka needs Dhaka dates, not UTC dates.
  */
-export function getClientDateString(timezone?: string): string {
-  const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
-  return new Date().toLocaleDateString("sv-SE", { timeZone: tz });
+export function getClientDateString(timezone = "Asia/Dhaka"): string {
+  return new Date().toLocaleDateString("sv-SE", { timeZone: timezone });
 }
 
-export function getClientMonthString(timezone?: string): string {
-  const tz = timezone || Intl.DateTimeFormat().resolvedOptions().timeZone;
+export function getClientMonthString(timezone = "Asia/Dhaka"): string {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: tz,
+    timeZone: timezone,
     year: "numeric",
     month: "2-digit",
   }).formatToParts(new Date());

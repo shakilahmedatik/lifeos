@@ -222,5 +222,5 @@ export const api = {
       body: JSON.stringify(input),
     }),
   deleteNotificationsByTaskId: (taskId: string) =>
-    request<void>(`/api/notifications/task/${taskId}`, { method: "POST" }),
+    request<void>(`/api/notifications/task/${taskId}`, { method: "DELETE" }),
 };

@@ -64,19 +64,12 @@ export function createSkillsRouter(
   });
 
   // Import (bulk restore from backup)
-  router.post("/import", (req, res) => {
+  router.post("/import", validateBody(BackupImportSchema), (req, res) => {
     try {
-      const parsed = BackupImportSchema.safeParse(req.body);
-      if (!parsed.success) {
-        res.status(400).json({
-          error: "Invalid backup data",
-          details: parsed.error.issues,
-        });
-        return;
-      }
+      const { areas, resources, logs } = req.body;
       const result = { areasCreated: 0, resourcesCreated: 0, logsCreated: 0 };
 
-      for (const area of parsed.data.areas) {
+      for (const area of areas) {
         try {
           skillAreaService.create(area);
           result.areasCreated++;
@@ -85,7 +78,7 @@ export function createSkillsRouter(
         }
       }
 
-      for (const resource of parsed.data.resources) {
+      for (const resource of resources) {
         try {
           resourceService.create(resource);
           result.resourcesCreated++;
@@ -94,7 +87,7 @@ export function createSkillsRouter(
         }
       }
 
-      for (const log of parsed.data.logs) {
+      for (const log of logs) {
         try {
           logService.log(log);
           result.logsCreated++;

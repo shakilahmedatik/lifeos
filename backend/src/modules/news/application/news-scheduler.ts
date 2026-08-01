@@ -4,6 +4,9 @@ import type { createRssFetchService } from "./rss-fetch-service.js";
 export function createNewsScheduler(rssFetchService: ReturnType<typeof createRssFetchService>) {
   let intervalId: ReturnType<typeof setInterval> | null = null;
   let fetchIntervalMinutes = 60;
+  let lastRun: string | undefined;
+  let error: string | undefined;
+  let running = false;
 
   return {
     start(intervalMinutes?: number): void {
@@ -17,10 +20,8 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
 
       logger.info("Starting news scheduler", { intervalMinutes: fetchIntervalMinutes });
 
-      // Run immediately on start
       this.runFetchCycle();
 
-      // Then run on interval
       intervalId = setInterval(
         () => {
           this.runFetchCycle();
@@ -49,7 +50,23 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
       return fetchIntervalMinutes;
     },
 
+    getStatus(): {
+      name: string;
+      status: "idle" | "running" | "error";
+      lastRun?: string;
+      error?: string;
+    } {
+      return {
+        name: "news",
+        status: running ? "running" : error ? "error" : "idle",
+        lastRun,
+        error,
+      };
+    },
+
     async runFetchCycle(): Promise<void> {
+      if (running) return;
+      running = true;
       try {
         logger.info("Running news fetch cycle");
         const result = await rssFetchService.fetchAllActiveFeeds();
@@ -57,8 +74,14 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
           totalFeeds: result.totalFeeds,
           newArticles: result.totalNewArticles,
         });
-      } catch (error) {
-        logger.error("Error in news fetch cycle", { error: (error as Error).message });
+        lastRun = new Date().toISOString();
+        error = undefined;
+      } catch (err) {
+        logger.error("Error in news fetch cycle", { error: (err as Error).message });
+        error = (err as Error).message;
+        lastRun = new Date().toISOString();
+      } finally {
+        running = false;
       }
     },
   };

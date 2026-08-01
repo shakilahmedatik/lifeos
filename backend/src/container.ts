@@ -1,10 +1,10 @@
 import type Database from "better-sqlite3";
 import type { AppConfig } from "./config.js";
-
 import { initBackupModule } from "./modules/backup/index.js";
 import { initDashboardModule } from "./modules/dashboard/index.js";
 import { initFinanceModule } from "./modules/finance/index.js";
 import { initHabitsModule } from "./modules/habits/index.js";
+import type { SchedulerStatus } from "./modules/health/api/router.js";
 import { initHealthModule } from "./modules/health/index.js";
 import { initNewsModule } from "./modules/news/index.js";
 import { initNotificationsModule } from "./modules/notifications/index.js";
@@ -49,7 +49,17 @@ export function createContainer(config: AppConfig): Container {
   const finance = initFinanceModule(db);
   const news = initNewsModule(db);
   const skills = initSkillsModule(db);
-  const health = initHealthModule(db);
+
+  const getSchedulerStatus = (): SchedulerStatus[] => {
+    const statuses: SchedulerStatus[] = [];
+    const newsStatus = news.newsScheduler.getStatus();
+    if (newsStatus) statuses.push(newsStatus);
+    const notifStatus = notifications.notificationScheduler.getStatus();
+    if (notifStatus) statuses.push(notifStatus);
+    return statuses;
+  };
+
+  const health = initHealthModule(db, getSchedulerStatus);
 
   const startBackgroundJobs = () => {
     news.newsScheduler.start();

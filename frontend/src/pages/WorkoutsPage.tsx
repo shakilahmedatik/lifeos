@@ -22,10 +22,10 @@ import { WorkoutHistoryWithFilter } from "../modules/workouts/WorkoutHistoryWith
 import { WorkoutProgress } from "../modules/workouts/WorkoutProgress.js";
 import { WorkoutSessionDetail } from "../modules/workouts/WorkoutSessionDetail.js";
 
-type Tab = "dashboard" | "history" | "plans" | "exercises";
+type Tab = "overview" | "history" | "plans" | "exercises";
 
 export default function WorkoutsPage() {
-  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -134,12 +134,20 @@ export default function WorkoutsPage() {
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)} variant="underline">
         <TabsList className="w-full">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
-          <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="plans">Plans</TabsTrigger>
           <TabsTrigger value="exercises">Exercises</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
         </TabsList>
 
+        <TabsContent value="overview">
+          <div className="space-y-6">
+            <WorkoutProgress
+              onViewHistory={() => setActiveTab("history")}
+              onViewSession={setSelectedSessionId}
+            />
+          </div>
+        </TabsContent>
         <TabsContent value="plans">
           <div className="space-y-6">
             <div className="flex justify-between items-center">
@@ -208,24 +216,13 @@ export default function WorkoutsPage() {
             )}
           </div>
         </TabsContent>
-
-        <TabsContent value="dashboard">
-          <div className="space-y-6">
-            <WorkoutProgress
-              onViewHistory={() => setActiveTab("history")}
-              onViewSession={setSelectedSessionId}
-            />
-          </div>
+        <TabsContent value="exercises">
+          <ExerciseLibrary />
         </TabsContent>
-
         <TabsContent value="history">
           <div className="space-y-6">
             <WorkoutHistoryWithFilter onViewSession={setSelectedSessionId} />
           </div>
-        </TabsContent>
-
-        <TabsContent value="exercises">
-          <ExerciseLibrary />
         </TabsContent>
       </Tabs>
 

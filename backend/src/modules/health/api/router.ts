@@ -5,6 +5,7 @@ export interface SchedulerStatus {
   name: string;
   status: "idle" | "running" | "error";
   lastRun?: string;
+  error?: string;
 }
 
 export function createHealthRouter(

@@ -8,6 +8,8 @@ export type NotificationCallback = (notification: NotificationWithTask) => void;
 export class NotificationScheduler {
   private intervalId: ReturnType<typeof setInterval> | null = null;
   private running = false;
+  private lastRun: string | undefined;
+  private error: string | undefined;
   public listeners: NotificationCallback[] = [];
 
   constructor(
@@ -42,6 +44,20 @@ export class NotificationScheduler {
     };
   }
 
+  getStatus(): {
+    name: string;
+    status: "idle" | "running" | "error";
+    lastRun?: string;
+    error?: string;
+  } {
+    return {
+      name: "notifications",
+      status: this.running ? "running" : this.error ? "error" : "idle",
+      lastRun: this.lastRun,
+      error: this.error,
+    };
+  }
+
   public async checkAndSendNotifications(): Promise<void> {
     if (this.running) return;
     this.running = true;
@@ -52,8 +68,12 @@ export class NotificationScheduler {
         await this.sendNotification(notification);
         this.notificationService.markNotificationAsSent(notification.id);
       }
+      this.lastRun = new Date().toISOString();
+      this.error = undefined;
     } catch (error) {
       logger.error("Error checking notifications", { error: (error as Error).message });
+      this.error = (error as Error).message;
+      this.lastRun = new Date().toISOString();
     } finally {
       this.running = false;
     }

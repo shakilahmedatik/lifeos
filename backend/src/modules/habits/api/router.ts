@@ -1,10 +1,19 @@
+import { NewHabitInputSchema } from "@lifeos/contracts";
 import { Router } from "express";
-
+import { z } from "zod";
 import { nowIsoInDhaka, todayInDhaka } from "../../../shared/timezone.js";
+import { validateBody } from "../../../shared/validate.js";
 import type { HabitLogService } from "../application/habit-log-service.js";
 import type { HabitService } from "../application/habit-service.js";
 import type { HabitStatsService } from "../application/habit-stats-service.js";
 import type { WeeklyReviewService } from "../application/weekly-review-service.js";
+
+const HabitLogBodySchema = z.object({
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD")
+    .optional(),
+});
 
 export function createHabitsRouter(
   habitService: HabitService,
@@ -51,7 +60,7 @@ export function createHabitsRouter(
     res.json(habit);
   });
 
-  router.post("/", (req, res) => {
+  router.post("/", validateBody(NewHabitInputSchema), (req, res) => {
     try {
       const habit = habitService.createHabit(req.body);
       res.status(201).json(habit);
@@ -60,7 +69,7 @@ export function createHabitsRouter(
         res.status(409).json({ error: error.message });
         return;
       }
-      throw error;
+      res.status(400).json({ error: (error as Error).message });
     }
   });
 
@@ -83,9 +92,9 @@ export function createHabitsRouter(
     res.status(204).send();
   });
 
-  router.post("/:id/log", (req, res) => {
+  router.post("/:id/log", validateBody(HabitLogBodySchema), (req, res) => {
     const date = req.body.date || todayInDhaka();
-    const log = habitLogService.logHabit({ habitId: req.params.id, date });
+    const log = habitLogService.logHabit({ habitId: req.params.id as string, date });
     res.status(201).json(log);
   });
 

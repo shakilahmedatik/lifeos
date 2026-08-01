@@ -28,17 +28,36 @@ export function useWorkoutTimerSSE(options: UseWorkoutTimerSSEOptions = {}) {
     optionsRef.current = options;
   }, [options]);
 
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const disposedRef = useRef(false);
+
+  const cleanup = useCallback(() => {
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+  }, []);
+
   const connect = useCallback(() => {
     resumeAudioContext();
+    cleanup();
 
     const eventSource = new EventSource("/api/notifications/stream");
+    eventSourceRef.current = eventSource;
 
     eventSource.onopen = () => {
+      if (disposedRef.current) return;
       setIsConnected(true);
       setError(null);
     };
 
     eventSource.onmessage = (event) => {
+      if (disposedRef.current) return;
       try {
         const data = JSON.parse(event.data);
         if (data.type === "workout_timer") {
@@ -57,20 +76,29 @@ export function useWorkoutTimerSSE(options: UseWorkoutTimerSSEOptions = {}) {
     };
 
     eventSource.onerror = () => {
+      if (disposedRef.current) return;
       setIsConnected(false);
-      setError("Workout timer SSE connection error");
-    };
-
-    return () => {
+      setError("Workout timer SSE connection error. Retrying...");
       eventSource.close();
-      setIsConnected(false);
+      if (eventSourceRef.current === eventSource) {
+        eventSourceRef.current = null;
+      }
+
+      reconnectTimeoutRef.current = setTimeout(() => {
+        reconnectTimeoutRef.current = null;
+        connect();
+      }, 5000);
     };
-  }, []);
+  }, [cleanup]);
 
   useEffect(() => {
-    const cleanup = connect();
-    return cleanup;
-  }, [connect]);
+    disposedRef.current = false;
+    connect();
+    return () => {
+      disposedRef.current = true;
+      cleanup();
+    };
+  }, [connect, cleanup]);
 
   return {
     isConnected,

@@ -14,14 +14,14 @@ import { useLearningResources } from "../modules/skills/hooks/useLearningResourc
 import { useSkillAreas } from "../modules/skills/hooks/useSkillCategories.js";
 import type { ResourceWithProgress } from "../modules/skills/types.js";
 
-type Tab = "dashboard" | "sessions" | "courses" | "categories" | "backup";
+type Tab = "overview" | "sessions" | "resources" | "areas" | "backup";
 
 export default function SkillsPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const toast = useAppToast();
 
-  const [activeTab, setActiveTab] = useState<Tab>("dashboard");
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
 
   // Routine task automation query state
   const [automationTaskId, setAutomationTaskId] = useState<string | null>(null);
@@ -145,14 +145,14 @@ export default function SkillsPage() {
 
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)} variant="underline">
         <TabsList className="w-full">
-          <TabsTrigger value="dashboard">Dashboard</TabsTrigger>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="sessions">Sessions</TabsTrigger>
-          <TabsTrigger value="courses">Resources</TabsTrigger>
-          <TabsTrigger value="categories">Areas</TabsTrigger>
+          <TabsTrigger value="resources">Resources</TabsTrigger>
+          <TabsTrigger value="areas">Areas</TabsTrigger>
           <TabsTrigger value="backup">Backup</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dashboard">
+        <TabsContent value="overview">
           <SkillsDashboard
             logs={logs}
             resources={resources}
@@ -176,7 +176,7 @@ export default function SkillsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="courses">
+        <TabsContent value="resources">
           <CoursesTab
             resources={resources}
             areas={areas}
@@ -187,7 +187,7 @@ export default function SkillsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="categories">
+        <TabsContent value="areas">
           <CategoriesTab
             areas={areas}
             resourceCounts={resourceCounts}

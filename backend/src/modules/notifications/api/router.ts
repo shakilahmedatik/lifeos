@@ -84,10 +84,5 @@ export function createNotificationsRouter(
     res.status(204).send();
   });
 
-  router.post("/task/:taskId", (req, res) => {
-    notificationService.deleteNotificationsByTaskId(req.params.taskId);
-    res.status(204).send();
-  });
-
   return router;
 }

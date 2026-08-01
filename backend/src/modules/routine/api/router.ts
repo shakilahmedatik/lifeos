@@ -5,6 +5,7 @@ import {
   UpdateTaskSchema,
 } from "@lifeos/contracts";
 import { Router } from "express";
+import { validateBody } from "../../../shared/validate.js";
 
 import {
   createTask,
@@ -32,14 +33,9 @@ export function createRoutineRouter(repo: TaskRepository): Router {
     }
   });
 
-  router.post("/tasks", (req, res) => {
-    const parsed = NewTaskInputSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
+  router.post("/tasks", validateBody(NewTaskInputSchema), (req, res) => {
     try {
-      const result = createTask(repo, parsed.data);
+      const result = createTask(repo, req.body);
       res.status(201).json(result);
     } catch (err) {
       const msg = (err as Error).message;
@@ -47,14 +43,9 @@ export function createRoutineRouter(repo: TaskRepository): Router {
     }
   });
 
-  router.patch("/tasks/:id", (req, res) => {
-    const parsed = UpdateTaskSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
+  router.patch("/tasks/:id", validateBody(UpdateTaskSchema), (req, res) => {
     try {
-      const result = updateTask(repo, req.params.id, parsed.data);
+      const result = updateTask(repo, req.params.id as string, req.body);
       res.json(result);
     } catch (err) {
       const msg = (err as Error).message;
@@ -66,14 +57,9 @@ export function createRoutineRouter(repo: TaskRepository): Router {
     }
   });
 
-  router.patch("/tasks/:id/status", (req, res) => {
-    const parsed = UpdateStatusSchema.safeParse(req.body);
-    if (!parsed.success) {
-      res.status(400).json({ error: parsed.error.flatten() });
-      return;
-    }
+  router.patch("/tasks/:id/status", validateBody(UpdateStatusSchema), (req, res) => {
     try {
-      const task = setTaskStatus(repo, req.params.id, parsed.data.status);
+      const task = setTaskStatus(repo, req.params.id as string, req.body.status);
       res.json(task);
     } catch (err) {
       const msg = (err as Error).message;
