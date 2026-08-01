@@ -2,14 +2,9 @@ import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { NotificationToast } from "../../modules/notifications/NotificationToast.js";
 import { useNotificationSSE } from "../../modules/notifications/useNotificationSSE.js";
-import { ToastContainer, ToastProvider, useAppToast } from "../Toast.js";
+import { ToastProvider } from "../Toast.js";
 import { ShaderBackground } from "../ui/ShaderBackground.js";
 import Dock from "./Sidebar.js";
-
-function LayoutToast() {
-  const { toasts } = useAppToast();
-  return <ToastContainer toasts={toasts} />;
-}
 
 export default function Layout() {
   const [notification, setNotification] = useState<{
@@ -51,7 +46,6 @@ export default function Layout() {
 
         <div className="relative z-20">
           <Dock />
-          <LayoutToast />
           <NotificationToast notification={notification} onDismiss={() => setNotification(null)} />
         </div>
       </div>

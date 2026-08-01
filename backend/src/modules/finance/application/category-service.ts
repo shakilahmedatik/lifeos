@@ -34,4 +34,12 @@ export class CategoryService {
   archiveCategory(id: string): boolean {
     return this.categoryRepo.archive(id);
   }
+
+  unarchiveCategory(id: string): boolean {
+    return this.categoryRepo.unarchive(id);
+  }
+
+  deleteCategory(id: string): boolean {
+    return this.categoryRepo.delete(id);
+  }
 }

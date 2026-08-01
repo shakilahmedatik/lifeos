@@ -7,6 +7,7 @@ export type NotificationCallback = (notification: NotificationWithTask) => void;
 
 export class NotificationScheduler {
   private intervalId: ReturnType<typeof setInterval> | null = null;
+  private running = false;
   public listeners: NotificationCallback[] = [];
 
   constructor(
@@ -18,7 +19,9 @@ export class NotificationScheduler {
     if (this.intervalId) return;
 
     this.intervalId = setInterval(() => {
-      this.checkAndSendNotifications();
+      if (!this.running) {
+        this.checkAndSendNotifications();
+      }
     }, intervalMs);
 
     logger.info("Notification scheduler started", { intervalMs });
@@ -40,6 +43,8 @@ export class NotificationScheduler {
   }
 
   public async checkAndSendNotifications(): Promise<void> {
+    if (this.running) return;
+    this.running = true;
     try {
       const pendingNotifications = this.notificationService.getPendingNotifications();
 
@@ -49,6 +54,8 @@ export class NotificationScheduler {
       }
     } catch (error) {
       logger.error("Error checking notifications", { error: (error as Error).message });
+    } finally {
+      this.running = false;
     }
   }
 

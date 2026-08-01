@@ -2,6 +2,7 @@ import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import Layout from "./components/layout/Layout.js";
+import PageSkeleton from "./components/PageSkeleton.js";
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage.js"));
 const RoutinePage = lazy(() => import("./pages/RoutinePage.js"));
@@ -11,15 +12,6 @@ const SkillsPage = lazy(() => import("./pages/SkillsPage.js"));
 const FinancePage = lazy(() => import("./pages/FinancePage.js"));
 const NewsPage = lazy(() => import("./pages/NewsPage.js"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage.js"));
-
-function PageSkeleton() {
-  return (
-    <div className="p-6 space-y-4 animate-pulse max-w-7xl mx-auto">
-      <div className="h-8 bg-card/60 rounded-lg w-1/4" />
-      <div className="h-64 bg-card/40 rounded-xl border border-border/50" />
-    </div>
-  );
-}
 
 export default function App() {
   return (

@@ -99,4 +99,16 @@ export class SqliteCategoryRepository implements CategoryRepository {
       .run(new Date().toISOString(), id);
     return result.changes > 0;
   }
+
+  unarchive(id: string): boolean {
+    const result = this.db
+      .prepare("UPDATE categories SET archived = 0, updated_at = ? WHERE id = ?")
+      .run(new Date().toISOString(), id);
+    return result.changes > 0;
+  }
+
+  delete(id: string): boolean {
+    const result = this.db.prepare("DELETE FROM categories WHERE id = ?").run(id);
+    return result.changes > 0;
+  }
 }

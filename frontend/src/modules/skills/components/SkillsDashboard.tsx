@@ -2,23 +2,20 @@ import { Activity, BookOpen, Clock, Target } from "lucide-react";
 import { ProgressBar } from "../../../components/ui/ProgressBar.js";
 import { Skeleton } from "../../../components/ui/Skeleton.js";
 import { StatCard } from "../../../components/ui/StatCard.js";
-import { useLearningLogs } from "../hooks/useLearningLogs.js";
-import { useLearningResources } from "../hooks/useLearningResources.js";
-import { useSkillAreas } from "../hooks/useSkillCategories.js";
-import type { ResourceWithProgress } from "../types.js";
+import type { LearningLog, LearningResource, ResourceWithProgress } from "../types.js";
 import { LearningChart } from "./LearningChart.js";
 
 export function SkillsDashboard({
+  logs,
+  resources,
+  loading,
   progresses = {},
 }: {
+  logs: LearningLog[];
+  resources: LearningResource[];
+  loading: boolean;
   progresses?: Record<string, ResourceWithProgress | null>;
 }) {
-  const { logs, loading: logsLoading } = useLearningLogs();
-  const { resources, loading: resourcesLoading } = useLearningResources();
-  const { loading: areasLoading } = useSkillAreas();
-
-  const loading = logsLoading || resourcesLoading || areasLoading;
-
   if (loading) {
     return (
       <div className="space-y-6">

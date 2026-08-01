@@ -7,4 +7,6 @@ export interface AccountRepository {
   create(id: string, input: NewAccountInput): Account;
   update(id: string, patch: Partial<NewAccountInput>): Account | undefined;
   archive(id: string): boolean;
+  unarchive(id: string): boolean;
+  delete(id: string): boolean;
 }

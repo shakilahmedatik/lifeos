@@ -1,143 +1,521 @@
-import type { AccountWithBalance, CategoryBreakdown, MonthlySummary } from "@lifeos/contracts";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { fetchAccountBalances, fetchCategoryBreakdown, fetchMonthlySummary } from "./api.js";
+import { getClientMonthString } from "@lifeos/contracts";
+import { Calendar, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { animate, useInView, useReducedMotion } from "motion/react";
+import { useEffect, useRef, useState } from "react";
+import {
+  Bar,
+  BarChart,
+  Cell,
+  Pie,
+  PieChart,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
+import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
+import { EmptyState } from "../../components/ui/EmptyState.js";
+import { Skeleton } from "../../components/ui/Skeleton.js";
+import { StatCard } from "../../components/ui/StatCard.js";
+import { TiltCard } from "../../components/ui/TiltCard.js";
+import { useFinanceSummary } from "./hooks/useFinanceSummary.js";
+import { formatBDT, getTypeIcon } from "./utils.js";
 
 interface MonthlyViewProps {
   refreshTrigger?: number;
 }
 
-export function MonthlyView({ refreshTrigger }: MonthlyViewProps) {
-  const [summary, setSummary] = useState<MonthlySummary | null>(null);
-  const [breakdown, setBreakdown] = useState<CategoryBreakdown[]>([]);
-  const [balances, setBalances] = useState<AccountWithBalance[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [yearMonth, setYearMonth] = useState(() => {
-    const now = new Date();
-    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-  });
-  const prevRefreshTrigger = useRef(refreshTrigger);
+const INCOME_GRADIENTS = [
+  { start: "#10b981", end: "#34d399" },
+  { start: "#059669", end: "#10b981" },
+  { start: "#047857", end: "#059669" },
+  { start: "#0d9488", end: "#14b8a6" },
+  { start: "#0f766e", end: "#0d9488" },
+];
 
-  const loadData = useCallback(async () => {
-    setLoading(true);
-    try {
-      const [summaryData, breakdownData, balancesData] = await Promise.all([
-        fetchMonthlySummary(yearMonth),
-        fetchCategoryBreakdown(yearMonth),
-        fetchAccountBalances(),
-      ]);
-      setSummary(summaryData);
-      setBreakdown(breakdownData);
-      setBalances(balancesData);
-    } finally {
-      setLoading(false);
-    }
-  }, [yearMonth]);
+const EXPENSE_GRADIENT = { start: "#f59e0b", end: "#fbbf24" };
+const EXPENSE_BAR_SHADES = ["#f59e0b", "#d97706", "#fbbf24", "#eab308", "#b45309"];
+
+function AnimatedAmount({
+  value,
+  className = "",
+  prefix = "",
+}: {
+  value: number;
+  className?: string;
+  prefix?: string;
+}) {
+  const ref = useRef<HTMLSpanElement>(null);
+  const hasIntersectionObserver = typeof window !== "undefined" && "IntersectionObserver" in window;
+  const inView = hasIntersectionObserver ? useInView(ref, { once: true, amount: 0.5 }) : true;
+  const reduce = useReducedMotion();
+  const [display, setDisplay] = useState(0);
+  const fromRef = useRef(0);
 
   useEffect(() => {
-    loadData();
-  }, [loadData]);
+    if (!inView) return;
+    if (reduce) {
+      fromRef.current = value;
+      setDisplay(Math.round(value));
+      return;
+    }
+    const controls = animate(fromRef.current, value, {
+      duration: 0.8,
+      ease: [0.23, 1, 0.32, 1],
+      onUpdate: (v) => setDisplay(Math.round(v)),
+    });
+    fromRef.current = value;
+    return () => controls.stop();
+  }, [value, inView, reduce]);
+
+  return (
+    <span ref={ref} className={`tabular-nums ${className}`}>
+      {prefix}
+      {formatBDT(display)}
+    </span>
+  );
+}
+
+export function MonthlyView({ refreshTrigger }: MonthlyViewProps) {
+  const [yearMonth, setYearMonth] = useState(getClientMonthString());
+  const { summary, breakdown, balances, loading, refresh } = useFinanceSummary(yearMonth);
+  const prevRefreshTrigger = useRef(refreshTrigger);
 
   useEffect(() => {
     if (refreshTrigger !== prevRefreshTrigger.current) {
       prevRefreshTrigger.current = refreshTrigger;
-      loadData();
+      refresh();
     }
-  }, [refreshTrigger, loadData]);
+  }, [refreshTrigger, refresh]);
 
-  function formatAmount(amountMinor: number): string {
-    return `৳${(amountMinor / 100).toFixed(2)}`;
+  const expenseBreakdown = breakdown
+    .filter((b) => b.kind === "expense")
+    .sort((a, b) => b.total - a.total);
+  const incomeBreakdown = breakdown
+    .filter((b) => b.kind === "income")
+    .sort((a, b) => b.total - a.total);
+  const totalSpent = expenseBreakdown.reduce((acc, b) => acc + b.total, 0);
+  const totalEarned = incomeBreakdown.reduce((acc, b) => acc + b.total, 0);
+
+  const expenseBarData = expenseBreakdown.map((item) => ({
+    name: item.categoryName,
+    value: item.total,
+    percent: totalSpent > 0 ? Math.round((item.total / totalSpent) * 100) : 0,
+  }));
+
+  const incomeDonutData = incomeBreakdown.map((item) => ({
+    name: item.categoryName,
+    value: item.total,
+  }));
+
+  if (loading) {
+    return (
+      <div className="space-y-3">
+        <Skeleton className="h-7 w-40" />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-20 rounded-xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <Skeleton className="h-64 rounded-xl" />
+          <Skeleton className="h-64 rounded-xl" />
+        </div>
+      </div>
+    );
   }
 
-  if (loading) return <div className="text-gray-500">Loading...</div>;
-
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-lg font-semibold">Monthly Overview</h3>
-        <input
-          type="month"
-          value={yearMonth}
-          onChange={(e) => setYearMonth(e.target.value)}
-          className="px-3 py-1 border rounded"
-        />
+        <div>
+          <h3 className="text-base font-semibold text-primary">Monthly Overview</h3>
+          <p className="text-xs text-muted">Income vs. Expense summary and category breakdowns</p>
+        </div>
+        <div className="flex items-center gap-1.5 glass border border-border px-2.5 py-1 rounded-lg">
+          <Calendar size={13} className="text-muted" />
+          <input
+            type="month"
+            value={yearMonth}
+            onChange={(e) => setYearMonth(e.target.value)}
+            className="bg-transparent text-xs text-primary focus:outline-none cursor-pointer"
+          />
+        </div>
       </div>
 
-      {/* Summary Cards */}
       {summary && (
-        <div className="grid grid-cols-3 gap-4">
-          <div className="p-4 bg-green-50 rounded-lg">
-            <p className="text-sm text-green-600">Income</p>
-            <p className="text-2xl font-bold text-green-700">{formatAmount(summary.totalIncome)}</p>
-          </div>
-          <div className="p-4 bg-red-50 rounded-lg">
-            <p className="text-sm text-red-600">Expenses</p>
-            <p className="text-2xl font-bold text-red-700">{formatAmount(summary.totalExpense)}</p>
-          </div>
-          <div className={`p-4 rounded-lg ${summary.net >= 0 ? "bg-blue-50" : "bg-yellow-50"}`}>
-            <p className={`text-sm ${summary.net >= 0 ? "text-blue-600" : "text-yellow-600"}`}>
-              Net
-            </p>
-            <p
-              className={`text-2xl font-bold ${
-                summary.net >= 0 ? "text-blue-700" : "text-yellow-700"
-              }`}
-            >
-              {formatAmount(summary.net)}
-            </p>
-          </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <StatCard
+            value={summary.totalIncome}
+            label="Total Income"
+            icon={TrendingUp}
+            format={(val) => formatBDT(val)}
+            className="border-emerald-500/20 hover:border-emerald-500/40"
+            valueClassName="text-emerald-400 text-lg"
+            iconClassName="bg-emerald-500/10"
+          />
+
+          <StatCard
+            value={summary.totalExpense}
+            label="Total Expenses"
+            icon={TrendingDown}
+            format={(val) => formatBDT(val)}
+            className="border-amber-500/20 hover:border-amber-500/40"
+            valueClassName="text-amber-400 text-lg"
+            iconClassName="bg-amber-500/10"
+          />
+
+          <StatCard
+            value={Math.abs(summary.net)}
+            label="Net Flow"
+            icon={Wallet}
+            format={(val) => `${summary.net >= 0 ? "+ " : "- "}${formatBDT(val)}`}
+            className={
+              summary.net >= 0
+                ? "border-emerald-500/30 hover:border-emerald-500/40"
+                : "border-amber-500/30 hover:border-amber-500/40"
+            }
+            valueClassName={
+              summary.net >= 0 ? "text-emerald-400 text-lg" : "text-amber-400 text-lg"
+            }
+            iconClassName={summary.net >= 0 ? "bg-emerald-500/10" : "bg-amber-500/10"}
+          />
         </div>
       )}
 
-      {/* Account Balances */}
-      <div>
-        <h4 className="font-medium mb-2">Account Balances</h4>
-        <div className="grid grid-cols-2 gap-3">
-          {balances.map((account) => (
-            <div key={account.id} className="p-3 bg-gray-50 rounded-lg">
-              <div className="flex items-center justify-between">
-                <span className="font-medium">{account.name}</span>
-                <span className="text-sm text-gray-500 capitalize">{account.type}</span>
+      {/* 2x2 Overview Cards Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        {/* Account Balances Card */}
+        <Card className="glass flex flex-col justify-between">
+          <CardHeader className="py-2.5 px-3 border-b border-border">
+            <CardTitle className="text-xs font-semibold text-primary">Account Balances</CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 flex-1">
+            {balances.length === 0 ? (
+              <EmptyState title="No accounts available" />
+            ) : (
+              <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1 scrollbar-thin">
+                {balances.map((acc) => (
+                  <div
+                    key={acc.id}
+                    className="flex items-center justify-between p-2 glass rounded-lg border border-border hover:border-accent/30 transition-colors"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      {getTypeIcon(acc.type)}
+                      <div className="min-w-0">
+                        <p className="text-xs font-medium text-primary truncate">{acc.name}</p>
+                        <p className="text-[10px] text-muted capitalize">{acc.type}</p>
+                      </div>
+                    </div>
+                    <span
+                      className={`text-xs font-bold shrink-0 ml-2 ${
+                        acc.balance >= 0 ? "text-emerald-400" : "text-amber-400"
+                      }`}
+                    >
+                      <AnimatedAmount value={acc.balance} />
+                    </span>
+                  </div>
+                ))}
               </div>
-              <p
-                className={`text-lg font-semibold ${account.balance >= 0 ? "text-green-600" : "text-red-600"}`}
-              >
-                {formatAmount(account.balance)}
-              </p>
-            </div>
-          ))}
-        </div>
-      </div>
+            )}
+          </CardContent>
+        </Card>
 
-      {/* Category Breakdown */}
-      <div>
-        <h4 className="font-medium mb-2">Category Breakdown</h4>
-        <div className="space-y-2">
-          {breakdown.map((item) => (
-            <div
-              key={item.categoryId}
-              className="flex items-center justify-between p-2 bg-white border rounded"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    item.kind === "income" ? "bg-green-500" : "bg-red-500"
-                  }`}
-                />
-                <span>{item.categoryName}</span>
+        {/* Expense vs Income Card */}
+        <Card className="glass flex flex-col justify-between">
+          <CardHeader className="py-2.5 px-3 border-b border-border">
+            <CardTitle className="text-xs font-semibold text-primary">Expense vs Income</CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 flex-1">
+            {!summary ? (
+              <EmptyState title="No data this month" />
+            ) : (
+              <div className="space-y-3">
+                <div style={{ width: "100%", height: 144 }}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                    <BarChart
+                      data={[
+                        {
+                          name: "Income",
+                          value: summary.totalIncome,
+                          color: "#10b981",
+                        },
+                        {
+                          name: "Expenses",
+                          value: summary.totalExpense,
+                          color: "#f59e0b",
+                        },
+                      ]}
+                      margin={{ top: 10, right: 10, left: 10, bottom: 5 }}
+                      barSize={32}
+                      barGap={12}
+                    >
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: "#9ca3af" }}
+                        dy={3}
+                      />
+                      <YAxis hide />
+                      <Tooltip
+                        cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                        content={({ active, payload }) => {
+                          if (active && payload?.length) {
+                            const data = payload[0].payload;
+                            const total = summary.totalIncome + summary.totalExpense;
+                            return (
+                              <div className="glass p-2 rounded-lg text-xs shadow-2xl border border-border">
+                                <p className="font-semibold text-primary mb-0.5">{data.name}</p>
+                                <p
+                                  className={
+                                    data.name === "Income"
+                                      ? "text-emerald-400 font-bold"
+                                      : "text-amber-400 font-bold"
+                                  }
+                                >
+                                  {formatBDT(data.value)}
+                                </p>
+                                <p className="text-[10px] text-muted">
+                                  {total > 0
+                                    ? `${Math.round((data.value / total) * 100)}% of total`
+                                    : "0%"}
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar
+                        dataKey="value"
+                        radius={[4, 4, 0, 0]}
+                        background={{ fill: "rgba(31, 41, 55, 0.3)" }}
+                      >
+                        {[
+                          { name: "Income", color: "#10b981" },
+                          { name: "Expenses", color: "#f59e0b" },
+                        ].map((entry) => (
+                          <Cell key={entry.name} fill={entry.color} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="flex items-center justify-center gap-4 text-[11px] pt-1 border-t border-border/50">
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400" />
+                    <span className="text-muted">Income:</span>
+                    <span className="font-bold text-emerald-400">
+                      {formatBDT(summary.totalIncome)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <div className="w-2 h-2 rounded-full bg-amber-400" />
+                    <span className="text-muted">Expenses:</span>
+                    <span className="font-bold text-amber-400">
+                      {formatBDT(summary.totalExpense)}
+                    </span>
+                  </div>
+                </div>
               </div>
-              <span
-                className={`font-medium ${
-                  item.kind === "income" ? "text-green-600" : "text-red-600"
-                }`}
-              >
-                {formatAmount(item.total)}
-              </span>
-            </div>
-          ))}
-          {breakdown.length === 0 && (
-            <p className="text-gray-500 text-center py-4">No transactions this month</p>
-          )}
-        </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Income by Category Card */}
+        <Card className="glass flex flex-col justify-between">
+          <CardHeader className="py-2.5 px-3 border-b border-border">
+            <CardTitle className="text-xs font-semibold text-primary">Income by Category</CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 flex-1">
+            {incomeDonutData.length === 0 ? (
+              <EmptyState title="No income this month" />
+            ) : (
+              <div className="space-y-3">
+                <svg style={{ width: 0, height: 0, position: "absolute" }}>
+                  <defs>
+                    {incomeDonutData.map((_, index) => (
+                      <linearGradient
+                        key={index}
+                        id={`incomeDonutGrad${index}`}
+                        x1="0%"
+                        y1="0%"
+                        x2="100%"
+                        y2="100%"
+                      >
+                        <stop
+                          offset="0%"
+                          stopColor={INCOME_GRADIENTS[index % INCOME_GRADIENTS.length].start}
+                        />
+                        <stop
+                          offset="100%"
+                          stopColor={INCOME_GRADIENTS[index % INCOME_GRADIENTS.length].end}
+                        />
+                      </linearGradient>
+                    ))}
+                  </defs>
+                </svg>
+                <div style={{ width: "100%", height: 144 }}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                    <PieChart>
+                      <Pie
+                        data={incomeDonutData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        outerRadius={58}
+                        innerRadius={38}
+                        paddingAngle={3}
+                        strokeWidth={0}
+                      >
+                        {incomeDonutData.map((entry, index) => (
+                          <Cell key={entry.name} fill={`url(#incomeDonutGrad${index})`} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (active && payload?.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="glass p-2 rounded-lg text-xs shadow-2xl border border-border">
+                                <p className="font-semibold text-primary mb-0.5">{data.name}</p>
+                                <p className="text-emerald-400 font-bold">
+                                  {formatBDT(data.value)}
+                                </p>
+                                <p className="text-[10px] text-muted">
+                                  {totalEarned > 0
+                                    ? `${Math.round((data.value / totalEarned) * 100)}% of income`
+                                    : "0%"}
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-1 max-h-[90px] overflow-y-auto pr-1 scrollbar-thin">
+                  {incomeDonutData.map((item, index) => {
+                    const percent =
+                      totalEarned > 0 ? Math.round((item.value / totalEarned) * 100) : 0;
+                    return (
+                      <div
+                        key={item.name}
+                        className="flex items-center justify-between text-[11px] px-1 py-0.5 rounded hover:bg-card-hover"
+                      >
+                        <div className="flex items-center gap-1.5 truncate">
+                          <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{
+                              backgroundColor:
+                                INCOME_GRADIENTS[index % INCOME_GRADIENTS.length].start,
+                            }}
+                          />
+                          <span className="text-muted truncate">{item.name}</span>
+                        </div>
+                        <span className="font-semibold text-emerald-400 shrink-0 ml-2">
+                          {formatBDT(item.value)} ({percent}%)
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Expense by Category Card */}
+        <Card className="glass flex flex-col justify-between">
+          <CardHeader className="py-2.5 px-3 border-b border-border">
+            <CardTitle className="text-xs font-semibold text-primary">
+              Expense by Category
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-3 flex-1">
+            {expenseBarData.length === 0 ? (
+              <EmptyState title="No expenses this month" />
+            ) : (
+              <div className="space-y-3">
+                <div style={{ width: "100%", height: 144 }}>
+                  <ResponsiveContainer width="100%" height="100%" minWidth={100}>
+                    <BarChart
+                      data={expenseBarData}
+                      layout="vertical"
+                      margin={{ top: 0, right: 10, left: 0, bottom: 0 }}
+                      barSize={14}
+                    >
+                      <XAxis type="number" hide />
+                      <YAxis
+                        type="category"
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fontSize: 10, fill: "#9ca3af" }}
+                        width={75}
+                      />
+                      <Tooltip
+                        cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                        content={({ active, payload }) => {
+                          if (active && payload?.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="glass p-2 rounded-lg text-xs shadow-2xl border border-border">
+                                <p className="font-semibold text-primary mb-0.5">{data.name}</p>
+                                <p className="text-amber-400 font-bold">{formatBDT(data.value)}</p>
+                                <p className="text-[10px] text-muted">
+                                  {data.percent}% of expenses
+                                </p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar
+                        dataKey="value"
+                        radius={[0, 4, 4, 0]}
+                        background={{ fill: "rgba(31, 41, 55, 0.3)" }}
+                      >
+                        {expenseBarData.map((entry, index) => (
+                          <Cell
+                            key={entry.name}
+                            fill={EXPENSE_BAR_SHADES[index % EXPENSE_BAR_SHADES.length]}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="space-y-1 max-h-[90px] overflow-y-auto pr-1 scrollbar-thin">
+                  {expenseBarData.map((item, index) => (
+                    <div
+                      key={item.name}
+                      className="flex items-center justify-between text-[11px] px-1 py-0.5 rounded hover:bg-card-hover"
+                    >
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span
+                          className="w-1.5 h-1.5 rounded-full shrink-0"
+                          style={{
+                            backgroundColor: EXPENSE_BAR_SHADES[index % EXPENSE_BAR_SHADES.length],
+                          }}
+                        />
+                        <span className="text-muted truncate">{item.name}</span>
+                      </div>
+                      <span className="font-semibold text-amber-400 shrink-0 ml-2">
+                        {formatBDT(item.value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

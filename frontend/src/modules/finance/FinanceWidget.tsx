@@ -1,54 +1,87 @@
-import type { MonthlySummary } from "@lifeos/contracts";
-import { useCallback, useEffect, useState } from "react";
-import { fetchMonthlySummary } from "./api.js";
+import { ChevronRight, Wallet } from "lucide-react";
+import { Skeleton } from "../../components/ui/Skeleton.js";
+import { TiltCard } from "../../components/ui/TiltCard.js";
+import { useFinanceSummary } from "./hooks/useFinanceSummary.js";
+import { formatBDT } from "./utils.js";
 
-export function FinanceWidget() {
-  const [summary, setSummary] = useState<MonthlySummary | null>(null);
-  const [loading, setLoading] = useState(true);
+interface FinanceWidgetProps {
+  onViewAll?: () => void;
+}
 
-  const loadSummary = useCallback(async () => {
-    try {
-      const now = new Date();
-      const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
-      const data = await fetchMonthlySummary(yearMonth);
-      setSummary(data);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+export function FinanceWidget({ onViewAll }: FinanceWidgetProps) {
+  const { summary, loading } = useFinanceSummary();
 
-  useEffect(() => {
-    loadSummary();
-  }, [loadSummary]);
-
-  function formatAmount(amountMinor: number): string {
-    return `৳${(amountMinor / 100).toFixed(0)}`;
+  if (loading) {
+    return (
+      <TiltCard className="p-4 bg-gray-800/60 border border-gray-800 rounded-xl">
+        <Skeleton className="h-4 w-24 mb-3" />
+        <div className="grid grid-cols-3 gap-2">
+          {[1, 2, 3].map((i) => (
+            <div key={i} className="space-y-1">
+              <Skeleton className="h-3 w-12" />
+              <Skeleton className="h-5 w-16" />
+            </div>
+          ))}
+        </div>
+      </TiltCard>
+    );
   }
 
-  if (loading) return <div className="text-gray-500">Loading finance...</div>;
-  if (!summary) return <div className="text-gray-500">No data</div>;
-
-  return (
-    <div className="p-4 bg-white border rounded-lg shadow-sm">
-      <h3 className="text-sm font-medium text-gray-500 mb-3">Finance This Month</h3>
-      <div className="space-y-2">
-        <div className="flex justify-between">
-          <span className="text-sm text-gray-600">Income</span>
-          <span className="font-semibold text-green-600">{formatAmount(summary.totalIncome)}</span>
-        </div>
-        <div className="flex justify-between">
-          <span className="text-sm text-gray-600">Expenses</span>
-          <span className="font-semibold text-red-600">{formatAmount(summary.totalExpense)}</span>
-        </div>
-        <div className="border-t pt-2">
-          <div className="flex justify-between">
-            <span className="text-sm font-medium text-gray-700">Net</span>
-            <span className={`font-bold ${summary.net >= 0 ? "text-blue-600" : "text-yellow-600"}`}>
-              {formatAmount(summary.net)}
-            </span>
+  if (!summary) {
+    return (
+      <TiltCard className="p-4 bg-gray-800/60 border border-gray-800/80 rounded-xl">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
+            <Wallet size={16} className="text-emerald-400" />
+            <span>Finance</span>
           </div>
         </div>
+        <p className="text-xs text-gray-500 mt-2">No transactions yet this month.</p>
+      </TiltCard>
+    );
+  }
+
+  return (
+    <TiltCard className="p-4 bg-gray-800/60 border border-gray-800/80 rounded-xl backdrop-blur-sm shadow-sm space-y-3">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
+          <Wallet size={16} className="text-emerald-400" />
+          <span>Finance This Month</span>
+        </div>
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-gray-500 font-mono">{summary.yearMonth}</span>
+          {onViewAll && (
+            <button
+              type="button"
+              onClick={onViewAll}
+              className="text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors inline-flex items-center gap-0.5"
+            >
+              Details <ChevronRight size={12} />
+            </button>
+          )}
+        </div>
       </div>
-    </div>
+
+      <div className="grid grid-cols-3 gap-2 pt-1 border-t border-gray-800/80">
+        <div>
+          <p className="text-xs text-gray-500">Income</p>
+          <p className="text-sm font-semibold text-emerald-400">
+            {formatBDT(summary.totalIncome, 0)}
+          </p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">Expenses</p>
+          <p className="text-sm font-semibold text-red-400">{formatBDT(summary.totalExpense, 0)}</p>
+        </div>
+        <div>
+          <p className="text-xs text-gray-500">Net Flow</p>
+          <p
+            className={`text-sm font-bold ${summary.net >= 0 ? "text-emerald-400" : "text-red-400"}`}
+          >
+            {formatBDT(Math.abs(summary.net), 0)}
+          </p>
+        </div>
+      </div>
+    </TiltCard>
   );
 }

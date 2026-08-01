@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useCallback, useContext, useMemo, useState } from "react";
 
 type ToastType = "error" | "success" | "info" | "warning";
 
@@ -6,6 +6,13 @@ interface Toast {
   id: number;
   type: ToastType;
   message: string;
+}
+
+interface ToastActions {
+  show: (message: string, type?: ToastType) => void;
+  error: (message: string) => void;
+  success: (message: string) => void;
+  warning: (message: string) => void;
 }
 
 let toastId = 0;
@@ -52,11 +59,21 @@ export function ToastContainer({ toasts }: { toasts: Toast[] }) {
   );
 }
 
-const ToastContext = createContext<ReturnType<typeof useToast> | null>(null);
+const ToastContext = createContext<ToastActions | null>(null);
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
-  const toast = useToast();
-  return <ToastContext.Provider value={toast}>{children}</ToastContext.Provider>;
+  const { toasts, show, error, success, warning } = useToast();
+  const actions = useMemo(
+    () => ({ show, error, success, warning }),
+    [show, error, success, warning],
+  );
+
+  return (
+    <ToastContext.Provider value={actions}>
+      {children}
+      <ToastContainer toasts={toasts} />
+    </ToastContext.Provider>
+  );
 }
 
 export function useAppToast() {

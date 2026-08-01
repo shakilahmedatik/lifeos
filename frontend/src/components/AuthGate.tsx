@@ -13,19 +13,19 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       setChecking(false);
       return;
     }
-    setAuthToken(saved);
     try {
       const res = await fetch("/api/auth/verify", {
         headers: { "x-auth-token": saved },
       });
       if (res.ok) {
         setAuthenticated(true);
-        setChecking(false);
       } else {
+        setError("Invalid password");
         setAuthToken(null);
-        setChecking(false);
       }
     } catch {
+      setError("Connection failed");
+    } finally {
       setChecking(false);
     }
   }, []);
@@ -34,9 +34,10 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     tryRestore();
   }, [tryRestore]);
 
-  const handleLogin = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.SubmitEvent) => {
     e.preventDefault();
     setError("");
+    setChecking(true);
     try {
       const res = await fetch("/api/auth/login", {
         method: "POST",
@@ -51,12 +52,14 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
       }
     } catch {
       setError("Connection failed");
+    } finally {
+      setChecking(false);
     }
   };
   if (checking) {
     return (
       <div className="min-h-screen bg-surface flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500" />
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-accent" />
       </div>
     );
   }
@@ -66,7 +69,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     <div className="min-h-screen bg-surface flex items-center justify-center px-6">
       <div className="max-w-sm w-full space-y-6">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto rounded-2xl bg-gradient-to-br from-blue-500 to-blue-700 flex items-center justify-center shadow-lg shadow-blue-600/20">
+          <div className="w-16 h-16 mx-auto rounded-2xl bg-linear-to-br from-accent to-accent/80 flex items-center justify-center shadow-lg shadow-accent-600/20">
             <span className="text-white font-bold text-2xl">L</span>
           </div>
           <h1 className="text-xl font-bold text-gray-100 mt-4">LifeOS</h1>
@@ -78,12 +81,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Password"
-            className="w-full bg-gray-800/60 border border-gray-700/50 text-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
+            className="w-full bg-gray-800/60 border border-gray-700/50 text-gray-100 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-accent-500/50 placeholder-gray-500"
           />
           {error && <p className="text-red-400 text-sm text-center">{error}</p>}
           <button
             type="submit"
-            className="w-full py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-medium transition-colors"
+            className="w-full py-3 rounded-xl bg-accent hover:bg-accent/80 text-white text-sm font-medium transition-colors"
           >
             Enter
           </button>

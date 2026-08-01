@@ -10,6 +10,8 @@ interface StatCardProps {
   format?: (n: number) => string;
   trend?: { value: number; label: string };
   className?: string;
+  valueClassName?: string;
+  iconClassName?: string;
 }
 
 export function StatCard({
@@ -19,9 +21,12 @@ export function StatCard({
   format = (n) => n.toLocaleString(),
   trend,
   className,
+  valueClassName,
+  iconClassName,
 }: StatCardProps) {
   const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { once: true, amount: 0.5 });
+  const hasIntersectionObserver = typeof window !== "undefined" && "IntersectionObserver" in window;
+  const inView = hasIntersectionObserver ? useInView(ref, { once: true, amount: 0.5 }) : true;
   const reduce = useReducedMotion();
   const [display, setDisplay] = useState(0);
   const fromRef = useRef(0);
@@ -51,13 +56,23 @@ export function StatCard({
     >
       <div ref={ref} className="flex items-center justify-between">
         <div>
-          <p className="text-xl font-bold text-primary tabular-nums tracking-tight">
+          <p
+            className={cn(
+              "text-xl font-bold text-primary tabular-nums tracking-tight",
+              valueClassName,
+            )}
+          >
             {format(display)}
           </p>
           <p className="text-[11px] text-muted mt-0.5 uppercase tracking-wider">{label}</p>
         </div>
         {Icon && (
-          <div className="w-8 h-8 rounded-lg bg-accent-muted flex items-center justify-center">
+          <div
+            className={cn(
+              "w-8 h-8 rounded-lg bg-accent-muted flex items-center justify-center",
+              iconClassName,
+            )}
+          >
             <Icon className="w-4 h-4 text-accent" />
           </div>
         )}

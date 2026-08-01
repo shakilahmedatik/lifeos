@@ -35,6 +35,14 @@ export class AccountService {
     return this.accountRepo.archive(id);
   }
 
+  unarchiveAccount(id: string): boolean {
+    return this.accountRepo.unarchive(id);
+  }
+
+  deleteAccount(id: string): boolean {
+    return this.accountRepo.delete(id);
+  }
+
   getAccountBalance(id: string): number {
     return this.transactionRepo.getAccountBalance(id);
   }

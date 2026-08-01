@@ -37,10 +37,6 @@ export function createNotificationsRouter(
     res.write(`: connected ${clientId}\n\n`);
 
     broadcaster.addClient(clientId, res);
-
-    req.on("close", () => {
-      broadcaster.removeClient(clientId);
-    });
   });
 
   router.get("/:id", (req, res) => {
@@ -66,7 +62,7 @@ export function createNotificationsRouter(
   });
 
   router.patch("/:id", validateBody(UpdateNotificationInputSchema), (req, res) => {
-    const notification = notificationService.updateNotification(req.params.id, req.body);
+    const notification = notificationService.updateNotification(req.params.id as string, req.body);
     if (!notification) {
       res.status(404).json({ error: "Notification not found" });
       return;

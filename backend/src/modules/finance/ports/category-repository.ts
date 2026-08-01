@@ -8,4 +8,6 @@ export interface CategoryRepository {
   create(id: string, input: NewCategoryInput): Category;
   update(id: string, patch: Partial<NewCategoryInput>): Category | undefined;
   archive(id: string): boolean;
+  unarchive(id: string): boolean;
+  delete(id: string): boolean;
 }

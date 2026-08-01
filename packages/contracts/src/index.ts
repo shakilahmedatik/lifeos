@@ -259,7 +259,7 @@ export interface ExerciseProgressPoint {
   totalSets: number;
 }
 
-export type AccountType = "cash" | "bank" | "card" | "savings";
+export type AccountType = "cash" | "bank" | "card" | "savings" | "mfs";
 
 export type CategoryKind = "income" | "expense";
 

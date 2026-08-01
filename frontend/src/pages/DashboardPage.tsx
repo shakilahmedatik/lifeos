@@ -16,6 +16,7 @@ import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { api } from "../lib/api.js";
+import { FinanceWidget } from "../modules/finance/FinanceWidget.js";
 import { WorkoutWidget } from "../modules/workouts/WorkoutWidget.js";
 
 const POLL_INTERVAL = 30_000;
@@ -153,7 +154,8 @@ export default function DashboardPage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-1">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FinanceWidget onViewAll={() => navigate("/finance")} />
         <WorkoutWidget
           onSelectWorkout={() => navigate("/workouts")}
           onViewHistory={() => navigate("/workouts")}

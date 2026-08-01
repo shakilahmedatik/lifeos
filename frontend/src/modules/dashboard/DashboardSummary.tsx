@@ -1,4 +1,5 @@
 import type { DashboardSummary as DashboardSummaryType } from "@lifeos/contracts";
+import { useNavigate } from "react-router-dom";
 import { FinanceWidget } from "../finance/FinanceWidget.js";
 import HabitChip from "../habits/HabitChip.js";
 import { NewsTicker } from "./NewsTicker.js";
@@ -11,6 +12,8 @@ interface DashboardSummaryProps {
 }
 
 export default function DashboardSummary({ summary, onHabitToggle }: DashboardSummaryProps) {
+  const navigate = useNavigate();
+
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -30,7 +33,7 @@ export default function DashboardSummary({ summary, onHabitToggle }: DashboardSu
           ))}
         </div>
       )}
-      <FinanceWidget />
+      <FinanceWidget onViewAll={() => navigate("/finance")} />
     </div>
   );
 }

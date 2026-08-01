@@ -3,6 +3,9 @@ import {
   NewCategoryInputSchema,
   NewTransactionInputSchema,
   TransferInputSchema,
+  UpdateAccountSchema,
+  UpdateCategorySchema,
+  UpdateTransactionSchema,
 } from "@lifeos/contracts";
 import { Router } from "express";
 import { validateBody } from "../../../shared/validate.js";
@@ -52,8 +55,8 @@ export function createFinanceRouter(
     }
   });
 
-  router.patch("/accounts/:id", (req, res) => {
-    const account = accountService.updateAccount(req.params.id, req.body);
+  router.patch("/accounts/:id", validateBody(UpdateAccountSchema), (req, res) => {
+    const account = accountService.updateAccount(req.params.id as string, req.body);
     if (!account) {
       res.status(404).json({ error: "Account not found" });
       return;
@@ -64,6 +67,24 @@ export function createFinanceRouter(
   router.post("/accounts/:id/archive", (req, res) => {
     const archived = accountService.archiveAccount(req.params.id);
     if (!archived) {
+      res.status(404).json({ error: "Account not found" });
+      return;
+    }
+    res.status(204).send();
+  });
+
+  router.post("/accounts/:id/unarchive", (req, res) => {
+    const unarchived = accountService.unarchiveAccount(req.params.id);
+    if (!unarchived) {
+      res.status(404).json({ error: "Account not found" });
+      return;
+    }
+    res.status(204).send();
+  });
+
+  router.delete("/accounts/:id", (req, res) => {
+    const deleted = accountService.deleteAccount(req.params.id);
+    if (!deleted) {
       res.status(404).json({ error: "Account not found" });
       return;
     }
@@ -123,8 +144,8 @@ export function createFinanceRouter(
     }
   });
 
-  router.patch("/categories/:id", (req, res) => {
-    const category = categoryService.updateCategory(req.params.id, req.body);
+  router.patch("/categories/:id", validateBody(UpdateCategorySchema), (req, res) => {
+    const category = categoryService.updateCategory(req.params.id as string, req.body);
     if (!category) {
       res.status(404).json({ error: "Category not found" });
       return;
@@ -135,6 +156,24 @@ export function createFinanceRouter(
   router.post("/categories/:id/archive", (req, res) => {
     const archived = categoryService.archiveCategory(req.params.id);
     if (!archived) {
+      res.status(404).json({ error: "Category not found" });
+      return;
+    }
+    res.status(204).send();
+  });
+
+  router.post("/categories/:id/unarchive", (req, res) => {
+    const unarchived = categoryService.unarchiveCategory(req.params.id);
+    if (!unarchived) {
+      res.status(404).json({ error: "Category not found" });
+      return;
+    }
+    res.status(204).send();
+  });
+
+  router.delete("/categories/:id", (req, res) => {
+    const deleted = categoryService.deleteCategory(req.params.id);
+    if (!deleted) {
       res.status(404).json({ error: "Category not found" });
       return;
     }
@@ -185,9 +224,9 @@ export function createFinanceRouter(
     }
   });
 
-  router.patch("/transactions/:id", (req, res) => {
+  router.patch("/transactions/:id", validateBody(UpdateTransactionSchema), (req, res) => {
     try {
-      const transaction = transactionService.updateTransaction(req.params.id, req.body);
+      const transaction = transactionService.updateTransaction(req.params.id as string, req.body);
       if (!transaction) {
         res.status(404).json({ error: "Transaction not found" });
         return;

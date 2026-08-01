@@ -42,8 +42,12 @@ export class FinanceReportService {
   }
 
   getMonthlyTransactions(yearMonth: string) {
+    const [yearStr, monthStr] = yearMonth.split("-");
+    const year = Number.parseInt(yearStr, 10);
+    const month = Number.parseInt(monthStr, 10);
+    const lastDay = new Date(year, month, 0).getDate();
     const startDate = `${yearMonth}-01`;
-    const endDate = `${yearMonth}-31`;
+    const endDate = `${yearMonth}-${String(lastDay).padStart(2, "0")}`;
     return this.transactionRepo.getByDateRange(startDate, endDate);
   }
 }

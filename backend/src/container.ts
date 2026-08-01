@@ -62,6 +62,7 @@ export function createContainer(config: AppConfig): Container {
   const stopBackgroundJobs = () => {
     news.newsScheduler.stop();
     notifications.notificationScheduler.stop();
+    notifications.notificationBroadcaster.stop();
   };
 
   return {

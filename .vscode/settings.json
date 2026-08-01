@@ -3,5 +3,6 @@
   "editor.wordWrap": "wordWrapColumn",
   "editor.codeActionsOnSave": {
     "source.fixAll.biome": "always"
-  }
+  },
+  "css.lint.unknownAtRules": "ignore"
 }

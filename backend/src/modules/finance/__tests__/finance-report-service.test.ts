@@ -34,6 +34,8 @@ function createMockAccountRepo(): AccountRepository & { accounts: Map<string, Ac
     },
     update: () => undefined,
     archive: () => false,
+    unarchive: () => false,
+    delete: () => false,
   };
 }
 
@@ -68,6 +70,8 @@ function createMockCategoryRepo(): CategoryRepository & { categories: Map<string
     },
     update: () => undefined,
     archive: () => false,
+    unarchive: () => false,
+    delete: () => false,
   };
 }
 

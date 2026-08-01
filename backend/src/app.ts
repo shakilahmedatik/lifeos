@@ -1,6 +1,7 @@
 import express, { type Express } from "express";
 import type { Container } from "./container.js";
 import { authMiddleware } from "./shared/auth-middleware.js";
+import { logger } from "./shared/logger.js";
 import { apiRateLimiter } from "./shared/rate-limiter.js";
 
 export function createApp(container: Container): Express {
@@ -39,6 +40,14 @@ export function createApp(container: Container): Express {
   app.use("/api/news", modules.news.router);
   app.use("/api/skills", modules.skills.router);
   app.use("/api/backup", modules.backup.router);
+
+  // Global error handler
+  app.use(
+    (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+      logger.error("Unhandled error", { error: err.message, stack: err.stack });
+      res.status(500).json({ error: "Internal server error" });
+    },
+  );
 
   return app;
 }

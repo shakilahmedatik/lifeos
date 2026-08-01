@@ -70,7 +70,7 @@ export function createSkillsRouter(
       if (!parsed.success) {
         res.status(400).json({
           error: "Invalid backup data",
-          details: parsed.error.errors,
+          details: parsed.error.issues,
         });
         return;
       }

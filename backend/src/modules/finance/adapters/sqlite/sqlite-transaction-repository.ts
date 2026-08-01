@@ -126,20 +126,40 @@ export class SqliteTransactionRepository implements TransactionRepository {
   }
 
   delete(id: string): boolean {
+    const tx = this.getById(id);
+    if (!tx) return false;
+
+    if (tx.transferPairId) {
+      const result = this.db
+        .prepare("DELETE FROM transactions WHERE id = ? OR transfer_pair_id = ?")
+        .run(id, tx.transferPairId);
+      return result.changes > 0;
+    }
+
     const result = this.db.prepare("DELETE FROM transactions WHERE id = ?").run(id);
     return result.changes > 0;
   }
 
+  private getMonthDateRange(yearMonth: string): { startDate: string; endDate: string } {
+    const [yearStr, monthStr] = yearMonth.split("-");
+    const year = Number.parseInt(yearStr, 10);
+    const month = Number.parseInt(monthStr, 10);
+    const lastDay = new Date(year, month, 0).getDate();
+    return {
+      startDate: `${yearMonth}-01`,
+      endDate: `${yearMonth}-${String(lastDay).padStart(2, "0")}`,
+    };
+  }
+
   getMonthlyTotals(yearMonth: string): { totalIncome: number; totalExpense: number } {
-    const startDate = `${yearMonth}-01`;
-    const endDate = `${yearMonth}-31`;
+    const { startDate, endDate } = this.getMonthDateRange(yearMonth);
 
     const incomeResult = this.db
       .prepare(
         `SELECT COALESCE(SUM(amount_minor), 0) as total
          FROM transactions t
          JOIN categories c ON t.category_id = c.id
-         WHERE t.date >= ? AND t.date <= ? AND c.kind = 'income'`,
+         WHERE t.date >= ? AND t.date <= ? AND c.kind = 'income' AND t.transfer_pair_id IS NULL`,
       )
       .get(startDate, endDate) as { total: number };
 
@@ -148,7 +168,7 @@ export class SqliteTransactionRepository implements TransactionRepository {
         `SELECT COALESCE(SUM(amount_minor), 0) as total
          FROM transactions t
          JOIN categories c ON t.category_id = c.id
-         WHERE t.date >= ? AND t.date <= ? AND c.kind = 'expense'`,
+         WHERE t.date >= ? AND t.date <= ? AND c.kind = 'expense' AND t.transfer_pair_id IS NULL`,
       )
       .get(startDate, endDate) as { total: number };
 
@@ -159,14 +179,13 @@ export class SqliteTransactionRepository implements TransactionRepository {
   }
 
   getCategoryBreakdown(yearMonth: string): { categoryId: string; total: number }[] {
-    const startDate = `${yearMonth}-01`;
-    const endDate = `${yearMonth}-31`;
+    const { startDate, endDate } = this.getMonthDateRange(yearMonth);
 
     return this.db
       .prepare(
         `SELECT category_id as categoryId, SUM(amount_minor) as total
          FROM transactions
-         WHERE date >= ? AND date <= ?
+         WHERE date >= ? AND date <= ? AND transfer_pair_id IS NULL
          GROUP BY category_id
          ORDER BY total DESC`,
       )

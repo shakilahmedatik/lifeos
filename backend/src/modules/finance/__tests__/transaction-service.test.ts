@@ -39,6 +39,15 @@ function createMockAccountRepo(): AccountRepository & { accounts: Map<string, Ac
       account.archived = true;
       return true;
     },
+    unarchive(id: string) {
+      const account = accounts.get(id);
+      if (!account) return false;
+      account.archived = false;
+      return true;
+    },
+    delete(id: string) {
+      return accounts.delete(id);
+    },
   };
 }
 
@@ -77,6 +86,15 @@ function createMockCategoryRepo(): CategoryRepository & { categories: Map<string
       if (!category) return false;
       category.archived = true;
       return true;
+    },
+    unarchive(id: string) {
+      const category = categories.get(id);
+      if (!category) return false;
+      category.archived = false;
+      return true;
+    },
+    delete(id: string) {
+      return categories.delete(id);
     },
   };
 }
@@ -222,6 +240,15 @@ describe("TransactionService", () => {
       amountMinor: 5000,
     });
     expect(service.deleteTransaction(transaction.id)).toBe(true);
+    expect(transactionRepo.transactions.size).toBe(0);
+  });
+
+  it("deleting a transfer transaction reverts both linked transactions", () => {
+    accountRepo.create("acc-2", { name: "Cash", type: "cash" });
+    const { from } = service.createTransfer("acc-1", "acc-2", 100000, "2026-07-22", "ATM");
+    expect(transactionRepo.transactions.size).toBe(2);
+
+    expect(service.deleteTransaction(from.id)).toBe(true);
     expect(transactionRepo.transactions.size).toBe(0);
   });
 });

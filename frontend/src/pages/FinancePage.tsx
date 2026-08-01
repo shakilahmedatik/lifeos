@@ -1,241 +1,112 @@
-import type {
-  AccountWithBalance,
-  Category,
-  NewTransactionInput,
-  Transaction,
-} from "@lifeos/contracts";
-import { getClientDateString, getClientMonthString } from "@lifeos/contracts";
-import { Plus as PlusIcon } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { useAppToast } from "../components/Toast.js";
+import type { Transaction } from "@lifeos/contracts";
+import { Plus } from "lucide-react";
+import { useCallback, useState } from "react";
 import Button from "../components/ui/Button.js";
-import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
-import { EmptyState } from "../components/ui/EmptyState.js";
-import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
-import { Select } from "../components/ui/Select.js";
-import * as financeApi from "../modules/finance/api.js";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
+import {
+  AccountList,
+  BackupPanel,
+  CategoryList,
+  MonthlyView,
+  TransactionForm,
+  TransactionList,
+} from "../modules/finance/index.js";
+
+type Tab = "overview" | "transactions" | "accounts" | "categories" | "backup";
 
 export default function FinancePage() {
-  const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [amount, setAmount] = useState("");
-  const [accountId, setAccountId] = useState("");
-  const [categoryId, setCategoryId] = useState("");
-  const [note, setNote] = useState("");
-  const [date, setDate] = useState(getClientDateString());
-  const toast = useAppToast();
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [acs, txs, cats] = await Promise.all([
-        financeApi.fetchAccountBalances(),
-        financeApi.fetchMonthlyTransactions(getClientMonthString()),
-        financeApi.fetchActiveCategories(),
-      ]);
-      setAccounts(acs);
-      setTransactions(txs);
-      setCategories(cats);
-    } catch {
-      toast.error("Failed to load finance data");
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
+  const handleRefresh = useCallback(() => {
+    setRefreshTrigger((prev) => prev + 1);
+  }, []);
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!amount || !accountId || !categoryId) return;
-    try {
-      const input: NewTransactionInput = {
-        accountId,
-        categoryId,
-        date,
-        amountMinor: Math.round(Number.parseFloat(amount) * 100),
-        note: note.trim() || undefined,
-      };
-      await financeApi.createTransaction(input);
-      setAmount("");
-      setNote("");
-      setShowForm(false);
-      fetchData();
-    } catch {
-      toast.error("Failed to create transaction");
-    }
-  };
-
-  const totalIncome = transactions
-    .filter((t) => categories.find((c) => c.id === t.categoryId)?.kind === "income")
-    .reduce((s, t) => s + t.amountMinor, 0);
-
-  const totalExpense = transactions
-    .filter((t) => categories.find((c) => c.id === t.categoryId)?.kind === "expense")
-    .reduce((s, t) => s + t.amountMinor, 0);
-
-  const net = totalIncome - totalExpense;
-
-  const formatBDT = (amount: number) => {
-    return `BDT ${(amount / 100).toLocaleString("en-BD", { minimumFractionDigits: 2 })}`;
-  };
+  const handleEditTransaction = useCallback((tx: Transaction) => {
+    setEditingTransaction(tx);
+    setShowTransactionModal(true);
+  }, []);
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
         title="Finance"
-        description="Track your money"
+        description="Track accounts, income, expenses, and category budgets"
         actions={
-          <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
-            Add Transaction
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              size="sm"
+              icon={<Plus size={14} />}
+              onClick={() => {
+                setEditingTransaction(null);
+                setShowTransactionModal(true);
+              }}
+            >
+              Add Transaction
+            </Button>
+          </div>
         }
       />
 
-      {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-24 bg-gray-800/60 rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <Card>
-              <p className="text-xs text-gray-500 mb-1">Income</p>
-              <p className="text-xl font-bold text-emerald-400">{formatBDT(totalIncome)}</p>
-            </Card>
-            <Card>
-              <p className="text-xs text-gray-500 mb-1">Expenses</p>
-              <p className="text-xl font-bold text-red-400">{formatBDT(totalExpense)}</p>
-            </Card>
-            <Card className={net >= 0 ? "border-l-emerald-500/50" : "border-l-red-500/50"}>
-              <p className="text-xs text-gray-500 mb-1">Net</p>
-              <p className={`text-xl font-bold ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}>
-                {formatBDT(Math.abs(net))}
-              </p>
-            </Card>
-          </div>
+      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as Tab)} variant="underline">
+        <TabsList className="w-full">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="transactions">Transactions</TabsTrigger>
+          <TabsTrigger value="accounts">Accounts</TabsTrigger>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
+          <TabsTrigger value="backup">Backup & Export</TabsTrigger>
+        </TabsList>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Card>
-              <CardHeader>
-                <CardTitle>Accounts</CardTitle>
-              </CardHeader>
-              <div className="space-y-2">
-                {accounts.length === 0 ? (
-                  <EmptyState title="No accounts" />
-                ) : (
-                  accounts.map((a) => (
-                    <div key={a.id} className="flex items-center justify-between py-1.5">
-                      <span className="text-sm text-gray-300">{a.name}</span>
-                      <span className="text-sm font-medium text-gray-200">
-                        {formatBDT(a.balance)}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </Card>
-            <Card>
-              <CardHeader>
-                <CardTitle>Transactions</CardTitle>
-              </CardHeader>
-              <div className="space-y-2 max-h-64 overflow-y-auto">
-                {transactions.length === 0 ? (
-                  <EmptyState title="No transactions" />
-                ) : (
-                  transactions.map((t) => (
-                    <div key={t.id} className="flex items-center justify-between py-1.5">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm text-gray-300 truncate">{t.note || "Transaction"}</p>
-                        <p className="text-xs text-gray-600">
-                          {new Date(t.date).toLocaleDateString()}
-                        </p>
-                      </div>
-                      <span
-                        className={`text-sm font-medium ${categories.find((c) => c.id === t.categoryId)?.kind === "income" ? "text-emerald-400" : "text-red-400"}`}
-                      >
-                        {formatBDT(t.amountMinor)}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </Card>
-          </div>
-        </>
-      )}
+        <TabsContent value="overview" className="mt-6">
+          <MonthlyView refreshTrigger={refreshTrigger} />
+        </TabsContent>
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Add Transaction">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <Input
-              label="Amount (BDT)"
-              type="number"
-              value={amount}
-              onChange={(e) => setAmount(e.target.value)}
-              step="0.01"
-              min="0"
-              required
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Select
-                label="Account"
-                value={accountId}
-                onChange={(e) => setAccountId(e.target.value)}
-                required
-                options={[
-                  { value: "", label: "Select account" },
-                  ...accounts.map((a) => ({ value: a.id, label: a.name })),
-                ]}
-              />
-            </div>
-            <div>
-              <Select
-                label="Category"
-                value={categoryId}
-                onChange={(e) => setCategoryId(e.target.value)}
-                required
-                options={[
-                  { value: "", label: "Select category" },
-                  ...categories.map((c) => ({ value: c.id, label: c.name })),
-                ]}
-              />
-            </div>
-          </div>
-          <div>
-            <Input
-              label="Date"
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-            />
-          </div>
-          <div>
-            <Input
-              label="Note"
-              type="text"
-              value={note}
-              onChange={(e) => setNote(e.target.value)}
-              placeholder="Optional note"
-            />
-          </div>
-          <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>
-              Cancel
-            </Button>
-            <Button type="submit">Add Transaction</Button>
-          </div>
-        </form>
+        <TabsContent value="transactions" className="mt-6">
+          <TransactionList
+            refreshTrigger={refreshTrigger}
+            onDataChange={handleRefresh}
+            onEditTransaction={handleEditTransaction}
+          />
+        </TabsContent>
+
+        <TabsContent value="accounts" className="mt-6">
+          <AccountList refreshTrigger={refreshTrigger} onDataChange={handleRefresh} />
+        </TabsContent>
+
+        <TabsContent value="categories" className="mt-6">
+          <CategoryList refreshTrigger={refreshTrigger} onDataChange={handleRefresh} />
+        </TabsContent>
+
+        <TabsContent value="backup" className="mt-6">
+          <BackupPanel onImportComplete={handleRefresh} />
+        </TabsContent>
+      </Tabs>
+
+      <Modal
+        open={showTransactionModal}
+        onClose={() => {
+          setShowTransactionModal(false);
+          setEditingTransaction(null);
+        }}
+        title={editingTransaction ? "Edit Transaction" : "Log New Transaction"}
+      >
+        <TransactionForm
+          key={editingTransaction?.id ?? "new"}
+          editTransaction={editingTransaction}
+          onTransactionCreated={() => {
+            handleRefresh();
+            setShowTransactionModal(false);
+            setEditingTransaction(null);
+          }}
+          onClose={() => {
+            setShowTransactionModal(false);
+            setEditingTransaction(null);
+          }}
+        />
       </Modal>
     </div>
   );

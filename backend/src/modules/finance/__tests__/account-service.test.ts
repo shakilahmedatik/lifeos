@@ -45,6 +45,16 @@ function createMockAccountRepo(): AccountRepository & { accounts: Map<string, Ac
       account.updatedAt = new Date().toISOString();
       return true;
     },
+    unarchive(id: string) {
+      const account = accounts.get(id);
+      if (!account) return false;
+      account.archived = false;
+      account.updatedAt = new Date().toISOString();
+      return true;
+    },
+    delete(id: string) {
+      return accounts.delete(id);
+    },
   };
 }
 

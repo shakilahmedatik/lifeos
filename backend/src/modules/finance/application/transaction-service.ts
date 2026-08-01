@@ -78,6 +78,18 @@ export class TransactionService {
   }
 
   deleteTransaction(id: string): boolean {
+    const target = this.transactionRepo.getById(id);
+    if (!target) return false;
+
+    if (target.transferPairId) {
+      const allTxs = this.transactionRepo.getByDateRange("1900-01-01", "2100-01-01");
+      const paired = allTxs.filter((t) => t.transferPairId === target.transferPairId);
+      for (const p of paired) {
+        this.transactionRepo.delete(p.id);
+      }
+      return true;
+    }
+
     return this.transactionRepo.delete(id);
   }
 

@@ -92,4 +92,16 @@ export class SqliteAccountRepository implements AccountRepository {
       .run(new Date().toISOString(), id);
     return result.changes > 0;
   }
+
+  unarchive(id: string): boolean {
+    const result = this.db
+      .prepare("UPDATE accounts SET archived = 0, updated_at = ? WHERE id = ?")
+      .run(new Date().toISOString(), id);
+    return result.changes > 0;
+  }
+
+  delete(id: string): boolean {
+    const result = this.db.prepare("DELETE FROM accounts WHERE id = ?").run(id);
+    return result.changes > 0;
+  }
 }

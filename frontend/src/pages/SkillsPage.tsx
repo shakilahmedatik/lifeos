@@ -153,7 +153,12 @@ export default function SkillsPage() {
         </TabsList>
 
         <TabsContent value="dashboard">
-          <SkillsDashboard progresses={progressesByResource} />
+          <SkillsDashboard
+            logs={logs}
+            resources={resources}
+            loading={loading}
+            progresses={progressesByResource}
+          />
         </TabsContent>
 
         <TabsContent value="sessions">

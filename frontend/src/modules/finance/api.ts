@@ -51,6 +51,16 @@ export async function archiveAccount(id: string): Promise<void> {
   if (!res.ok) throw new Error("Failed to archive account");
 }
 
+export async function unarchiveAccount(id: string): Promise<void> {
+  const res = await fetchWithAuth(`${API_BASE}/accounts/${id}/unarchive`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to unarchive account");
+}
+
+export async function deleteAccount(id: string): Promise<void> {
+  const res = await fetchWithAuth(`${API_BASE}/accounts/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete account");
+}
+
 export async function fetchAccountBalance(id: string): Promise<number> {
   const res = await fetchWithAuth(`${API_BASE}/accounts/${id}/balance`);
   if (!res.ok) throw new Error("Failed to fetch account balance");
@@ -93,9 +103,32 @@ export async function createCategory(input: NewCategoryInput): Promise<Category>
   return res.json();
 }
 
+export async function updateCategory(
+  id: string,
+  patch: Partial<NewCategoryInput>,
+): Promise<Category> {
+  const res = await fetchWithAuth(`${API_BASE}/categories/${id}`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(patch),
+  });
+  if (!res.ok) throw new Error("Failed to update category");
+  return res.json();
+}
+
 export async function archiveCategory(id: string): Promise<void> {
   const res = await fetchWithAuth(`${API_BASE}/categories/${id}/archive`, { method: "POST" });
   if (!res.ok) throw new Error("Failed to archive category");
+}
+
+export async function unarchiveCategory(id: string): Promise<void> {
+  const res = await fetchWithAuth(`${API_BASE}/categories/${id}/unarchive`, { method: "POST" });
+  if (!res.ok) throw new Error("Failed to unarchive category");
+}
+
+export async function deleteCategory(id: string): Promise<void> {
+  const res = await fetchWithAuth(`${API_BASE}/categories/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete category");
 }
 
 // Transaction API

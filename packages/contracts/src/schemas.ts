@@ -92,7 +92,7 @@ export const NewHabitLogInputSchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
 });
 
-export const AccountTypeSchema = z.enum(["cash", "bank", "card", "savings"]);
+export const AccountTypeSchema = z.enum(["cash", "bank", "card", "savings", "mfs"]);
 
 export const NewAccountInputSchema = z.object({
   name: z.string().min(1, "Account name is required"),
@@ -125,6 +125,34 @@ export const TransferInputSchema = z.object({
     .positive("Amount must be positive"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
   note: z.string().max(500).optional(),
+});
+
+export const UpdateAccountSchema = z.object({
+  name: z.string().min(1, "Account name is required").optional(),
+  type: AccountTypeSchema.optional(),
+  archived: z.boolean().optional(),
+});
+
+export const UpdateCategorySchema = z.object({
+  name: z.string().min(1, "Category name is required").optional(),
+  kind: CategoryKindSchema.optional(),
+  archived: z.boolean().optional(),
+});
+
+export const UpdateTransactionSchema = z.object({
+  accountId: z.string().min(1).optional(),
+  categoryId: z.string().min(1).optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD")
+    .optional(),
+  amountMinor: z
+    .number()
+    .int("Amount must be in minor units (integer)")
+    .positive("Amount must be positive")
+    .optional(),
+  currency: z.string().optional(),
+  note: z.string().optional(),
 });
 
 export const NewRssFeedInputSchema = z.object({
