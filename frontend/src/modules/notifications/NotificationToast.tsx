@@ -31,7 +31,7 @@ export function NotificationToast({ notification, onDismiss }: NotificationToast
     <div
       role="alert"
       aria-live="assertive"
-      className={`fixed top-4 right-4 z-50 bg-gray-900/90 backdrop-blur-md border border-blue-500/50 shadow-2xl rounded-xl p-4 max-w-sm transform transition-all duration-300 ${
+      className={`fixed top-4 right-4 z-50 bg-gray-900/90 border border-blue-500/50 shadow-2xl rounded-xl p-4 max-w-sm transform transition-all duration-300 ${
         visible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
       }`}
     >

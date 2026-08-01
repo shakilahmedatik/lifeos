@@ -4,7 +4,7 @@ import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { Input } from "../../components/ui/Input.js";
-import { api, fetchWithAuth } from "../../lib/api.js";
+import { api } from "../../lib/api.js";
 import { playNotificationSound } from "../notifications/sound-player.js";
 import { addExerciseLog, cancelSession, completeSession, startSession } from "./api.js";
 import { CoachStartModal } from "./components/CoachStartModal.js";
@@ -52,12 +52,12 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (sessionId && !isFinishedRef.current) {
-        fetchWithAuth(`/api/workouts/sessions/${sessionId}`, {
+        fetch(`/api/workouts/sessions/${sessionId}`, {
           method: "DELETE",
           keepalive: true,
         }).catch(console.error);
         if (taskId) {
-          fetchWithAuth(`/api/tasks/${taskId}/status`, {
+          fetch(`/api/tasks/${taskId}/status`, {
             method: "PATCH",
             body: JSON.stringify({ status: "planned" }),
             headers: { "Content-Type": "application/json" },

@@ -1,6 +1,6 @@
 import type { Category } from "@lifeos/contracts";
 import { Pencil, Plus, Trash2, TrendingDown, TrendingUp } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
 import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
@@ -25,7 +25,7 @@ interface CategoryListProps {
   onDataChange?: () => void;
 }
 
-function CategorySection({
+const CategorySection = memo(function CategorySection({
   title,
   icon,
   borderColor,
@@ -138,7 +138,7 @@ function CategorySection({
       </CardContent>
     </Card>
   );
-}
+});
 
 export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps) {
   const { categories, loading, refresh } = useCategories();
@@ -163,6 +163,14 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
       refresh();
     }
   }, [refreshTrigger, refresh]);
+
+  const handleArchive = useCallback((id: string, name: string) => {
+    setConfirmTarget({ action: "archive", id, name });
+  }, []);
+
+  const handleDelete = useCallback((id: string, name: string) => {
+    setConfirmTarget({ action: "delete", id, name });
+  }, []);
 
   function resetForm() {
     setNewName("");
@@ -213,7 +221,7 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
     }
   }
 
-  async function handleArchive(id: string, name: string) {
+  async function confirmArchive(id: string, name: string) {
     try {
       await apiArchiveCategory(id);
       toast.success(`Archived category "${name}"`);
@@ -235,7 +243,7 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
     }
   }
 
-  async function handleDelete(id: string, name: string) {
+  async function confirmDelete(id: string, name: string) {
     try {
       await apiDeleteCategory(id);
       toast.success(`Deleted category "${name}"`);
@@ -246,6 +254,15 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
     }
   }
 
+  const incomeCategories = useMemo(
+    () => categories.filter((c) => c.kind === "income"),
+    [categories],
+  );
+  const expenseCategories = useMemo(
+    () => categories.filter((c) => c.kind === "expense"),
+    [categories],
+  );
+
   if (loading) {
     return (
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -254,9 +271,6 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
       </div>
     );
   }
-
-  const incomeCategories = categories.filter((c) => c.kind === "income");
-  const expenseCategories = categories.filter((c) => c.kind === "expense");
 
   return (
     <div className="space-y-4">
@@ -286,9 +300,9 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
           badgeVariant="success"
           categories={incomeCategories}
           onEdit={openEdit}
-          onArchive={(id, name) => setConfirmTarget({ action: "archive", id, name })}
+          onArchive={handleArchive}
           onUnarchive={handleUnarchive}
-          onDelete={(id, name) => setConfirmTarget({ action: "delete", id, name })}
+          onDelete={handleDelete}
         />
         <CategorySection
           title="Expense Categories"
@@ -298,9 +312,9 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
           badgeVariant="warning"
           categories={expenseCategories}
           onEdit={openEdit}
-          onArchive={(id, name) => setConfirmTarget({ action: "archive", id, name })}
+          onArchive={handleArchive}
           onUnarchive={handleUnarchive}
-          onDelete={(id, name) => setConfirmTarget({ action: "delete", id, name })}
+          onDelete={handleDelete}
         />
       </div>
 
@@ -390,16 +404,16 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
         message={
           confirmTarget?.action === "delete"
             ? `Are you sure you want to permanently delete category "${confirmTarget?.name}"?`
-            : `Are you sure you want to archive category "${confirmTarget?.name}"?`
+            : `Are you sure you want to archive "${confirmTarget?.name}"?`
         }
         confirmLabel={confirmTarget?.action === "delete" ? "Delete" : "Archive"}
         onCancel={() => setConfirmTarget(null)}
         onConfirm={async () => {
           if (!confirmTarget) return;
           if (confirmTarget.action === "delete") {
-            await handleDelete(confirmTarget.id, confirmTarget.name);
+            await confirmDelete(confirmTarget.id, confirmTarget.name);
           } else {
-            await handleArchive(confirmTarget.id, confirmTarget.name);
+            await confirmArchive(confirmTarget.id, confirmTarget.name);
           }
           setConfirmTarget(null);
         }}

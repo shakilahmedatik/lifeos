@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getSSEUrl } from "../../lib/api.js";
+
 import { playNotificationSound, resumeAudioContext } from "../notifications/sound-player.js";
 import type { SoundPreset } from "../notifications/sound-presets.js";
 
@@ -31,7 +31,7 @@ export function useWorkoutTimerSSE(options: UseWorkoutTimerSSEOptions = {}) {
   const connect = useCallback(() => {
     resumeAudioContext();
 
-    const eventSource = new EventSource(getSSEUrl("/api/notifications/stream"));
+    const eventSource = new EventSource("/api/notifications/stream");
 
     eventSource.onopen = () => {
       setIsConnected(true);

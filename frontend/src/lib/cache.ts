@@ -3,6 +3,8 @@ export interface CacheEntry<T> {
   expiresAt: number;
 }
 
+const MAX_CACHE_SIZE = 100;
+
 export class ApiCache {
   private store = new Map<string, CacheEntry<unknown>>();
 
@@ -17,6 +19,9 @@ export class ApiCache {
   }
 
   set<T>(key: string, data: T, ttlMs = 30_000): void {
+    if (this.store.size >= MAX_CACHE_SIZE) {
+      this.evictOldest();
+    }
     this.store.set(key, { data, expiresAt: Date.now() + ttlMs });
   }
 
@@ -29,6 +34,13 @@ export class ApiCache {
       if (key.includes(pattern)) {
         this.store.delete(key);
       }
+    }
+  }
+
+  private evictOldest(): void {
+    const oldestKey = this.store.keys().next().value;
+    if (oldestKey !== undefined) {
+      this.store.delete(oldestKey);
     }
   }
 }

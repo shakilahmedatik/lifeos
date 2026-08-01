@@ -1,22 +1,21 @@
 import type { Habit, HabitLog, HabitStats, NewHabitInput, WeeklySummary } from "@lifeos/contracts";
-import { fetchWithAuth } from "../../lib/api.js";
 
 const API_BASE = "/api/habits";
 
 export async function fetchHabits(): Promise<Habit[]> {
-  const res = await fetchWithAuth(API_BASE);
+  const res = await fetch(API_BASE);
   if (!res.ok) throw new Error("Failed to fetch habits");
   return res.json();
 }
 
 export async function fetchHabit(id: string): Promise<Habit> {
-  const res = await fetchWithAuth(`${API_BASE}/${id}`);
+  const res = await fetch(`${API_BASE}/${id}`);
   if (!res.ok) throw new Error("Failed to fetch habit");
   return res.json();
 }
 
 export async function createHabit(input: NewHabitInput): Promise<Habit> {
-  const res = await fetchWithAuth(API_BASE, {
+  const res = await fetch(API_BASE, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -26,7 +25,7 @@ export async function createHabit(input: NewHabitInput): Promise<Habit> {
 }
 
 export async function updateHabit(id: string, patch: Partial<NewHabitInput>): Promise<Habit> {
-  const res = await fetchWithAuth(`${API_BASE}/${id}`, {
+  const res = await fetch(`${API_BASE}/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -36,23 +35,23 @@ export async function updateHabit(id: string, patch: Partial<NewHabitInput>): Pr
 }
 
 export async function deleteHabit(id: string): Promise<void> {
-  const res = await fetchWithAuth(`${API_BASE}/${id}`, { method: "DELETE" });
+  const res = await fetch(`${API_BASE}/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete habit");
 }
 
 export async function logHabit(habitId: string): Promise<HabitLog> {
-  const res = await fetchWithAuth(`${API_BASE}/${habitId}/log`, { method: "POST" });
+  const res = await fetch(`${API_BASE}/${habitId}/log`, { method: "POST" });
   if (!res.ok) throw new Error("Failed to log habit");
   return res.json();
 }
 
 export async function unlogHabit(habitId: string, date: string): Promise<void> {
-  const res = await fetchWithAuth(`${API_BASE}/${habitId}/log/${date}`, { method: "DELETE" });
+  const res = await fetch(`${API_BASE}/${habitId}/log/${date}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to unlog habit");
 }
 
 export async function batchLogHabits(habitIds: string[], date: string): Promise<HabitLog[]> {
-  const res = await fetchWithAuth(`${API_BASE}/log-batch`, {
+  const res = await fetch(`${API_BASE}/log-batch`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ habitIds, date }),
@@ -66,9 +65,7 @@ export async function fetchHabitStats(
   startDate: string,
   endDate: string,
 ): Promise<HabitStats> {
-  const res = await fetchWithAuth(
-    `${API_BASE}/${habitId}/stats?startDate=${startDate}&endDate=${endDate}`,
-  );
+  const res = await fetch(`${API_BASE}/${habitId}/stats?startDate=${startDate}&endDate=${endDate}`);
   if (!res.ok) throw new Error("Failed to fetch habit stats");
   return res.json();
 }
@@ -77,7 +74,7 @@ export async function fetchWeeklySummary(weekStart?: string): Promise<WeeklySumm
   const url = weekStart
     ? `${API_BASE}/weekly-review?weekStart=${weekStart}`
     : `${API_BASE}/weekly-review`;
-  const res = await fetchWithAuth(url);
+  const res = await fetch(url);
   if (!res.ok) throw new Error("Failed to fetch weekly summary");
   return res.json();
 }

@@ -42,7 +42,7 @@ export function FinanceWidget({ onViewAll }: FinanceWidgetProps) {
   }
 
   return (
-    <TiltCard className="p-4 bg-gray-800/60 border border-gray-800/80 rounded-xl backdrop-blur-sm shadow-sm space-y-3">
+    <TiltCard className="p-4 bg-gray-800/60 border border-gray-800/80 rounded-xl shadow-sm space-y-3">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2 text-gray-300 text-sm font-medium">
           <Wallet size={16} className="text-emerald-400" />

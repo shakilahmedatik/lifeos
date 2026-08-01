@@ -1,6 +1,5 @@
 import type { NotificationWithTask } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
-import { fetchWithAuth } from "../../lib/api.js";
 
 type Notification = NotificationWithTask;
 
@@ -14,7 +13,7 @@ export function NotificationPanel() {
     try {
       setLoading(true);
       setError(null);
-      const response = await fetchWithAuth("/api/notifications");
+      const response = await fetch("/api/notifications");
       if (!response.ok) {
         throw new Error("Failed to fetch notifications");
       }
@@ -35,7 +34,7 @@ export function NotificationPanel() {
   const deleteNotification = async (id: string) => {
     try {
       setDeleting(id);
-      const response = await fetchWithAuth(`/api/notifications/${id}`, { method: "DELETE" });
+      const response = await fetch(`/api/notifications/${id}`, { method: "DELETE" });
       if (!response.ok) {
         throw new Error("Failed to delete notification");
       }

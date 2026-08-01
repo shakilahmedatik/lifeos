@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { getSSEUrl } from "../../lib/api.js";
+
 import { requestNotificationPermission, showBrowserNotification } from "./browser-notifications.js";
 import { playNotificationSound, resumeAudioContext } from "./sound-player.js";
 import type { SoundPreset } from "./sound-presets.js";
@@ -55,7 +55,7 @@ export function useNotificationSSE(options: UseNotificationSSEOptions = {}) {
       clearTimeout(reconnectTimeoutRef.current);
     }
 
-    const eventSource = new EventSource(getSSEUrl("/api/notifications/stream"));
+    const eventSource = new EventSource("/api/notifications/stream");
 
     eventSource.onopen = () => {
       setIsConnected(true);

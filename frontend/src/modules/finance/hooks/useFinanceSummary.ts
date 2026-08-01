@@ -20,7 +20,7 @@ export function useFinanceSummary(yearMonth?: string) {
   }, []);
 
   const load = useCallback(async () => {
-    if (!summary || prevYm.current !== ym) {
+    if (prevYm.current !== ym) {
       setLoading(true);
     }
     try {
@@ -40,7 +40,7 @@ export function useFinanceSummary(yearMonth?: string) {
         setLoading(false);
       }
     }
-  }, [ym]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [ym]);
 
   useEffect(() => {
     load();

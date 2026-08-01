@@ -1,7 +1,7 @@
 import type { Transaction } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
 import { Pencil, Plus } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
 import Button from "../../components/ui/Button.js";
 import { Input } from "../../components/ui/Input.js";
@@ -54,9 +54,15 @@ export function TransactionForm({
     }
   }, [editTransaction, categories]);
 
-  const activeAccounts = accounts.filter((a) => !a.archived || a.id === accountId);
-  const filteredCategories = categories.filter(
-    (c) => c.kind === transactionKind && (!c.archived || c.id === categoryId),
+  const activeAccounts = useMemo(
+    () => accounts.filter((a) => !a.archived || a.id === accountId),
+    [accounts, accountId],
+  );
+
+  const filteredCategories = useMemo(
+    () =>
+      categories.filter((c) => c.kind === transactionKind && (!c.archived || c.id === categoryId)),
+    [categories, transactionKind, categoryId],
   );
 
   useEffect(() => {

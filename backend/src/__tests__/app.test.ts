@@ -11,7 +11,6 @@ describe("Application Composition Root", () => {
     const app = createApp(container);
 
     expect(container.db).toBeDefined();
-    expect(container.modules.auth).toBeDefined();
     expect(container.modules.finance).toBeDefined();
     expect(container.modules.habits).toBeDefined();
     expect(container.modules.health).toBeDefined();

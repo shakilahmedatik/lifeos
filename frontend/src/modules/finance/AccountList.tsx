@@ -10,7 +10,6 @@ import { Input } from "../../components/ui/Input.js";
 import Modal from "../../components/ui/Modal.js";
 import { Select } from "../../components/ui/Select.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
-import { TiltCard } from "../../components/ui/TiltCard.js";
 import {
   archiveAccount as apiArchiveAccount,
   createAccount as apiCreateAccount,

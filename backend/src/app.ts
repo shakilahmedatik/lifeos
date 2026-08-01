@@ -1,6 +1,5 @@
 import express, { type Express } from "express";
 import type { Container } from "./container.js";
-import { authMiddleware } from "./shared/auth-middleware.js";
 import { logger } from "./shared/logger.js";
 import { apiRateLimiter } from "./shared/rate-limiter.js";
 
@@ -12,7 +11,7 @@ export function createApp(container: Container): Express {
   app.use((_req, res, next) => {
     res.setHeader("Access-Control-Allow-Origin", `http://localhost:${config.frontendPort}`);
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type, x-auth-token");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
     if (_req.method === "OPTIONS") {
       res.status(204).end();
       return;
@@ -25,12 +24,8 @@ export function createApp(container: Container): Express {
 
   // Unprotected routes
   app.use("/api/health", modules.health.router);
-  app.use("/api/auth", modules.auth.router);
 
-  // Authentication barrier
-  app.use("/api", authMiddleware);
-
-  // Protected domain routes
+  // Domain routes
   app.use("/api/routine", modules.routine.router);
   app.use("/api/habits", modules.habits.router);
   app.use("/api/dashboard", modules.dashboard.router);

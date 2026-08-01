@@ -31,7 +31,7 @@ export default function Card({
 
   const content = (
     <div
-      className={`bg-gray-800/60 backdrop-blur-sm border border-gray-700/50 rounded-xl ${paddingStyles[padding]} ${hover ? "hover:bg-gray-800/80 transition-colors duration-200" : ""} ${accent ? `border-l-4 ${accent}` : ""} ${onClick ? "cursor-pointer" : ""} ${className}`}
+      className={`bg-gray-800/60 border border-gray-700/50 rounded-xl ${paddingStyles[padding]} ${hover ? "hover:bg-gray-800/80 transition-colors duration-200" : ""} ${accent ? `border-l-4 ${accent}` : ""} ${onClick ? "cursor-pointer" : ""} ${className}`}
       onClick={onClick}
     >
       {children}
@@ -42,7 +42,7 @@ export default function Card({
     return (
       <TiltCard className={className} onClick={onClick}>
         <div
-          className={`bg-gray-800/60 backdrop-blur-sm border border-gray-700/50 rounded-xl h-full w-full ${paddingStyles[padding]} ${hover ? "hover:bg-gray-800/80 transition-colors duration-200" : ""} ${accent ? `border-l-4 ${accent}` : ""}`}
+          className={`bg-gray-800/60 border border-gray-700/50 rounded-xl h-full w-full ${paddingStyles[padding]} ${hover ? "hover:bg-gray-800/80 transition-colors duration-200" : ""} ${accent ? `border-l-4 ${accent}` : ""}`}
         >
           {children}
         </div>

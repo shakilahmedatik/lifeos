@@ -26,7 +26,7 @@ export default function Dock() {
     <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pb-3 pointer-events-none">
       <nav
         aria-label="Main Navigation"
-        className="pointer-events-auto flex items-center gap-1 max-w-[95vw] overflow-x-auto px-3 py-2 rounded-2xl bg-sidebar/90 backdrop-blur-xl border border-border shadow-2xl shadow-black/50 scrollbar-none"
+        className="pointer-events-auto flex items-center gap-1 max-w-[95vw] overflow-x-auto px-3 py-2 rounded-2xl bg-sidebar/90 border border-border shadow-2xl shadow-black/50 scrollbar-none"
       >
         {navItems.map((item) => (
           <NavLink

@@ -9,25 +9,24 @@ import type {
   NewTransactionInput,
   Transaction,
 } from "@lifeos/contracts";
-import { fetchWithAuth } from "../../lib/api.js";
 
 const API_BASE = "/api/finance";
 
 // Account API
 export async function fetchAccounts(): Promise<Account[]> {
-  const res = await fetchWithAuth(`${API_BASE}/accounts`);
+  const res = await fetch(`${API_BASE}/accounts`);
   if (!res.ok) throw new Error("Failed to fetch accounts");
   return res.json();
 }
 
 export async function fetchActiveAccounts(): Promise<Account[]> {
-  const res = await fetchWithAuth(`${API_BASE}/accounts/active`);
+  const res = await fetch(`${API_BASE}/accounts/active`);
   if (!res.ok) throw new Error("Failed to fetch active accounts");
   return res.json();
 }
 
 export async function createAccount(input: NewAccountInput): Promise<Account> {
-  const res = await fetchWithAuth(`${API_BASE}/accounts`, {
+  const res = await fetch(`${API_BASE}/accounts`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -37,7 +36,7 @@ export async function createAccount(input: NewAccountInput): Promise<Account> {
 }
 
 export async function updateAccount(id: string, patch: Partial<NewAccountInput>): Promise<Account> {
-  const res = await fetchWithAuth(`${API_BASE}/accounts/${id}`, {
+  const res = await fetch(`${API_BASE}/accounts/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -47,22 +46,22 @@ export async function updateAccount(id: string, patch: Partial<NewAccountInput>)
 }
 
 export async function archiveAccount(id: string): Promise<void> {
-  const res = await fetchWithAuth(`${API_BASE}/accounts/${id}/archive`, { method: "POST" });
+  const res = await fetch(`${API_BASE}/accounts/${id}/archive`, { method: "POST" });
   if (!res.ok) throw new Error("Failed to archive account");
 }
 
 export async function unarchiveAccount(id: string): Promise<void> {
-  const res = await fetchWithAuth(`${API_BASE}/accounts/${id}/unarchive`, { method: "POST" });
+  const res = await fetch(`${API_BASE}/accounts/${id}/unarchive`, { method: "POST" });
   if (!res.ok) throw new Error("Failed to unarchive account");
 }
 
 export async function deleteAccount(id: string): Promise<void> {
-  const res = await fetchWithAuth(`${API_BASE}/accounts/${id}`, { method: "DELETE" });
+  const res = await fetch(`${API_BASE}/accounts/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete account");
 }
 
 export async function fetchAccountBalance(id: string): Promise<number> {
-  const res = await fetchWithAuth(`${API_BASE}/accounts/${id}/balance`);
+  const res = await fetch(`${API_BASE}/accounts/${id}/balance`);
   if (!res.ok) throw new Error("Failed to fetch account balance");
   const data = await res.json();
   return data.balance;
@@ -70,31 +69,31 @@ export async function fetchAccountBalance(id: string): Promise<number> {
 
 // Category API
 export async function fetchCategories(): Promise<Category[]> {
-  const res = await fetchWithAuth(`${API_BASE}/categories`);
+  const res = await fetch(`${API_BASE}/categories`);
   if (!res.ok) throw new Error("Failed to fetch categories");
   return res.json();
 }
 
 export async function fetchActiveCategories(): Promise<Category[]> {
-  const res = await fetchWithAuth(`${API_BASE}/categories/active`);
+  const res = await fetch(`${API_BASE}/categories/active`);
   if (!res.ok) throw new Error("Failed to fetch active categories");
   return res.json();
 }
 
 export async function fetchIncomeCategories(): Promise<Category[]> {
-  const res = await fetchWithAuth(`${API_BASE}/categories/income`);
+  const res = await fetch(`${API_BASE}/categories/income`);
   if (!res.ok) throw new Error("Failed to fetch income categories");
   return res.json();
 }
 
 export async function fetchExpenseCategories(): Promise<Category[]> {
-  const res = await fetchWithAuth(`${API_BASE}/categories/expense`);
+  const res = await fetch(`${API_BASE}/categories/expense`);
   if (!res.ok) throw new Error("Failed to fetch expense categories");
   return res.json();
 }
 
 export async function createCategory(input: NewCategoryInput): Promise<Category> {
-  const res = await fetchWithAuth(`${API_BASE}/categories`, {
+  const res = await fetch(`${API_BASE}/categories`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -107,7 +106,7 @@ export async function updateCategory(
   id: string,
   patch: Partial<NewCategoryInput>,
 ): Promise<Category> {
-  const res = await fetchWithAuth(`${API_BASE}/categories/${id}`, {
+  const res = await fetch(`${API_BASE}/categories/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -117,17 +116,17 @@ export async function updateCategory(
 }
 
 export async function archiveCategory(id: string): Promise<void> {
-  const res = await fetchWithAuth(`${API_BASE}/categories/${id}/archive`, { method: "POST" });
+  const res = await fetch(`${API_BASE}/categories/${id}/archive`, { method: "POST" });
   if (!res.ok) throw new Error("Failed to archive category");
 }
 
 export async function unarchiveCategory(id: string): Promise<void> {
-  const res = await fetchWithAuth(`${API_BASE}/categories/${id}/unarchive`, { method: "POST" });
+  const res = await fetch(`${API_BASE}/categories/${id}/unarchive`, { method: "POST" });
   if (!res.ok) throw new Error("Failed to unarchive category");
 }
 
 export async function deleteCategory(id: string): Promise<void> {
-  const res = await fetchWithAuth(`${API_BASE}/categories/${id}`, { method: "DELETE" });
+  const res = await fetch(`${API_BASE}/categories/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete category");
 }
 
@@ -136,21 +135,19 @@ export async function fetchTransactionsByDateRange(
   startDate: string,
   endDate: string,
 ): Promise<Transaction[]> {
-  const res = await fetchWithAuth(
-    `${API_BASE}/transactions?startDate=${startDate}&endDate=${endDate}`,
-  );
+  const res = await fetch(`${API_BASE}/transactions?startDate=${startDate}&endDate=${endDate}`);
   if (!res.ok) throw new Error("Failed to fetch transactions");
   return res.json();
 }
 
 export async function fetchTransactionsByAccount(accountId: string): Promise<Transaction[]> {
-  const res = await fetchWithAuth(`${API_BASE}/transactions?accountId=${accountId}`);
+  const res = await fetch(`${API_BASE}/transactions?accountId=${accountId}`);
   if (!res.ok) throw new Error("Failed to fetch transactions");
   return res.json();
 }
 
 export async function createTransaction(input: NewTransactionInput): Promise<Transaction> {
-  const res = await fetchWithAuth(`${API_BASE}/transactions`, {
+  const res = await fetch(`${API_BASE}/transactions`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(input),
@@ -166,7 +163,7 @@ export async function updateTransaction(
   id: string,
   patch: Partial<NewTransactionInput>,
 ): Promise<Transaction> {
-  const res = await fetchWithAuth(`${API_BASE}/transactions/${id}`, {
+  const res = await fetch(`${API_BASE}/transactions/${id}`, {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(patch),
@@ -176,7 +173,7 @@ export async function updateTransaction(
 }
 
 export async function deleteTransaction(id: string): Promise<void> {
-  const res = await fetchWithAuth(`${API_BASE}/transactions/${id}`, { method: "DELETE" });
+  const res = await fetch(`${API_BASE}/transactions/${id}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete transaction");
 }
 
@@ -187,7 +184,7 @@ export async function createTransfer(
   date: string,
   note?: string,
 ): Promise<{ from: Transaction; to: Transaction }> {
-  const res = await fetchWithAuth(`${API_BASE}/transfers`, {
+  const res = await fetch(`${API_BASE}/transfers`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ fromAccountId, toAccountId, amountMinor, date, note }),
@@ -201,25 +198,25 @@ export async function createTransfer(
 
 // Report API
 export async function fetchMonthlySummary(yearMonth: string): Promise<MonthlySummary> {
-  const res = await fetchWithAuth(`${API_BASE}/monthly/${yearMonth}`);
+  const res = await fetch(`${API_BASE}/monthly/${yearMonth}`);
   if (!res.ok) throw new Error("Failed to fetch monthly summary");
   return res.json();
 }
 
 export async function fetchCategoryBreakdown(yearMonth: string): Promise<CategoryBreakdown[]> {
-  const res = await fetchWithAuth(`${API_BASE}/monthly/${yearMonth}/breakdown`);
+  const res = await fetch(`${API_BASE}/monthly/${yearMonth}/breakdown`);
   if (!res.ok) throw new Error("Failed to fetch category breakdown");
   return res.json();
 }
 
 export async function fetchMonthlyTransactions(yearMonth: string): Promise<Transaction[]> {
-  const res = await fetchWithAuth(`${API_BASE}/monthly/${yearMonth}/transactions`);
+  const res = await fetch(`${API_BASE}/monthly/${yearMonth}/transactions`);
   if (!res.ok) throw new Error("Failed to fetch monthly transactions");
   return res.json();
 }
 
 export async function fetchAccountBalances(): Promise<AccountWithBalance[]> {
-  const res = await fetchWithAuth(`${API_BASE}/balances`);
+  const res = await fetch(`${API_BASE}/balances`);
   if (!res.ok) throw new Error("Failed to fetch account balances");
   return res.json();
 }

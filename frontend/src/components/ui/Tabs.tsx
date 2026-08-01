@@ -1,4 +1,3 @@
-import { MotionConfig, motion, type Transition, useReducedMotion } from "motion/react";
 import {
   createContext,
   type ReactNode,
@@ -27,14 +26,6 @@ function useTabs() {
   return ctx;
 }
 
-// Weighty spring for the active-tab indicator
-const transition: Transition = {
-  type: "spring",
-  stiffness: 170,
-  damping: 24,
-  mass: 1.2,
-};
-
 export function Tabs({
   defaultValue,
   value,
@@ -52,7 +43,6 @@ export function Tabs({
 }) {
   const [internal, setInternal] = useState(defaultValue ?? "");
   const layoutId = useId();
-  const reduce = useReducedMotion();
   const controlled = value !== undefined;
   const current = controlled ? value : internal;
   const setValue = useCallback(
@@ -67,13 +57,9 @@ export function Tabs({
     [current, layoutId, setValue, variant],
   );
   return (
-    <MotionConfig transition={reduce ? { duration: 0 } : transition}>
-      <TabsCtx.Provider value={contextValue}>
-        <motion.div layoutRoot className={className}>
-          {children}
-        </motion.div>
-      </TabsCtx.Provider>
-    </MotionConfig>
+    <TabsCtx.Provider value={contextValue}>
+      <div className={className}>{children}</div>
+    </TabsCtx.Provider>
   );
 }
 
@@ -103,7 +89,7 @@ export function TabsTrigger({
   className?: string;
   indicatorClassName?: string;
 }) {
-  const { value: current, setValue, layoutId, variant } = useTabs();
+  const { value: current, setValue, variant } = useTabs();
   const active = current === value;
 
   if (variant === "underline") {
@@ -121,8 +107,7 @@ export function TabsTrigger({
       >
         {children}
         {active ? (
-          <motion.span
-            layoutId={layoutId}
+          <span
             className={cn(
               "absolute -bottom-px left-0 right-0 h-0.5 bg-accent rounded-full",
               indicatorClassName,
@@ -138,8 +123,7 @@ export function TabsTrigger({
   return (
     <div className="relative">
       {active ? (
-        <motion.span
-          layoutId={layoutId}
+        <span
           style={{ borderRadius: variant === "pill" ? 9999 : 8 }}
           className={cn(
             "absolute inset-0 bg-accent shadow-sm shadow-accent/20",
@@ -177,26 +161,14 @@ export function TabsContent({
   className?: string;
 }) {
   const { value: current } = useTabs();
-  const reduce = useReducedMotion();
   const active = current === value;
 
-  if (!active) {
-    return (
-      <div hidden className={className}>
-        {children}
-      </div>
-    );
-  }
+  if (!active) return null;
+
   return (
-    <motion.div
-      key={value}
-      initial={{ opacity: 0, y: reduce ? 0 : 4 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.18, ease: [0.23, 1, 0.32, 1] }}
-      className={cn("mt-4", className)}
-    >
+    <div key={value} className={cn("mt-4", className)}>
       {children}
-    </motion.div>
+    </div>
   );
 }
 

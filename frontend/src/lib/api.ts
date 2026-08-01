@@ -21,39 +21,8 @@ import type {
   WeeklySummary,
 } from "@lifeos/contracts";
 
-const STORAGE_KEY = "lifeos_auth_token";
-
-export function getAuthToken(): string | null {
-  if (typeof window === "undefined") return null;
-  return localStorage.getItem(STORAGE_KEY);
-}
-
-export function setAuthToken(token: string | null) {
-  if (token) {
-    localStorage.setItem(STORAGE_KEY, token);
-  } else {
-    localStorage.removeItem(STORAGE_KEY);
-  }
-}
-
-export async function fetchWithAuth(url: string, options?: RequestInit): Promise<Response> {
-  const headers: Record<string, string> = {
-    ...(options?.headers as Record<string, string>),
-  };
-  const token = getAuthToken();
-  if (token) headers["x-auth-token"] = token;
-  return fetch(url, { ...options, headers });
-}
-
-export function getSSEUrl(baseUrl: string): string {
-  const token = getAuthToken();
-  if (!token) return baseUrl;
-  const separator = baseUrl.includes("?") ? "&" : "?";
-  return `${baseUrl}${separator}token=${encodeURIComponent(token)}`;
-}
-
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetchWithAuth(url, options);
+  const res = await fetch(url, options);
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`API error ${res.status}: ${body || res.statusText}`);

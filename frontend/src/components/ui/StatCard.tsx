@@ -1,5 +1,4 @@
-import { animate, useInView, useReducedMotion } from "motion/react";
-import { type ElementType, useEffect, useRef, useState } from "react";
+import type { ElementType } from "react";
 import { cn } from "../../lib/utils.js";
 import { TiltCard } from "./TiltCard.js";
 
@@ -24,29 +23,6 @@ export function StatCard({
   valueClassName,
   iconClassName,
 }: StatCardProps) {
-  const ref = useRef<HTMLDivElement>(null);
-  const hasIntersectionObserver = typeof window !== "undefined" && "IntersectionObserver" in window;
-  const inView = hasIntersectionObserver ? useInView(ref, { once: true, amount: 0.5 }) : true;
-  const reduce = useReducedMotion();
-  const [display, setDisplay] = useState(0);
-  const fromRef = useRef(0);
-
-  useEffect(() => {
-    if (!inView) return;
-    if (reduce) {
-      fromRef.current = value;
-      setDisplay(Math.round(value));
-      return;
-    }
-    const controls = animate(fromRef.current, value, {
-      duration: 1,
-      ease: [0.23, 1, 0.32, 1],
-      onUpdate: (v) => setDisplay(Math.round(v)),
-    });
-    fromRef.current = value;
-    return () => controls.stop();
-  }, [value, inView, reduce]);
-
   return (
     <TiltCard
       className={cn(
@@ -54,7 +30,7 @@ export function StatCard({
         className,
       )}
     >
-      <div ref={ref} className="flex items-center justify-between">
+      <div className="flex items-center justify-between">
         <div>
           <p
             className={cn(
@@ -62,7 +38,7 @@ export function StatCard({
               valueClassName,
             )}
           >
-            {format(display)}
+            {format(Math.round(value))}
           </p>
           <p className="text-[11px] text-muted mt-0.5 uppercase tracking-wider">{label}</p>
         </div>

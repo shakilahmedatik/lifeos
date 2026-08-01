@@ -24,7 +24,7 @@ export function createNotificationsRouter(
     res.json({ count });
   });
 
-  router.get("/stream", (req, res) => {
+  router.get("/stream", (_req, res) => {
     const clientId = randomUUID();
 
     res.setHeader("Content-Type", "text/event-stream");

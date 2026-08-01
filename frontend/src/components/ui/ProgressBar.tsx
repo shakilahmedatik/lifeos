@@ -1,4 +1,3 @@
-import { motion, useReducedMotion } from "motion/react";
 import { cn } from "../../lib/utils.js";
 
 interface ProgressBarProps {
@@ -23,21 +22,16 @@ export function ProgressBar({
   barClassName,
 }: ProgressBarProps) {
   const clamped = Math.min(100, Math.max(0, value));
-  const reduce = useReducedMotion();
 
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <div className={cn("flex-1 bg-border/50 rounded-full overflow-hidden", sizeStyles[size])}>
-        <motion.div
+        <div
           className={cn(
-            "h-full rounded-full bg-linear-to-r from-amber-500 to-amber-400",
+            "h-full rounded-full bg-linear-to-r from-amber-500 to-amber-400 transition-[width] duration-300 ease-out",
             barClassName,
           )}
-          initial={{ width: 0 }}
-          animate={{ width: `${clamped}%` }}
-          transition={
-            reduce ? { duration: 0 } : { type: "spring", stiffness: 100, damping: 20, mass: 0.8 }
-          }
+          style={{ width: `${clamped}%` }}
         />
       </div>
       {showLabel && (

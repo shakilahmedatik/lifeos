@@ -1,16 +1,8 @@
 import { Activity, X } from "lucide-react";
 import { useMemo } from "react";
-import {
-  Area,
-  AreaChart,
-  CartesianGrid,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
+import { AreaChart } from "../../components/ui/charts/AreaChart.js";
 import { useExerciseProgress } from "./useWorkouts.js";
 
 interface ExerciseProgressChartProps {
@@ -26,8 +18,10 @@ export function ExerciseProgressChart({
 }: ExerciseProgressChartProps) {
   const { progress, loading, error } = useExerciseProgress(exerciseId);
 
-  const { maxWeightOverall, totalSessions, avgRepsOverall } = useMemo(() => {
-    if (!progress.length) return { maxWeightOverall: 0, totalSessions: 0, avgRepsOverall: 0 };
+  const { maxWeightOverall, totalSessions, avgRepsOverall, chartData } = useMemo(() => {
+    if (!progress.length) {
+      return { maxWeightOverall: 0, totalSessions: 0, avgRepsOverall: 0, chartData: [] };
+    }
 
     let maxWeight = 0;
     let totalReps = 0;
@@ -41,17 +35,14 @@ export function ExerciseProgressChart({
       maxWeightOverall: maxWeight,
       totalSessions: progress.length,
       avgRepsOverall: Math.round(totalReps / progress.length),
+      chartData: progress.map((p) => ({
+        label: new Date(p.date).toLocaleDateString(undefined, {
+          month: "short",
+          day: "numeric",
+        }),
+        value: p.maxWeight,
+      })),
     };
-  }, [progress]);
-
-  const chartData = useMemo(() => {
-    return progress.map((p) => ({
-      ...p,
-      dateFormatted: new Date(p.date).toLocaleDateString(undefined, {
-        month: "short",
-        day: "numeric",
-      }),
-    }));
   }, [progress]);
 
   return (
@@ -86,64 +77,7 @@ export function ExerciseProgressChart({
           </div>
         ) : (
           <div className="space-y-6">
-            <div className="w-full h-62.5">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorWeight" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="var(--color-accent)" stopOpacity={0.3} />
-                      <stop offset="95%" stopColor="var(--color-accent)" stopOpacity={0} />
-                    </linearGradient>
-                  </defs>
-                  <XAxis
-                    dataKey="dateFormatted"
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: "var(--color-muted)" }}
-                    dy={10}
-                    minTickGap={30}
-                  />
-                  <YAxis
-                    axisLine={false}
-                    tickLine={false}
-                    tick={{ fontSize: 12, fill: "var(--color-muted)" }}
-                    dx={-10}
-                  />
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    vertical={false}
-                    stroke="var(--color-border)"
-                  />
-                  <Tooltip
-                    content={({ active, payload }) => {
-                      if (active && payload?.length) {
-                        return (
-                          <div className="glass p-2 rounded-lg text-xs shadow-lg">
-                            <div className="font-semibold text-primary mb-1">
-                              {payload[0].payload.dateFormatted}
-                            </div>
-                            <div className="text-accent">
-                              Max Weight: {payload[0].payload.maxWeight} kg
-                            </div>
-                            <div className="text-muted">Avg Reps: {payload[0].payload.avgReps}</div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    }}
-                  />
-                  <Area
-                    type="monotone"
-                    dataKey="maxWeight"
-                    stroke="var(--color-accent)"
-                    fillOpacity={1}
-                    fill="url(#colorWeight)"
-                    strokeWidth={3}
-                    activeDot={{ r: 6, fill: "var(--color-accent)" }}
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+            <AreaChart data={chartData} height={250} formatValue={(v) => `${v} kg`} />
 
             <div className="grid grid-cols-3 gap-4">
               <div className="glass p-4 rounded-xl text-center">

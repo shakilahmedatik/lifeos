@@ -74,15 +74,11 @@ body {
 
 .glass {
   background: var(--color-card);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--color-border);
 }
 
 .glass-heavy {
-  background: rgba(3, 7, 18, 0.85);
-  backdrop-filter: blur(24px) saturate(1.2);
-  -webkit-backdrop-filter: blur(24px) saturate(1.2);
+  background: rgba(3, 7, 18, 0.95);
   border: 1px solid var(--color-border);
 }
 
@@ -104,26 +100,12 @@ body {
   border-radius: 3px;
 }
 
-@keyframes slide-up {
-  from {
-    opacity: 0;
-    transform: translateY(8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.animate-fade-in {
+  animation: fade-in 0.2s ease-out;
 }
 
-@keyframes slide-in {
-  from {
-    opacity: 0;
-    transform: translateX(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
+.animate-scale-up {
+  animation: scale-up 0.3s ease-out;
 }
 
 @keyframes fade-in {
@@ -144,48 +126,4 @@ body {
     opacity: 1;
     transform: scale(1);
   }
-}
-
-@keyframes scale-down {
-  from {
-    opacity: 1;
-    transform: scale(1);
-  }
-  to {
-    opacity: 0;
-    transform: scale(0.95);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.animate-slide-up {
-  animation: slide-up 0.3s ease-out;
-}
-
-.animate-slide-in {
-  animation: slide-in 0.3s ease-out;
-}
-
-.animate-fade-in {
-  animation: fade-in 0.2s ease-out;
-}
-
-.animate-scale-up {
-  animation: scale-up 0.3s ease-out;
-}
-
-.animate-scale-down {
-  animation: scale-down 0.3s ease-out;
-}
-
-.animate-shimmer {
-  animation: shimmer 2s infinite linear;
 }

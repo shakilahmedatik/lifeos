@@ -1,7 +1,7 @@
 import type { Transaction } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
 import { Pencil, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
 import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
@@ -26,7 +26,7 @@ interface TransactionListProps {
 const INCOME_EMERALD = "text-emerald-400";
 const EXPENSE_AMBER = "text-amber-400";
 
-function TransactionItem({
+const TransactionItem = memo(function TransactionItem({
   tx,
   categoryName,
   accountName,
@@ -58,7 +58,7 @@ function TransactionItem({
             })}
           </span>
           {tx.note && (
-            <span className="text-[11px] text-secondary truncate max-w-[140px]">{tx.note}</span>
+            <span className="text-[11px] text-secondary truncate max-w-35">{tx.note}</span>
           )}
         </div>
       </div>
@@ -96,9 +96,9 @@ function TransactionItem({
       </div>
     </TiltCard>
   );
-}
+});
 
-function TransactionSection({
+const TransactionSection = memo(function TransactionSection({
   title,
   transactions,
   categoryMap,
@@ -123,7 +123,7 @@ function TransactionSection({
   }
 
   return (
-    <div className="space-y-1.5 max-h-[500px] overflow-y-auto pr-1 scrollbar-thin">
+    <div className="space-y-1.5 max-h-125 overflow-y-auto pr-1 scrollbar-thin">
       {transactions.map((tx) => {
         const category = categoryMap.get(tx.categoryId);
         const account = accountMap.get(tx.accountId);
@@ -143,7 +143,7 @@ function TransactionSection({
       })}
     </div>
   );
-}
+});
 
 export function TransactionList({
   refreshTrigger,
@@ -173,38 +173,61 @@ export function TransactionList({
     }
   }, [refreshTrigger, refresh]);
 
-  async function handleDelete(id: string) {
-    try {
-      await apiDeleteTransaction(id);
-      toast.success("Transaction deleted");
-      refresh();
-      onDataChange?.();
-    } catch {
-      toast.error("Failed to delete transaction");
-    }
-  }
+  const handleDelete = useCallback(
+    async (id: string) => {
+      try {
+        await apiDeleteTransaction(id);
+        toast.success("Transaction deleted");
+        refresh();
+        onDataChange?.();
+      } catch {
+        toast.error("Failed to delete transaction");
+      }
+    },
+    [toast, refresh, onDataChange],
+  );
 
-  const categoryMap = new Map(categories.map((c) => [c.id, c]));
-  const accountMap = new Map(accounts.map((a) => [a.id, a]));
+  const handleDeleteTarget = useCallback((id: string) => setDeleteTargetId(id), []);
 
-  const filteredTransactions = transactions.filter((t) => {
-    if (selectedAccountId && t.accountId !== selectedAccountId) return false;
-    if (selectedCategoryId && t.categoryId !== selectedCategoryId) return false;
-    return true;
-  });
+  const categoryMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  const accountMap = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
 
-  const incomeTransactions = filteredTransactions.filter((t) => {
-    const cat = categoryMap.get(t.categoryId);
-    return cat?.kind === "income";
-  });
+  const filteredTransactions = useMemo(
+    () =>
+      transactions.filter((t) => {
+        if (selectedAccountId && t.accountId !== selectedAccountId) return false;
+        if (selectedCategoryId && t.categoryId !== selectedCategoryId) return false;
+        return true;
+      }),
+    [transactions, selectedAccountId, selectedCategoryId],
+  );
 
-  const expenseTransactions = filteredTransactions.filter((t) => {
-    const cat = categoryMap.get(t.categoryId);
-    return cat?.kind === "expense";
-  });
+  const incomeTransactions = useMemo(
+    () =>
+      filteredTransactions.filter((t) => {
+        const cat = categoryMap.get(t.categoryId);
+        return cat?.kind === "income";
+      }),
+    [filteredTransactions, categoryMap],
+  );
 
-  const totalIncomeMinor = incomeTransactions.reduce((acc, t) => acc + t.amountMinor, 0);
-  const totalExpenseMinor = expenseTransactions.reduce((acc, t) => acc + t.amountMinor, 0);
+  const expenseTransactions = useMemo(
+    () =>
+      filteredTransactions.filter((t) => {
+        const cat = categoryMap.get(t.categoryId);
+        return cat?.kind === "expense";
+      }),
+    [filteredTransactions, categoryMap],
+  );
+
+  const totalIncomeMinor = useMemo(
+    () => incomeTransactions.reduce((acc, t) => acc + t.amountMinor, 0),
+    [incomeTransactions],
+  );
+  const totalExpenseMinor = useMemo(
+    () => expenseTransactions.reduce((acc, t) => acc + t.amountMinor, 0),
+    [expenseTransactions],
+  );
 
   const selectedCategory = selectedCategoryId ? categoryMap.get(selectedCategoryId) : null;
   const isIncomeCategoryFilter = selectedCategory?.kind === "income";
@@ -279,7 +302,6 @@ export function TransactionList({
               : "grid-cols-1 md:grid-cols-2"
           } gap-4 items-start`}
         >
-          {/* Left Column / Income Section */}
           {(!isExpenseCategoryFilter || incomeTransactions.length > 0) && (
             <div className="space-y-2.5 p-3 rounded-xl glass border border-emerald-500/10">
               <div className="flex items-center justify-between pb-1.5 border-b border-emerald-500/20">
@@ -297,12 +319,11 @@ export function TransactionList({
                 categoryMap={categoryMap}
                 accountMap={accountMap}
                 onEdit={onEditTransaction}
-                onDelete={(id) => setDeleteTargetId(id)}
+                onDelete={handleDeleteTarget}
               />
             </div>
           )}
 
-          {/* Right Column / Expenses Section */}
           {(!isIncomeCategoryFilter || expenseTransactions.length > 0) && (
             <div className="space-y-2.5 p-3 rounded-xl glass border border-amber-500/10">
               <div className="flex items-center justify-between pb-1.5 border-b border-amber-500/20">
@@ -320,7 +341,7 @@ export function TransactionList({
                 categoryMap={categoryMap}
                 accountMap={accountMap}
                 onEdit={onEditTransaction}
-                onDelete={(id) => setDeleteTargetId(id)}
+                onDelete={handleDeleteTarget}
               />
             </div>
           )}

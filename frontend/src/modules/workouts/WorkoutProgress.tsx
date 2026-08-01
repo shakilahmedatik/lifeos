@@ -1,7 +1,8 @@
 import { Activity, CalendarDays, ChevronRight, Clock, Dumbbell, Target, Zap } from "lucide-react";
-import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
+import { useMemo } from "react";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent } from "../../components/ui/Card.js";
+import { SimpleBarChart } from "../../components/ui/charts/SimpleBarChart.js";
 import { StatCard } from "../../components/ui/StatCard.js";
 import { useWorkoutSessions, useWorkoutStats, useWorkouts } from "./useWorkouts.js";
 
@@ -16,6 +17,47 @@ export function WorkoutProgress({ workoutId, onViewHistory, onViewSession }: Wor
   const { sessions, loading: sessionsLoading } = useWorkoutSessions();
   const { workouts, loading: workoutsLoading } = useWorkouts();
 
+  const completedSessions = useMemo(() => {
+    const filtered = workoutId ? sessions.filter((s) => s.workoutId === workoutId) : sessions;
+    return filtered
+      .filter((s) => s.completedAt)
+      .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
+  }, [sessions, workoutId]);
+
+  const stats = useMemo(() => {
+    const totalDuration = completedSessions.reduce((acc, s) => acc + (s.durationSeconds || 0), 0);
+    const avgDuration = completedSessions.length > 0 ? totalDuration / completedSessions.length : 0;
+
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      return date.toISOString().split("T")[0];
+    }).reverse();
+
+    const sessionsPerDay = last7Days.map(
+      (date) => completedSessions.filter((s) => s.startedAt.startsWith(date)).length,
+    );
+
+    const chartData = last7Days.map((date, index) => ({
+      label: new Date(date).toLocaleDateString("en", { weekday: "short" }),
+      value: sessionsPerDay[index],
+      fullDate: new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+    }));
+
+    const thisWeekTotal = sessionsPerDay.reduce((a, b) => a + b, 0);
+    const weeklyGoal = 4;
+    const goalProgress = Math.min(thisWeekTotal / weeklyGoal, 1);
+
+    return {
+      totalDuration,
+      avgDuration,
+      chartData,
+      thisWeekTotal,
+      weeklyGoal,
+      goalProgress,
+    };
+  }, [completedSessions]);
+
   if (statsLoading || sessionsLoading || workoutsLoading) {
     return (
       <div className="space-y-4 animate-pulse">
@@ -25,60 +67,30 @@ export function WorkoutProgress({ workoutId, onViewHistory, onViewSession }: Wor
     );
   }
 
-  const filteredSessions = workoutId ? sessions.filter((s) => s.workoutId === workoutId) : sessions;
-  const completedSessions = filteredSessions
-    .filter((s) => s.completedAt)
-    .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime());
-
-  const totalDuration = completedSessions.reduce((acc, s) => acc + (s.durationSeconds || 0), 0);
-  const avgDuration = completedSessions.length > 0 ? totalDuration / completedSessions.length : 0;
-
-  const last7Days = Array.from({ length: 7 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() - i);
-    return date.toISOString().split("T")[0];
-  }).reverse();
-
-  const sessionsPerDay = last7Days.map((date) => {
-    return completedSessions.filter((s) => s.startedAt.startsWith(date)).length;
-  });
-
-  const chartData = last7Days.map((date, index) => ({
-    date: new Date(date).toLocaleDateString("en", { weekday: "short" }),
-    fullDate: new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
-    sessions: sessionsPerDay[index],
-  }));
-
-  const thisWeekTotal = sessionsPerDay.reduce((a, b) => a + b, 0);
-  const weeklyGoal = 4;
-  const goalProgress = Math.min(thisWeekTotal / weeklyGoal, 1);
   const circleRadius = 40;
   const circleCircumference = 2 * Math.PI * circleRadius;
-  const strokeDashoffset = circleCircumference - goalProgress * circleCircumference;
-
+  const strokeDashoffset = circleCircumference - stats.goalProgress * circleCircumference;
   const recentSessions = completedSessions.slice(0, 2);
 
   return (
     <div className="space-y-4">
-      {/* Row 1: Stat Cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         <StatCard label="Total Workouts" value={completedSessions.length} icon={Dumbbell} />
         <StatCard
           label="Total Time"
-          value={Math.round(totalDuration / 60)}
+          value={Math.round(stats.totalDuration / 60)}
           icon={Clock}
           format={(n) => `${n} min`}
         />
         <StatCard
           label="Avg Duration"
-          value={Math.round(avgDuration / 60)}
+          value={Math.round(stats.avgDuration / 60)}
           icon={Activity}
           format={(n) => `${n} min`}
         />
-        <StatCard label="This Week" value={thisWeekTotal} icon={Zap} />
+        <StatCard label="This Week" value={stats.thisWeekTotal} icon={Zap} />
       </div>
 
-      {/* Row 2: Recent History & Weekly Goal */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-3">
         <Card className="lg:col-span-2 flex flex-col h-full">
           <div className="flex items-center justify-between p-3 border-b border-border/50">
@@ -164,78 +176,32 @@ export function WorkoutProgress({ workoutId, onViewHistory, onViewSession }: Wor
             </svg>
             <div className="absolute inset-0 flex flex-col items-center justify-center">
               <span className="text-2xl font-bold text-primary tabular-nums tracking-tighter">
-                {thisWeekTotal}
+                {stats.thisWeekTotal}
               </span>
               <span className="text-[10px] text-muted uppercase tracking-widest font-medium mt-0.5">
-                / {weeklyGoal}
+                / {stats.weeklyGoal}
               </span>
             </div>
           </div>
 
           <p className="text-[11px] text-muted mt-3 max-w-45">
-            {thisWeekTotal >= weeklyGoal
+            {stats.thisWeekTotal >= stats.weeklyGoal
               ? "Goal reached! Amazing work this week."
-              : `${weeklyGoal - thisWeekTotal} more ${weeklyGoal - thisWeekTotal === 1 ? "workout" : "workouts"} to reach your goal.`}
+              : `${stats.weeklyGoal - stats.thisWeekTotal} more ${stats.weeklyGoal - stats.thisWeekTotal === 1 ? "workout" : "workouts"} to reach your goal.`}
           </p>
         </Card>
       </div>
 
-      {/* Row 3: Activity Chart */}
       <Card className="w-full">
         <CardContent className="p-4">
           <h4 className="text-sm font-semibold text-primary mb-2 uppercase tracking-wider">
             Last 7 Days Activity
           </h4>
-          <div className="w-full h-36">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <XAxis
-                  dataKey="date"
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: "var(--color-muted)" }}
-                  dy={10}
-                />
-                <YAxis
-                  axisLine={false}
-                  tickLine={false}
-                  tick={{ fontSize: 12, fill: "var(--color-muted)" }}
-                  dx={-10}
-                  allowDecimals={false}
-                />
-                <CartesianGrid
-                  strokeDasharray="3 3"
-                  vertical={false}
-                  stroke="var(--color-border)"
-                />
-                <Tooltip
-                  cursor={{ fill: "var(--color-card-hover)", opacity: 0.4 }}
-                  content={({ active, payload }) => {
-                    if (active && payload?.length) {
-                      return (
-                        <div className="glass p-2 rounded-lg text-xs shadow-lg border border-border/50">
-                          <div className="font-semibold text-primary mb-1">
-                            {payload[0].payload.fullDate}
-                          </div>
-                          <div className="text-accent font-medium">
-                            {payload[0].value} {payload[0].value === 1 ? "session" : "sessions"}
-                          </div>
-                        </div>
-                      );
-                    }
-                    return null;
-                  }}
-                />
-                <Bar
-                  dataKey="sessions"
-                  fill="var(--color-accent)"
-                  radius={[4, 4, 0, 0]}
-                  maxBarSize={40}
-                  animationDuration={1500}
-                />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          <SimpleBarChart
+            data={stats.chartData}
+            height={160}
+            formatValue={(v) => `${v} ${v === 1 ? "session" : "sessions"}`}
+          />
         </CardContent>
       </Card>
     </div>

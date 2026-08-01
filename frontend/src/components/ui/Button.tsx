@@ -1,13 +1,11 @@
 import { Loader2 } from "lucide-react";
-import type { HTMLMotionProps } from "motion/react";
-import { motion, useReducedMotion } from "motion/react";
 import type { ReactNode } from "react";
 import { cn } from "../../lib/utils.js";
 
 type Variant = "primary" | "secondary" | "ghost" | "danger";
 type Size = "sm" | "md" | "lg";
 
-interface ButtonProps extends Omit<HTMLMotionProps<"button">, "ref" | "children"> {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
@@ -38,14 +36,10 @@ export default function Button({
   disabled,
   ...props
 }: ButtonProps) {
-  const reduce = useReducedMotion();
-
   return (
-    <motion.button
-      whileTap={reduce ? undefined : { scale: 0.97 }}
-      transition={{ type: "spring", stiffness: 400, damping: 25 }}
+    <button
       className={cn(
-        "inline-flex items-center justify-center font-medium rounded-lg transition-colors duration-200",
+        "inline-flex items-center justify-center font-medium rounded-lg transition-colors duration-200 active:scale-[0.97]",
         "focus:outline-none focus:ring-2 focus:ring-accent/40 focus:ring-offset-1 focus:ring-offset-surface",
         "disabled:opacity-50 disabled:pointer-events-none",
         variantStyles[variant],
@@ -57,7 +51,7 @@ export default function Button({
     >
       {loading ? <Loader2 className="animate-spin" size={16} /> : icon ? icon : null}
       {children}
-    </motion.button>
+    </button>
   );
 }
 

@@ -23,6 +23,9 @@
         "useKeyWithClickEvents": "off",
         "noStaticElementInteractions": "off",
         "useSemanticElements": "off"
+      },
+      "suspicious": {
+        "noArrayIndexKey": "off"
       }
     }
   },

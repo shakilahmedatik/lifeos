@@ -1,4 +1,3 @@
-import { motion, useReducedMotion } from "motion/react";
 import type { ElementType, ReactNode } from "react";
 import { cn } from "../../lib/utils.js";
 
@@ -11,12 +10,8 @@ interface EmptyStateProps {
 }
 
 export function EmptyState({ icon: Icon, title, description, action, className }: EmptyStateProps) {
-  const reduce = useReducedMotion();
   return (
-    <motion.div
-      initial={reduce ? false : { opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, ease: [0.23, 1, 0.32, 1] }}
+    <div
       className={cn("flex flex-col items-center justify-center py-12 px-4 text-center", className)}
     >
       {Icon && (
@@ -27,7 +22,7 @@ export function EmptyState({ icon: Icon, title, description, action, className }
       <h3 className="text-sm font-semibold text-primary mb-1">{title}</h3>
       {description && <p className="text-xs text-muted max-w-xs">{description}</p>}
       {action && <div className="mt-4">{action}</div>}
-    </motion.div>
+    </div>
   );
 }
 

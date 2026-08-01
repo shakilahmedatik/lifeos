@@ -42,7 +42,7 @@ export function ToastContainer({ toasts }: { toasts: Toast[] }) {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`pointer-events-auto px-4 py-3 rounded-xl text-sm font-medium shadow-lg border backdrop-blur-xl animate-fade-in ${
+          className={`pointer-events-auto px-4 py-3 rounded-xl text-sm font-medium shadow-lg border animate-fade-in ${
             toast.type === "error"
               ? "bg-red-900/80 border-red-700/50 text-red-200"
               : toast.type === "success"
