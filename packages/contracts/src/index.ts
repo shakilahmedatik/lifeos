@@ -45,7 +45,7 @@ export interface NewTaskInput {
   referenceId?: string;
 }
 
-export type HabitFrequency = "daily" | "weekly";
+export type HabitType = "water" | "walking" | "prayer" | "timed" | "boolean";
 
 export type HabitCategory =
   | "health"
@@ -55,52 +55,116 @@ export type HabitCategory =
   | "fitness"
   | "general";
 
-export interface Habit {
+// --- Type-specific configs ---
+export interface WaterHabitConfig {
+  type: "water";
+  dailyGoalMl: number;
+  sessionPresetsMl: number[];
+  reminderIntervalMin?: number;
+}
+
+export interface WalkingHabitConfig {
+  type: "walking";
+  dailyGoal: number;
+  unit: "steps" | "km";
+}
+
+export interface PrayerHabitConfig {
+  type: "prayer";
+  prayers: { name: string; time: string }[];
+}
+
+export interface TimedHabitConfig {
+  type: "timed";
+  dailyGoalMinutes: number;
+}
+
+export interface BooleanHabitConfig {
+  type: "boolean";
+}
+
+export type HabitConfig =
+  | WaterHabitConfig
+  | WalkingHabitConfig
+  | PrayerHabitConfig
+  | TimedHabitConfig
+  | BooleanHabitConfig;
+
+// --- Core domain types ---
+export interface HabitDefinition {
   id: string;
   name: string;
-  frequency: HabitFrequency;
-  targetCount: number;
+  type: HabitType;
   category: HabitCategory;
+  icon?: string;
+  color?: string;
+  config: HabitConfig;
+  archived: boolean;
+  sortOrder: number;
   createdAt: string;
   updatedAt: string;
 }
 
-export interface NewHabitInput {
+export interface NewHabitDefinitionInput {
   name: string;
-  frequency?: HabitFrequency;
-  targetCount?: number;
+  type: HabitType;
   category?: HabitCategory;
+  icon?: string;
+  color?: string;
+  config: HabitConfig;
 }
 
-export interface HabitLog {
+export interface UpdateHabitDefinitionInput {
+  name?: string;
+  category?: HabitCategory;
+  icon?: string;
+  color?: string;
+  config?: HabitConfig;
+}
+
+export interface HabitLogEntry {
   id: string;
   habitId: string;
   date: string;
-  completedAt: string;
+  value: number;
+  meta?: string;
+  loggedAt: string;
 }
 
-export interface NewHabitLogInput {
+export interface NewHabitLogEntryInput {
   habitId: string;
   date: string;
+  value: number;
+  meta?: string;
 }
 
-export interface HabitWithStreak extends Habit {
+// --- Progress & analytics ---
+export interface HabitDailyProgress {
+  habit: HabitDefinition;
+  date: string;
+  currentValue: number;
+  targetValue: number;
+  progress: number; // 0 to 1
+  logs: HabitLogEntry[];
   currentStreak: number;
   longestStreak: number;
-  loggedToday: boolean;
 }
 
-export interface HabitStats {
+export interface HabitAnalyticsData {
   habitId: string;
+  period: "week" | "month";
+  dailyValues: { date: string; value: number; target: number }[];
   completionRate: number;
   currentStreak: number;
   longestStreak: number;
-  totalCompletions: number;
+  totalValue: number;
+  averageValue: number;
 }
 
 export interface WeeklyHabitSummary {
   habitId: string;
   name: string;
+  type: HabitType;
   category: HabitCategory;
   completionCount: number;
   targetCount: number;
@@ -117,6 +181,34 @@ export interface WeeklySummary {
   dailyBreakdown: DailyCompletion[];
   topHabits: WeeklyHabitSummary[];
   overallCompletionRate: number;
+}
+
+// --- Backward compat aliases (used during transition) ---
+/** @deprecated Use HabitDefinition */
+export type Habit = HabitDefinition;
+/** @deprecated Use NewHabitDefinitionInput */
+export type NewHabitInput = NewHabitDefinitionInput;
+/** @deprecated Use HabitLogEntry */
+export type HabitLog = HabitLogEntry;
+/** @deprecated Use NewHabitLogEntryInput */
+export type NewHabitLogInput = NewHabitLogEntryInput;
+export type HabitFrequency = "daily" | "weekly";
+
+export interface HabitWithStreak extends HabitDefinition {
+  currentStreak: number;
+  longestStreak: number;
+  loggedToday: boolean;
+  todayProgress: number;
+  todayValue: number;
+  todayTarget: number;
+}
+
+export interface HabitStats {
+  habitId: string;
+  completionRate: number;
+  currentStreak: number;
+  longestStreak: number;
+  totalCompletions: number;
 }
 
 export interface DashboardSummary {
@@ -340,12 +432,14 @@ export interface FinanceDashboardWidget {
 export interface SkillArea {
   id: string;
   name: string;
+  weeklyGoalHours: number;
   createdAt: string;
   updatedAt: string;
 }
 
 export interface NewSkillAreaInput {
   name: string;
+  weeklyGoalHours?: number;
 }
 
 export type LearningResourceType = "course" | "book" | "project" | "article";
@@ -391,6 +485,7 @@ export interface NewLearningLogInput {
 
 export interface UpdateSkillAreaInput {
   name?: string;
+  weeklyGoalHours?: number;
 }
 
 export interface UpdateLearningResourceInput {
@@ -494,6 +589,81 @@ export interface NotificationWithTask extends Notification {
   taskTitle: string;
   taskDate: string;
   taskStartTime: string;
+}
+
+// --- Reminders ---
+export type ReminderKind = "reminder" | "event";
+
+export interface Reminder {
+  id: string;
+  title: string;
+  time: string; // HH:MM
+  date: string | null; // YYYY-MM-DD, null = recurring daily
+  kind: ReminderKind;
+  completed: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NewReminderInput {
+  title: string;
+  time: string;
+  date?: string | null;
+  kind?: ReminderKind;
+}
+
+export interface UpdateReminderInput {
+  title?: string;
+  time?: string;
+  date?: string | null;
+  kind?: ReminderKind;
+  completed?: boolean;
+}
+
+// --- Enriched Dashboard Summary ---
+export interface DashboardHabitConsistency {
+  habitId: string;
+  name: string;
+  color: string;
+  days: number[]; // 0-100 completion % for last 7 days
+  currentStreak: number;
+  weekAverage: number;
+}
+
+export interface DashboardWorkoutDay {
+  day: string;
+  [workoutName: string]: string | number;
+}
+
+export interface DashboardSkillProgress {
+  skillAreaId: string;
+  name: string;
+  hoursThisWeek: number;
+  weeklyGoalHours: number;
+  pct: number;
+}
+
+export interface DashboardNewsItem {
+  id: string;
+  source: string;
+  title: string;
+  url: string;
+  publishedAt: string | null;
+}
+
+export interface DashboardSummary {
+  now: Task | null;
+  next: Task | null;
+  todayCount: number;
+  todayDoneCount: number;
+  dueHabits: HabitWithStreak[];
+  previous: Task | null;
+  upcomingReminders: Reminder[];
+  habitConsistency: DashboardHabitConsistency[];
+  workoutWeek: DashboardWorkoutDay[];
+  workoutLabels: string[];
+  skillsProgress: DashboardSkillProgress[];
+  newsItems: DashboardNewsItem[];
 }
 
 export {

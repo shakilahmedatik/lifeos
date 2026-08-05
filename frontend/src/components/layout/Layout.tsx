@@ -25,9 +25,9 @@ export default function Layout() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen relative overflow-hidden bg-surface">
+      <div className="min-h-screen  relative overflow-hidden bg-surface">
         <main className="min-h-screen relative z-10">
-          <div className="max-w-7xl mx-auto px-6 pt-14 pb-24">
+          <div className=" w-full mx-auto px-6 pt-14 pb-24">
             <Outlet />
           </div>
         </main>

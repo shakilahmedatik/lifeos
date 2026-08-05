@@ -34,6 +34,7 @@ function createMockSkillAreaRepo(): SkillAreaRepository & { areas: Map<string, S
       const area: SkillArea = {
         id,
         name: input.name,
+        weeklyGoalHours: input.weeklyGoalHours ?? 5,
         createdAt: now,
         updatedAt: now,
       };

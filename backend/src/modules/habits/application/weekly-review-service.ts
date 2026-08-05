@@ -1,6 +1,19 @@
+import { isCompleted } from "../domain/rules.js";
 import type { DailyCompletion, WeeklyHabitSummary, WeeklySummary } from "../domain/types.js";
 import type { HabitLogRepository } from "../ports/habit-log-repository.js";
 import type { HabitRepository } from "../ports/habit-repository.js";
+
+function parseLocalDate(dateStr: string): Date {
+  const [y, m, d] = dateStr.split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d));
+}
+
+function formatDate(date: Date): string {
+  const y = date.getUTCFullYear();
+  const m = String(date.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(date.getUTCDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
 
 export class WeeklyReviewService {
   constructor(
@@ -10,18 +23,32 @@ export class WeeklyReviewService {
 
   getWeeklySummary(weekStart: string): WeeklySummary {
     const weekEnd = this.getWeekEnd(weekStart);
-    const habits = this.habitRepo.getAll();
+    const habits = this.habitRepo.getAll(false);
     const weekLogs = this.habitLogRepo.getByDateRange(weekStart, weekEnd);
 
     const habitsSummary: WeeklyHabitSummary[] = habits.map((habit) => {
       const habitLogs = weekLogs.filter((l) => l.habitId === habit.id);
-      const targetCount = habit.frequency === "daily" ? 7 : 1;
-      const completionCount = habitLogs.length;
+
+      const targetCount = 7;
+      let completionCount = 0;
+
+      const startDate = parseLocalDate(weekStart);
+      for (let i = 0; i < 7; i++) {
+        const date = new Date(startDate);
+        date.setUTCDate(startDate.getUTCDate() + i);
+        const dateStr = formatDate(date);
+        const dayLogs = habitLogs.filter((l) => l.date === dateStr);
+        if (isCompleted(habit, dayLogs)) {
+          completionCount++;
+        }
+      }
+
       const completionRate = targetCount > 0 ? completionCount / targetCount : 0;
 
       return {
         habitId: habit.id,
         name: habit.name,
+        type: habit.type,
         category: habit.category,
         completionCount,
         targetCount,
@@ -30,15 +57,23 @@ export class WeeklyReviewService {
     });
 
     const dailyBreakdown: DailyCompletion[] = [];
-    const startDate = new Date(weekStart);
+    const startDate = parseLocalDate(weekStart);
     for (let i = 0; i < 7; i++) {
       const date = new Date(startDate);
-      date.setDate(date.getDate() + i);
-      const dateStr = date.toISOString().split("T")[0];
-      const dayLogs = weekLogs.filter((l) => l.date === dateStr);
+      date.setUTCDate(startDate.getUTCDate() + i);
+      const dateStr = formatDate(date);
+
+      let dayCompletions = 0;
+      for (const habit of habits) {
+        const dayLogs = weekLogs.filter((l) => l.habitId === habit.id && l.date === dateStr);
+        if (isCompleted(habit, dayLogs)) {
+          dayCompletions++;
+        }
+      }
+
       dailyBreakdown.push({
         date: dateStr,
-        completions: dayLogs.length,
+        completions: dayCompletions,
       });
     }
 
@@ -59,9 +94,9 @@ export class WeeklyReviewService {
   }
 
   private getWeekEnd(weekStart: string): string {
-    const start = new Date(weekStart);
+    const start = parseLocalDate(weekStart);
     const end = new Date(start);
-    end.setDate(end.getDate() + 6);
-    return end.toISOString().split("T")[0];
+    end.setUTCDate(start.getUTCDate() + 6);
+    return formatDate(end);
   }
 }

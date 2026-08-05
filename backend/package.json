@@ -10,7 +10,7 @@
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "tsc && mkdir -p dist/shared/migrations && cp src/shared/migrations/*.sql dist/shared/migrations/",
     "start": "node dist/index.js",
     "test": "vitest run"
   },

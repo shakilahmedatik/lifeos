@@ -21,6 +21,7 @@ export function initHabitsModule(db: Database.Database) {
     habitLogService,
     habitStatsService,
     weeklyReviewService,
+    habitLogRepo,
   );
 
   return {

@@ -1,6 +1,13 @@
-import type { NewNotificationInput, Task } from "@lifeos/contracts";
+import type { NewNotificationInput, NewReminderInput, Reminder, Task } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
-import { Bell as BellIcon, Plus as PlusIcon, RefreshCw as RefreshCwIcon } from "lucide-react";
+import {
+  Bell as BellIcon,
+  Calendar as CalendarIcon,
+  CheckCircle2,
+  Plus as PlusIcon,
+  RefreshCw as RefreshCwIcon,
+  Trash2,
+} from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
 import Badge from "../components/ui/Badge.js";
@@ -12,29 +19,56 @@ import { PageHeader } from "../components/ui/PageHeader.js";
 import { Select } from "../components/ui/Select.js";
 import { api } from "../lib/api.js";
 
-type Reminder = {
+type TaskReminder = {
   taskId: Task["id"];
   minutesBefore: NonNullable<Task["reminderMinutesBefore"]>;
   sound: "none" | "default";
 };
 
+function getCurrentTimeStr(): string {
+  const now = new Date();
+  return `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+}
+
 export default function NotificationsPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showForm, setShowForm] = useState(false);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showTaskForm, setShowTaskForm] = useState(false);
+  const [showReminderForm, setShowReminderForm] = useState(false);
+  const [taskReminders, setTaskReminders] = useState<TaskReminder[]>([]);
+
+  // Task reminder form state
   const [selectedTask, setSelectedTask] = useState("");
   const [minutesBefore, setMinutesBefore] = useState(15);
   const [sound, setSound] = useState("default");
+
+  // Standalone reminder form state
+  const [reminderTitle, setReminderTitle] = useState("");
+  const [reminderTime, setReminderTime] = useState(getCurrentTimeStr);
+  const [reminderDate, setReminderDate] = useState(getClientDateString);
+  const [reminderKind, setReminderKind] = useState<"reminder" | "event">("reminder");
+
+  const openReminderModal = () => {
+    setReminderTime(getCurrentTimeStr());
+    setReminderDate(getClientDateString());
+    setShowReminderForm(true);
+  };
+
   const toast = useAppToast();
 
-  const fetchTasks = useCallback(async () => {
+  const fetchData = useCallback(async () => {
     try {
       const today = getClientDateString();
-      const data = await api.getTasks(today);
-      setTasks(data);
-      const r: Reminder[] = [];
-      for (const t of data) {
+      const [tasksData, remindersData] = await Promise.all([
+        api.getTasks(today),
+        api.getReminders(),
+      ]);
+      setTasks(tasksData);
+      setReminders(remindersData);
+
+      const r: TaskReminder[] = [];
+      for (const t of tasksData) {
         if (t.reminderMinutesBefore) {
           r.push({
             taskId: t.id,
@@ -43,19 +77,19 @@ export default function NotificationsPage() {
           });
         }
       }
-      setReminders(r);
+      setTaskReminders(r);
     } catch {
-      toast.error("Failed to load tasks");
+      toast.error("Failed to load reminders & alerts");
     } finally {
       setLoading(false);
     }
   }, [toast]);
 
   useEffect(() => {
-    fetchTasks();
-  }, [fetchTasks]);
+    fetchData();
+  }, [fetchData]);
 
-  const handleSetReminder = async (e: React.FormEvent) => {
+  const handleSetTaskReminder = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedTask) return;
     const task = tasks.find((t) => t.id === selectedTask);
@@ -77,131 +111,306 @@ export default function NotificationsPage() {
         };
         await api.createNotification(input);
       }
-      setShowForm(false);
-      fetchTasks();
+      setShowTaskForm(false);
+      fetchData();
+      toast.success("Task reminder set");
     } catch {
-      toast.error("Failed to set reminder");
+      toast.error("Failed to set task reminder");
     }
   };
 
-  const handleRemoveReminder = async (taskId: string) => {
+  const handleCreateReminder = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reminderTitle.trim()) return;
+    try {
+      const input: NewReminderInput = {
+        title: reminderTitle.trim(),
+        time: reminderTime,
+        date: reminderDate || null,
+        kind: reminderKind,
+      };
+      await api.createReminder(input);
+      setShowReminderForm(false);
+      setReminderTitle("");
+      setReminderDate("");
+      fetchData();
+      toast.success("Item created successfully");
+    } catch {
+      toast.error("Failed to create item");
+    }
+  };
+
+  const handleRemoveTaskReminder = async (taskId: string) => {
     try {
       await api.deleteNotificationsByTaskId(taskId);
       await api.updateTask(taskId, {
         reminderMinutesBefore: null,
         reminderSilent: true,
       });
-      fetchTasks();
+      fetchData();
     } catch {
       toast.error("Failed to remove reminder");
+    }
+  };
+
+  const handleDeleteReminder = async (id: string) => {
+    try {
+      await api.deleteReminder(id);
+      fetchData();
+      toast.success("Reminder deleted");
+    } catch {
+      toast.error("Failed to delete reminder");
+    }
+  };
+
+  const handleToggleReminderDone = async (id: string, currentStatus: boolean) => {
+    try {
+      await api.updateReminder(id, { completed: !currentStatus });
+      fetchData();
+    } catch {
+      toast.error("Failed to update reminder");
     }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <PageHeader
-        title="Alerts"
-        description="Manage reminders and notifications"
+        title="Reminders & Alerts"
+        description="Manage your standalone reminders, events, and task notifications"
         actions={
-          <>
+          <div className="flex items-center gap-2">
             <Button
               variant="secondary"
               size="sm"
               icon={<RefreshCwIcon size={14} />}
-              onClick={fetchTasks}
+              onClick={fetchData}
             />
-            <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(true)}>
-              Add Reminder
+            <Button size="sm" icon={<PlusIcon size={14} />} onClick={openReminderModal}>
+              New Reminder
             </Button>
-          </>
+            <Button
+              size="sm"
+              variant="secondary"
+              icon={<PlusIcon size={14} />}
+              onClick={() => setShowTaskForm(true)}
+            >
+              Task Alert
+            </Button>
+          </div>
         }
       />
 
       {loading ? (
         <div className="space-y-3">
-          {[1, 2].map((i) => (
+          {[1, 2, 3].map((i) => (
             <div key={i} className="h-16 bg-gray-800/60 rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
-        <>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Standalone Reminders & Events */}
           <Card>
             <CardHeader>
-              <CardTitle>
-                <BellIcon size={16} className="text-blue-400" />
-                <span>Active Reminders</span>
+              <CardTitle className="flex items-center gap-2">
+                <BellIcon size={16} className="text-amber-400" />
+                <span>Reminders & Events</span>
               </CardTitle>
             </CardHeader>
             <div className="space-y-2">
               {reminders.length === 0 ? (
-                <EmptyState title="No active reminders" />
+                <EmptyState title="No reminders found" />
               ) : (
-                reminders.map((r) => {
-                  const task = tasks.find((t) => t.id === r.taskId);
-                  if (!task) return null;
-                  return (
-                    <div
-                      key={r.taskId}
-                      className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0"
-                    >
+                reminders.map((r) => (
+                  <div
+                    key={r.id}
+                    className="flex items-center justify-between py-2.5 px-2 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 rounded-lg transition-colors"
+                  >
+                    <div className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        onClick={() => handleToggleReminderDone(r.id, r.completed)}
+                        className={`p-1 rounded-full border transition-colors ${
+                          r.completed
+                            ? "bg-emerald-950/60 border-emerald-700 text-emerald-400"
+                            : "border-gray-600 text-gray-500 hover:text-amber-400"
+                        }`}
+                      >
+                        <CheckCircle2 size={14} />
+                      </button>
                       <div>
-                        <p className="text-sm font-medium text-gray-200">{task.title}</p>
-                        <p className="text-xs text-gray-500">
-                          {r.minutesBefore} min before · Sound: {r.sound}
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`text-sm font-medium ${r.completed ? "line-through text-gray-500" : "text-gray-200"}`}
+                          >
+                            {r.title}
+                          </span>
+                          <Badge variant={r.kind === "reminder" ? "orange" : "purple"} size="sm">
+                            {r.kind}
+                          </Badge>
+                        </div>
+                        <p className="text-xs font-mono text-gray-500 mt-0.5">
+                          Time: {r.time} {r.date ? `· Date: ${r.date}` : "· Daily"}
                         </p>
                       </div>
-                      <button
-                        onClick={() => handleRemoveReminder(r.taskId)}
-                        className="px-2 py-1 rounded text-xs text-gray-500 hover:text-red-400 hover:bg-red-900/30 transition-colors"
-                      >
-                        Remove
-                      </button>
                     </div>
-                  );
-                })
-              )}
-            </div>
-          </Card>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Today's Tasks</CardTitle>
-            </CardHeader>
-            <div className="space-y-2">
-              {tasks.length === 0 ? (
-                <EmptyState title="No tasks today" />
-              ) : (
-                tasks.map((t) => (
-                  <div
-                    key={t.id}
-                    className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0"
-                  >
-                    <div className="flex items-center gap-2">
-                      <Badge
-                        variant={
-                          t.status === "done"
-                            ? "success"
-                            : t.status === "in_progress"
-                              ? "info"
-                              : "default"
-                        }
-                        size="sm"
-                      >
-                        {t.status}
-                      </Badge>
-                      <span className="text-sm text-gray-200">{t.title}</span>
-                    </div>
-                    <span className="text-xs text-gray-500">{t.startTime}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteReminder(r.id)}
+                      className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                      title="Delete item"
+                    >
+                      <Trash2 size={14} />
+                    </button>
                   </div>
                 ))
               )}
             </div>
           </Card>
-        </>
+
+          {/* Task Notifications */}
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarIcon size={16} className="text-blue-400" />
+                  <span>Task Alerts</span>
+                </CardTitle>
+              </CardHeader>
+              <div className="space-y-2">
+                {taskReminders.length === 0 ? (
+                  <EmptyState title="No active task alerts" />
+                ) : (
+                  taskReminders.map((r) => {
+                    const task = tasks.find((t) => t.id === r.taskId);
+                    if (!task) return null;
+                    return (
+                      <div
+                        key={r.taskId}
+                        className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0"
+                      >
+                        <div>
+                          <p className="text-sm font-medium text-gray-200">{task.title}</p>
+                          <p className="text-xs text-gray-500">
+                            {r.minutesBefore} min before · Sound: {r.sound}
+                          </p>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveTaskReminder(r.taskId)}
+                          className="px-2 py-1 rounded text-xs text-gray-500 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                        >
+                          Remove
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Today's Schedule</CardTitle>
+              </CardHeader>
+              <div className="space-y-2">
+                {tasks.length === 0 ? (
+                  <EmptyState title="No tasks scheduled today" />
+                ) : (
+                  tasks.map((t) => (
+                    <div
+                      key={t.id}
+                      className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Badge
+                          variant={
+                            t.status === "done"
+                              ? "success"
+                              : t.status === "in_progress"
+                                ? "info"
+                                : "default"
+                          }
+                          size="sm"
+                        >
+                          {t.status}
+                        </Badge>
+                        <span className="text-sm text-gray-200">{t.title}</span>
+                      </div>
+                      <span className="text-xs text-gray-500 font-mono">{t.startTime}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </Card>
+          </div>
+        </div>
       )}
 
-      <Modal open={showForm} onClose={() => setShowForm(false)} title="Set Reminder">
-        <form onSubmit={handleSetReminder} className="space-y-4">
+      {/* New Standalone Reminder/Event Modal */}
+      <Modal
+        open={showReminderForm}
+        onClose={() => setShowReminderForm(false)}
+        title="New Reminder or Event"
+      >
+        <form onSubmit={handleCreateReminder} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-secondary mb-1">Title</label>
+            <input
+              type="text"
+              required
+              placeholder="e.g. John's Birthday, Standup call, Take vitamins"
+              value={reminderTitle}
+              onChange={(e) => setReminderTitle(e.target.value)}
+              className="w-full bg-input/40 border border-border rounded-lg px-3 py-2 text-sm text-primary focus:outline-none focus:border-accent"
+            />
+          </div>
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Select
+                label="Type"
+                value={reminderKind}
+                onChange={(e) => setReminderKind(e.target.value as "reminder" | "event")}
+                options={[
+                  { value: "reminder", label: "Reminder" },
+                  { value: "event", label: "Event" },
+                ]}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-secondary mb-1">Time</label>
+              <input
+                type="time"
+                required
+                value={reminderTime}
+                onChange={(e) => setReminderTime(e.target.value)}
+                className="w-full bg-input/40 border border-border rounded-lg px-3 py-2 text-sm text-primary font-mono focus:outline-none focus:border-accent"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-secondary mb-1">
+                Date (Optional)
+              </label>
+              <input
+                type="date"
+                value={reminderDate}
+                onChange={(e) => setReminderDate(e.target.value)}
+                className="w-full bg-input/40 border border-border rounded-lg px-3 py-2 text-sm text-primary font-mono focus:outline-none focus:border-accent"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button variant="secondary" type="button" onClick={() => setShowReminderForm(false)}>
+              Cancel
+            </Button>
+            <Button type="submit">Save</Button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Task Alert Modal */}
+      <Modal open={showTaskForm} onClose={() => setShowTaskForm(false)} title="Set Task Alert">
+        <form onSubmit={handleSetTaskReminder} className="space-y-4">
           <div>
             <Select
               label="Task"
@@ -245,10 +454,10 @@ export default function NotificationsPage() {
             />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="secondary" type="button" onClick={() => setShowForm(false)}>
+            <Button variant="secondary" type="button" onClick={() => setShowTaskForm(false)}>
               Cancel
             </Button>
-            <Button type="submit">Set Reminder</Button>
+            <Button type="submit">Set Alert</Button>
           </div>
         </form>
       </Modal>

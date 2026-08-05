@@ -78,19 +78,100 @@ export const HabitCategorySchema = z.enum([
   "general",
 ]);
 
-export const HabitFrequencySchema = z.enum(["daily", "weekly"]);
+export const HabitTypeSchema = z.enum(["water", "walking", "prayer", "timed", "boolean"]);
 
-export const NewHabitInputSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
-  frequency: HabitFrequencySchema.optional(),
-  targetCount: z.number().int().positive().optional(),
-  category: HabitCategorySchema.optional(),
+// Type-specific config schemas
+export const WaterConfigSchema = z.object({
+  type: z.literal("water"),
+  dailyGoalMl: z.number().int().positive().max(10000),
+  sessionPresetsMl: z.array(z.number().int().positive().max(5000)).min(1).max(10),
+  reminderIntervalMin: z.number().int().positive().max(480).optional(),
 });
 
-export const NewHabitLogInputSchema = z.object({
-  habitId: z.string().min(1),
+export const WalkingConfigSchema = z.object({
+  type: z.literal("walking"),
+  dailyGoal: z.number().positive().max(100000),
+  unit: z.enum(["steps", "km"]),
+});
+
+export const PrayerConfigSchema = z.object({
+  type: z.literal("prayer"),
+  prayers: z
+    .array(
+      z.object({
+        name: z.string().min(1).max(50),
+        time: z.string().regex(/^\d{2}:\d{2}$/, "Time must be HH:MM"),
+      }),
+    )
+    .min(1)
+    .max(10),
+});
+
+export const TimedConfigSchema = z.object({
+  type: z.literal("timed"),
+  dailyGoalMinutes: z.number().int().positive().max(1440),
+});
+
+export const BooleanConfigSchema = z.object({
+  type: z.literal("boolean"),
+});
+
+export const HabitConfigSchema = z.discriminatedUnion("type", [
+  WaterConfigSchema,
+  WalkingConfigSchema,
+  PrayerConfigSchema,
+  TimedConfigSchema,
+  BooleanConfigSchema,
+]);
+
+export const NewHabitDefinitionSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+  type: HabitTypeSchema,
+  category: HabitCategorySchema.optional(),
+  icon: z.string().max(10).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
+    .optional(),
+  config: HabitConfigSchema,
+});
+
+export const UpdateHabitDefinitionSchema = z.object({
+  name: z.string().min(1, "Name is required").max(100, "Name is too long").optional(),
+  category: HabitCategorySchema.optional(),
+  icon: z.string().max(10).optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
+    .optional(),
+  config: HabitConfigSchema.optional(),
+});
+
+export const NewHabitLogEntrySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
+  value: z.number().min(0),
+  meta: z.string().max(500).optional(),
+});
+
+export const BatchLogHabitsSchema = z.object({
+  habitIds: z.array(z.string().min(1)),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
 });
+
+export const HabitReorderSchema = z.object({
+  orders: z.array(
+    z.object({
+      id: z.string().min(1),
+      sortOrder: z.number().int().min(0),
+    }),
+  ),
+});
+
+// Keep backward compat aliases
+/** @deprecated Use NewHabitDefinitionSchema */
+export const NewHabitInputSchema = NewHabitDefinitionSchema;
+/** @deprecated Use UpdateHabitDefinitionSchema */
+export const UpdateHabitSchema = UpdateHabitDefinitionSchema;
 
 export const AccountTypeSchema = z.enum(["cash", "bank", "card", "savings", "mfs"]);
 
@@ -268,11 +349,39 @@ export const CompleteSessionInputSchema = z.object({
 
 // Skills schemas
 export const NewSkillAreaInputSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name is too long"),
+  name: z.string().min(1, "Name is required"),
+  weeklyGoalHours: z.number().positive().optional(),
 });
 
 export const UpdateSkillAreaInputSchema = z.object({
-  name: z.string().min(1, "Name is required").max(100, "Name is too long").optional(),
+  name: z.string().min(1, "Name is required").optional(),
+  weeklyGoalHours: z.number().positive().optional(),
+});
+
+export const NewReminderSchema = z.object({
+  title: z.string().min(1, "Title is required"),
+  time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)"),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
+    .nullable()
+    .optional(),
+  kind: z.enum(["reminder", "event"]).optional(),
+});
+
+export const UpdateReminderSchema = z.object({
+  title: z.string().min(1, "Title is required").optional(),
+  time: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)")
+    .optional(),
+  date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
+    .nullable()
+    .optional(),
+  kind: z.enum(["reminder", "event"]).optional(),
+  completed: z.boolean().optional(),
 });
 
 export const LearningResourceTypeSchema = z.enum(["course", "book", "project", "article"]);

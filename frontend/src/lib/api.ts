@@ -5,8 +5,8 @@ import type {
   CategoryBreakdown,
   DashboardSummary,
   FinanceDashboardWidget,
-  Habit,
-  HabitLog,
+  HabitDefinition,
+  HabitLogEntry,
   HabitStats,
   HabitWithStreak,
   MonthlySummary,
@@ -14,10 +14,13 @@ import type {
   NewCategoryInput,
   NewHabitInput,
   NewNotificationInput,
+  NewReminderInput,
   NewTransactionInput,
   Notification,
+  Reminder,
   Task,
   Transaction,
+  UpdateReminderInput,
   WeeklySummary,
 } from "@lifeos/contracts";
 
@@ -59,25 +62,25 @@ export const api = {
   deleteTask: (id: string) => request<void>(`/api/routine/tasks/${id}`, { method: "DELETE" }),
 
   // Habits
-  getHabits: () => request<Habit[]>("/api/habits"),
+  getHabits: () => request<HabitDefinition[]>("/api/habits"),
   createHabit: (input: NewHabitInput) =>
-    request<Habit>("/api/habits", {
+    request<HabitDefinition>("/api/habits", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
   updateHabit: (id: string, patch: Partial<NewHabitInput>) =>
-    request<Habit>(`/api/habits/${id}`, {
+    request<HabitDefinition>(`/api/habits/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     }),
   deleteHabit: (id: string) => request<void>(`/api/habits/${id}`, { method: "DELETE" }),
-  logHabit: (habitId: string, date?: string) =>
-    request<HabitLog>(`/api/habits/${habitId}/log`, {
+  logHabit: (habitId: string, date?: string, value = 1, meta?: string) =>
+    request<HabitLogEntry>(`/api/habits/${habitId}/log`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: date ? JSON.stringify({ date }) : undefined,
+      body: JSON.stringify({ date: date || new Date().toISOString().split("T")[0], value, meta }),
     }),
   unlogHabit: (habitId: string, date: string) =>
     request<void>(`/api/habits/${habitId}/log/${date}`, { method: "DELETE" }),
@@ -223,4 +226,22 @@ export const api = {
     }),
   deleteNotificationsByTaskId: (taskId: string) =>
     request<void>(`/api/notifications/task/${taskId}`, { method: "DELETE" }),
+
+  // Reminders
+  getReminders: (date?: string) =>
+    request<Reminder[]>(`/api/reminders${date ? `?date=${date}` : ""}`),
+  getTodayReminders: () => request<Reminder[]>("/api/reminders/today"),
+  createReminder: (input: NewReminderInput) =>
+    request<Reminder>("/api/reminders", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  updateReminder: (id: string, patch: UpdateReminderInput) =>
+    request<Reminder>(`/api/reminders/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  deleteReminder: (id: string) => request<void>(`/api/reminders/${id}`, { method: "DELETE" }),
 };

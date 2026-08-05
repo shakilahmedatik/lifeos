@@ -1,29 +1,35 @@
-import type { Habit, NewHabitInput } from "@lifeos/contracts";
+import type { HabitDefinition, NewHabitDefinitionInput } from "@lifeos/contracts";
 import { useState } from "react";
 import Button from "../../components/ui/Button.js";
 import { Input } from "../../components/ui/Input.js";
 import { Select } from "../../components/ui/Select.js";
 
 interface HabitFormProps {
-  habit?: Habit;
-  onSubmit: (input: NewHabitInput) => void;
+  habit?: HabitDefinition;
+  onSubmit: (input: NewHabitDefinitionInput) => void;
   onCancel: () => void;
 }
 
 export default function HabitForm({ habit, onSubmit, onCancel }: HabitFormProps) {
   const [name, setName] = useState(habit?.name ?? "");
-  const [frequency, setFrequency] = useState<Habit["frequency"]>(habit?.frequency ?? "daily");
-  const [category, setCategory] = useState<Habit["category"]>(habit?.category ?? "general");
+  const [category, setCategory] = useState<HabitDefinition["category"]>(
+    habit?.category ?? "general",
+  );
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit({ name, frequency, category });
+    onSubmit({
+      name,
+      type: habit?.type ?? "boolean",
+      category,
+      config: habit?.config ?? { type: "boolean" },
+    });
   };
 
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 p-4 bg-white rounded-lg border border-gray-200"
+      className="space-y-4 p-4 bg-gray-900 rounded-lg border border-gray-800"
     >
       <div>
         <Input
@@ -37,22 +43,10 @@ export default function HabitForm({ habit, onSubmit, onCancel }: HabitFormProps)
       </div>
       <div>
         <Select
-          id="habit-frequency"
-          label="Frequency"
-          value={frequency}
-          onChange={(e) => setFrequency(e.target.value as Habit["frequency"])}
-          options={[
-            { value: "daily", label: "Daily" },
-            { value: "weekly", label: "Weekly" },
-          ]}
-        />
-      </div>
-      <div>
-        <Select
           id="habit-category"
           label="Category"
           value={category}
-          onChange={(e) => setCategory(e.target.value as Habit["category"])}
+          onChange={(e) => setCategory(e.target.value as HabitDefinition["category"])}
           options={[
             { value: "health", label: "Health" },
             { value: "learning", label: "Learning" },

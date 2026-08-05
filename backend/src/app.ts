@@ -30,6 +30,7 @@ export function createApp(container: Container): Express {
   app.use("/api/habits", modules.habits.router);
   app.use("/api/dashboard", modules.dashboard.router);
   app.use("/api/notifications", modules.notifications.router);
+  app.use("/api/reminders", modules.reminders.router);
   app.use("/api/workouts", modules.workouts.router);
   app.use("/api/finance", modules.finance.router);
   app.use("/api/news", modules.news.router);

@@ -13,6 +13,7 @@ function createTestDb(): Database.Database {
     CREATE TABLE skill_areas (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL UNIQUE,
+      weekly_goal_hours REAL NOT NULL DEFAULT 5,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );

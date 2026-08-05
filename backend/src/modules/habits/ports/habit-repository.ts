@@ -1,11 +1,16 @@
-import type { Habit, NewHabitInput } from "../domain/types.js";
+import type {
+  HabitDefinition,
+  NewHabitDefinitionInput,
+  UpdateHabitDefinitionInput,
+} from "../domain/types.js";
 
 export interface HabitRepository {
-  getById(id: string): Habit | undefined;
-  getAll(): Habit[];
-  getByFrequency(frequency: Habit["frequency"]): Habit[];
-  create(id: string, input: NewHabitInput): Habit;
-  update(id: string, patch: Partial<NewHabitInput>): Habit | undefined;
+  getById(id: string): HabitDefinition | undefined;
+  getByName(name: string): HabitDefinition | undefined;
+  getAll(includeArchived?: boolean): HabitDefinition[];
+  create(id: string, input: NewHabitDefinitionInput, sortOrder: number): HabitDefinition;
+  update(id: string, patch: UpdateHabitDefinitionInput): HabitDefinition | undefined;
   delete(id: string): boolean;
-  getByName(name: string): Habit | undefined;
+  archive(id: string, archived: boolean): void;
+  updateSortOrders(updates: { id: string; sortOrder: number }[]): void;
 }

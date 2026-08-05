@@ -26,6 +26,8 @@ export function initWorkoutsModule(db: Database.Database) {
   );
 
   return {
+    workoutRepo,
+    workoutSessionRepo,
     workoutService,
     exerciseService,
     workoutSessionService,

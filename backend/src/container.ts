@@ -8,6 +8,7 @@ import type { SchedulerStatus } from "./modules/health/api/router.js";
 import { initHealthModule } from "./modules/health/index.js";
 import { initNewsModule } from "./modules/news/index.js";
 import { initNotificationsModule } from "./modules/notifications/index.js";
+import { initRemindersModule } from "./modules/reminders/index.js";
 import { initRoutineModule } from "./modules/routine/index.js";
 import { initSkillsModule } from "./modules/skills/index.js";
 import { initWorkoutsModule } from "./modules/workouts/index.js";
@@ -25,6 +26,7 @@ export interface Container {
     health: ReturnType<typeof initHealthModule>;
     news: ReturnType<typeof initNewsModule>;
     notifications: ReturnType<typeof initNotificationsModule>;
+    reminders: ReturnType<typeof initRemindersModule>;
     routine: ReturnType<typeof initRoutineModule>;
     skills: ReturnType<typeof initSkillsModule>;
     workouts: ReturnType<typeof initWorkoutsModule>;
@@ -40,15 +42,26 @@ export function createContainer(config: AppConfig): Container {
   const backup = initBackupModule(config.dbPath);
   const routine = initRoutineModule(db);
   const habits = initHabitsModule(db);
-  const dashboard = initDashboardModule({
-    taskRepo: routine.taskRepo,
-    habitLogService: habits.habitLogService,
-  });
+  const reminders = initRemindersModule(db);
   const notifications = initNotificationsModule(db);
   const workouts = initWorkoutsModule(db);
   const finance = initFinanceModule(db);
   const news = initNewsModule(db);
   const skills = initSkillsModule(db);
+
+  const dashboard = initDashboardModule({
+    taskRepo: routine.taskRepo,
+    habitLogService: habits.habitLogService,
+    habitStatsService: habits.habitStatsService,
+    habitRepo: habits.habitRepo,
+    reminderService: reminders.reminderService,
+    workoutSessionRepo: workouts.workoutSessionRepo,
+    workoutRepo: workouts.workoutRepo,
+    learningLogService: skills.learningLogService,
+    skillAreaService: skills.skillAreaService,
+    newsArticleRepo: news.newsArticleRepo,
+    rssFeedRepo: news.rssFeedRepo,
+  });
 
   const getSchedulerStatus = (): SchedulerStatus[] => {
     const statuses: SchedulerStatus[] = [];
@@ -83,6 +96,7 @@ export function createContainer(config: AppConfig): Container {
       health,
       news,
       notifications,
+      reminders,
       routine,
       skills,
       workouts,

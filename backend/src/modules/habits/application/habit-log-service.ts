@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 
-import { currentStreak, isDueToday, longestStreak } from "../domain/rules.js";
-import type { HabitLog, HabitWithStreak, NewHabitLogInput } from "../domain/types.js";
+import { currentStreak, getDailyProgress, isDueToday, longestStreak } from "../domain/rules.js";
+import type { HabitLogEntry, HabitWithStreak, NewHabitLogEntryInput } from "../domain/types.js";
 import type { HabitLogRepository } from "../ports/habit-log-repository.js";
 import type { HabitRepository } from "../ports/habit-repository.js";
 
@@ -11,45 +11,69 @@ export class HabitLogService {
     private readonly habitLogRepo: HabitLogRepository,
   ) {}
 
-  logHabit(input: NewHabitLogInput): HabitLog {
-    const existing = this.habitLogRepo.getByHabitAndDate(input.habitId, input.date);
-    if (existing) {
-      return existing;
-    }
-
+  logHabit(input: NewHabitLogEntryInput): HabitLogEntry {
     const id = randomUUID();
     return this.habitLogRepo.create(id, input);
   }
 
-  unlogHabit(habitId: string, date: string): boolean {
-    const log = this.habitLogRepo.getByHabitAndDate(habitId, date);
-    if (!log) return false;
+  removeLog(logId: string): boolean {
+    return this.habitLogRepo.delete(logId);
+  }
 
-    return this.habitLogRepo.delete(log.id);
+  getLogsForHabitAndDate(habitId: string, date: string): HabitLogEntry[] {
+    return this.habitLogRepo.getByHabitAndDate(habitId, date);
   }
 
   getTodayDueHabits(today: string): HabitWithStreak[] {
-    const habits = this.habitRepo.getAll();
+    const habits = this.habitRepo.getAll(false);
     const todayLogs = this.habitLogRepo.getByDateRange(today, today);
 
     return habits
       .filter((h) => isDueToday(h, today))
       .map((habit) => {
         const logs = this.habitLogRepo.getByHabitId(habit.id);
-        const loggedToday = todayLogs.some((l) => l.habitId === habit.id);
+        const habitTodayLogs = todayLogs.filter((l) => l.habitId === habit.id);
+
+        const progress = getDailyProgress(habit, habitTodayLogs);
+
+        let todayValue = habitTodayLogs.reduce((sum, l) => sum + l.value, 0);
+        if (habit.type === "prayer") {
+          todayValue = habitTodayLogs.length;
+        } else if (habit.type === "boolean") {
+          todayValue = habitTodayLogs.length > 0 ? 1 : 0;
+        }
+
+        let todayTarget = 1;
+        if (habit.type === "water" && "dailyGoalMl" in habit.config) {
+          todayTarget = habit.config.dailyGoalMl;
+        } else if (habit.type === "walking" && "dailyGoal" in habit.config) {
+          todayTarget = habit.config.dailyGoal;
+        } else if (habit.type === "timed" && "dailyGoalMinutes" in habit.config) {
+          todayTarget = habit.config.dailyGoalMinutes;
+        } else if (habit.type === "prayer") {
+          todayTarget = 5;
+        }
+
+        const cStreak = currentStreak(habit, logs, today);
+        const lStreak = longestStreak(habit, logs);
 
         return {
+          habit,
+          date: today,
+          currentValue: todayValue,
+          targetValue: todayTarget,
+          progress,
+          logs: habitTodayLogs,
+          currentStreak: cStreak,
+          longestStreak: lStreak,
+          // Backward compat aliases for HabitWithStreak
           ...habit,
-          currentStreak: currentStreak(habit, logs, today),
-          longestStreak: longestStreak(habit, logs),
-          loggedToday,
+          loggedToday: progress >= 1,
+          todayProgress: progress,
+          todayValue,
+          todayTarget,
         };
-      })
-      .slice(0, 8);
-  }
-
-  batchLogHabits(habitIds: string[], date: string): HabitLog[] {
-    return habitIds.map((habitId) => this.logHabit({ habitId, date }));
+      });
   }
 
   deleteLogsByHabitId(habitId: string): void {

@@ -36,7 +36,7 @@ export function NotificationToast({ notification, onDismiss }: NotificationToast
       }`}
     >
       <div className="flex items-start gap-3">
-        <div className="flex-shrink-0 p-1 bg-blue-500/20 rounded-lg">
+        <div className="shrink-0 p-1 bg-blue-500/20 rounded-lg">
           <svg
             className="h-5 w-5 text-blue-400"
             xmlns="http://www.w3.org/2000/svg"

@@ -1,24 +1,16 @@
-import type { Habit, NewHabitInput, WeeklySummary } from "@lifeos/contracts";
+import type { HabitDefinition, NewHabitDefinitionInput, WeeklySummary } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
-import {
-  createHabit,
-  deleteHabit,
-  fetchHabits,
-  fetchWeeklySummary,
-  logHabit,
-  unlogHabit,
-  updateHabit,
-} from "./api.js";
+import { habitApi } from "./api.js";
 
 export function useHabits() {
-  const [habits, setHabits] = useState<Habit[]>([]);
+  const [habits, setHabits] = useState<HabitDefinition[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const loadHabits = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await fetchHabits();
+      const data = await habitApi.getHabits();
       setHabits(data);
       setError(null);
     } catch (err) {
@@ -32,28 +24,28 @@ export function useHabits() {
     loadHabits();
   }, [loadHabits]);
 
-  const addHabit = useCallback(async (input: NewHabitInput) => {
-    const habit = await createHabit(input);
+  const addHabit = useCallback(async (input: NewHabitDefinitionInput) => {
+    const habit = await habitApi.createHabit(input);
     setHabits((prev) => [habit, ...prev]);
     return habit;
   }, []);
 
-  const editHabit = useCallback(async (id: string, patch: Partial<NewHabitInput>) => {
-    const habit = await updateHabit(id, patch);
+  const editHabit = useCallback(async (id: string, patch: Partial<HabitDefinition>) => {
+    const habit = await habitApi.updateHabit(id, patch);
     setHabits((prev) => prev.map((h) => (h.id === id ? habit : h)));
     return habit;
   }, []);
 
   const removeHabit = useCallback(async (id: string) => {
-    await deleteHabit(id);
+    await habitApi.deleteHabit(id);
     setHabits((prev) => prev.filter((h) => h.id !== id));
   }, []);
 
   const toggleHabit = useCallback(async (habitId: string, date: string, logged: boolean) => {
     if (logged) {
-      await unlogHabit(habitId, date);
+      await habitApi.removeLog(habitId);
     } else {
-      await logHabit(habitId);
+      await habitApi.addLog(habitId, { date, value: 1 });
     }
   }, []);
 
@@ -74,10 +66,10 @@ export function useWeeklyReview() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadSummary = useCallback(async (weekStart?: string) => {
+  const loadSummary = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await fetchWeeklySummary(weekStart);
+      const data = await habitApi.getWeeklySummary();
       setSummary(data);
       setError(null);
     } catch (err) {

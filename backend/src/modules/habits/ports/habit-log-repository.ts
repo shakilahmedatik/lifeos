@@ -1,11 +1,12 @@
-import type { HabitLog, NewHabitLogInput } from "../domain/types.js";
+import type { HabitLogEntry, NewHabitLogEntryInput } from "../domain/types.js";
 
 export interface HabitLogRepository {
-  getById(id: string): HabitLog | undefined;
-  getByHabitAndDate(habitId: string, date: string): HabitLog | undefined;
-  getByDateRange(startDate: string, endDate: string): HabitLog[];
-  getByHabitId(habitId: string): HabitLog[];
-  create(id: string, input: NewHabitLogInput): HabitLog;
+  getById(id: string): HabitLogEntry | undefined;
+  getByHabitAndDate(habitId: string, date: string): HabitLogEntry[];
+  getByDateRange(startDate: string, endDate: string): HabitLogEntry[];
+  getByHabitId(habitId: string): HabitLogEntry[];
+  getAllLogs(): HabitLogEntry[];
+  create(id: string, input: NewHabitLogEntryInput): HabitLogEntry;
   delete(id: string): boolean;
   deleteByHabitId(habitId: string): void;
 }
