@@ -2,13 +2,14 @@ import { NewReminderSchema, UpdateReminderSchema } from "@lifeos/contracts";
 import { Router } from "express";
 import { todayInDhaka } from "../../../shared/timezone.js";
 import { validateBody } from "../../../shared/validate.js";
+import type { AuthenticatedRequest } from "../../auth/middleware.js";
 import type { ReminderService } from "../application/reminder-service.js";
 
 export function createRemindersRouter(reminderService: ReminderService): Router {
   const router = Router();
 
-  router.get("/", (req, res) => {
-    const userId = (req.query.userId as string) || "default";
+  router.get("/", (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     reminderService.processDueRemindersForUser(userId);
     const { date } = req.query;
     if (typeof date === "string") {
@@ -18,14 +19,14 @@ export function createRemindersRouter(reminderService: ReminderService): Router 
     }
   });
 
-  router.get("/today", (req, res) => {
-    const userId = (req.query.userId as string) || "default";
+  router.get("/today", (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     const today = todayInDhaka();
     res.json(reminderService.getTodayReminders(today, userId));
   });
 
-  router.get("/:id", (req, res) => {
-    const userId = (req.query.userId as string) || "default";
+  router.get("/:id", (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     const reminder = reminderService.getById(req.params.id as string, userId);
     if (!reminder) {
       res.status(404).json({ error: "Reminder not found" });
@@ -34,8 +35,8 @@ export function createRemindersRouter(reminderService: ReminderService): Router 
     res.json(reminder);
   });
 
-  router.post("/", validateBody(NewReminderSchema), (req, res) => {
-    const userId = (req.query.userId as string) || "default";
+  router.post("/", validateBody(NewReminderSchema), (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     try {
       const reminder = reminderService.create(req.body, userId);
       res.status(201).json(reminder);
@@ -44,8 +45,8 @@ export function createRemindersRouter(reminderService: ReminderService): Router 
     }
   });
 
-  router.patch("/:id", validateBody(UpdateReminderSchema), (req, res) => {
-    const userId = (req.query.userId as string) || "default";
+  router.patch("/:id", validateBody(UpdateReminderSchema), (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     try {
       const updated = reminderService.update(req.params.id as string, req.body, userId);
       if (!updated) {
@@ -58,8 +59,8 @@ export function createRemindersRouter(reminderService: ReminderService): Router 
     }
   });
 
-  router.delete("/:id", (req, res) => {
-    const userId = (req.query.userId as string) || "default";
+  router.delete("/:id", (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     const deleted = reminderService.delete(req.params.id as string, userId);
     if (!deleted) {
       res.status(404).json({ error: "Reminder not found" });

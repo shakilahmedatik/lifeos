@@ -6,6 +6,7 @@ import {
 } from "@lifeos/contracts";
 import { Router } from "express";
 import { validateBody } from "../../../shared/validate.js";
+import type { AuthenticatedRequest } from "../../auth/middleware.js";
 
 import {
   createTask,
@@ -19,23 +20,25 @@ import type { TaskRepository } from "../ports/task-repository.js";
 export function createRoutineRouter(repo: TaskRepository): Router {
   const router = Router();
 
-  router.get("/tasks", (req, res) => {
+  router.get("/tasks", (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     const date = req.query.date as string | undefined;
     if (!date || !isValidDateString(date)) {
       res.status(400).json({ error: "Missing or invalid ?date=YYYY-MM-DD query param" });
       return;
     }
     try {
-      const tasks = getDaySchedule(repo, date);
+      const tasks = getDaySchedule(repo, date, userId);
       res.json(tasks);
     } catch (_err) {
       res.status(500).json({ error: "Failed to retrieve schedule" });
     }
   });
 
-  router.post("/tasks", validateBody(NewTaskInputSchema), (req, res) => {
+  router.post("/tasks", validateBody(NewTaskInputSchema), (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     try {
-      const result = createTask(repo, req.body);
+      const result = createTask(repo, req.body, userId);
       res.status(201).json(result);
     } catch (err) {
       const msg = (err as Error).message;
@@ -43,9 +46,10 @@ export function createRoutineRouter(repo: TaskRepository): Router {
     }
   });
 
-  router.patch("/tasks/:id", validateBody(UpdateTaskSchema), (req, res) => {
+  router.patch("/tasks/:id", validateBody(UpdateTaskSchema), (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     try {
-      const result = updateTask(repo, req.params.id as string, req.body);
+      const result = updateTask(repo, req.params.id as string, req.body, userId);
       res.json(result);
     } catch (err) {
       const msg = (err as Error).message;
@@ -57,30 +61,36 @@ export function createRoutineRouter(repo: TaskRepository): Router {
     }
   });
 
-  router.patch("/tasks/:id/status", validateBody(UpdateStatusSchema), (req, res) => {
+  router.patch(
+    "/tasks/:id/status",
+    validateBody(UpdateStatusSchema),
+    (req: AuthenticatedRequest, res) => {
+      const userId = req.user?.id || (req.query.userId as string) || "default";
+      try {
+        const result = setTaskStatus(repo, req.params.id as string, req.body.status, userId);
+        res.json(result);
+      } catch (err) {
+        const msg = (err as Error).message;
+        if (msg.includes("not found")) {
+          res.status(404).json({ error: msg });
+        } else {
+          res.status(400).json({ error: msg });
+        }
+      }
+    },
+  );
+
+  router.delete("/tasks/:id", (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     try {
-      const task = setTaskStatus(repo, req.params.id as string, req.body.status);
-      res.json(task);
+      deleteTask(repo, req.params.id as string, userId);
+      res.status(204).send();
     } catch (err) {
       const msg = (err as Error).message;
       if (msg.includes("not found")) {
         res.status(404).json({ error: msg });
       } else {
         res.status(400).json({ error: msg });
-      }
-    }
-  });
-
-  router.delete("/tasks/:id", (req, res) => {
-    try {
-      deleteTask(repo, req.params.id);
-      res.status(204).end();
-    } catch (err) {
-      const msg = (err as Error).message;
-      if (msg.includes("not found")) {
-        res.status(404).json({ error: msg });
-      } else {
-        res.status(500).json({ error: "Failed to delete task" });
       }
     }
   });

@@ -22,8 +22,12 @@ export class HabitStatsService {
     private readonly habitLogRepo: HabitLogRepository,
   ) {}
 
-  getAnalytics(habitId: string, period: "week" | "month"): HabitAnalyticsData | undefined {
-    const habit = this.habitRepo.getById(habitId);
+  getAnalytics(
+    habitId: string,
+    period: "week" | "month",
+    userId = "default",
+  ): HabitAnalyticsData | undefined {
+    const habit = this.habitRepo.getById(habitId, userId);
     if (!habit) return undefined;
 
     const today = todayInDhaka();
@@ -39,9 +43,9 @@ export class HabitStatsService {
 
     const startDateStr = formatDate(start);
 
-    const logs = this.habitLogRepo.getByHabitId(habitId);
+    const logs = this.habitLogRepo.getByHabitId(habitId, userId);
     const rangeLogs = this.habitLogRepo
-      .getByDateRange(startDateStr, endDateStr)
+      .getByDateRange(startDateStr, endDateStr, userId)
       .filter((l) => l.habitId === habitId);
 
     // Group logs by date

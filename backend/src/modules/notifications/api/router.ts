@@ -1,21 +1,22 @@
 import { NewNotificationInputSchema, UpdateNotificationInputSchema } from "@lifeos/contracts";
 import { Router } from "express";
 import { validateBody } from "../../../shared/validate.js";
+import type { AuthenticatedRequest } from "../../auth/middleware.js";
 
 import type { NotificationService } from "../application/notification-service.js";
 
 export function createNotificationsRouter(notificationService: NotificationService): Router {
   const router = Router();
 
-  router.get("/", (req, res) => {
-    const userId = (req.query.userId as string) || "default";
+  router.get("/", (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     notificationService.processDueRemindersForUser(userId);
     const notifications = notificationService.listNotifications(userId);
     res.json(notifications);
   });
 
-  router.get("/unread-count", (req, res) => {
-    const userId = (req.query.userId as string) || "default";
+  router.get("/unread-count", (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     const count = notificationService.getUnreadCount(userId);
     res.json({ count });
   });

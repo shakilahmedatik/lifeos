@@ -12,7 +12,7 @@ import type {
   MonthlySummary,
   NewAccountInput,
   NewCategoryInput,
-  NewHabitInput,
+  NewHabitDefinitionInput,
   NewNotificationInput,
   NewReminderInput,
   NewTransactionInput,
@@ -25,7 +25,18 @@ import type {
 } from "@lifeos/contracts";
 
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, options);
+  const token =
+    typeof localStorage !== "undefined" ? localStorage.getItem("lifeos_session_token") : null;
+  const headers = new Headers(options?.headers);
+  if (token && !headers.has("Authorization")) {
+    headers.set("Authorization", `Bearer ${token}`);
+  }
+
+  const res = await fetch(url, {
+    credentials: "include",
+    ...options,
+    headers,
+  });
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     throw new Error(`API error ${res.status}: ${body || res.statusText}`);
@@ -63,13 +74,13 @@ export const api = {
 
   // Habits
   getHabits: () => request<HabitDefinition[]>("/api/habits"),
-  createHabit: (input: NewHabitInput) =>
+  createHabit: (input: NewHabitDefinitionInput) =>
     request<HabitDefinition>("/api/habits", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
-  updateHabit: (id: string, patch: Partial<NewHabitInput>) =>
+  updateHabit: (id: string, patch: Partial<NewHabitDefinitionInput>) =>
     request<HabitDefinition>(`/api/habits/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -218,6 +229,8 @@ export const api = {
   downloadBackup: () => request<{ filename: string; path: string }>("/api/backup"),
 
   // Notifications
+  getNotifications: () => request<Notification[]>("/api/notifications"),
+  getUnreadCount: () => request<{ count: number }>("/api/notifications/unread-count"),
   createNotification: (input: NewNotificationInput) =>
     request<Notification>("/api/notifications", {
       method: "POST",

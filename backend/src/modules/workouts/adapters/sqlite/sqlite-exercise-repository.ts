@@ -28,26 +28,26 @@ function rowToExercise(row: ExerciseRow): Exercise {
 export class SqliteExerciseRepository implements ExerciseRepository {
   constructor(private readonly db: Database.Database) {}
 
-  getById(id: string): Exercise | undefined {
+  getById(id: string, _userId?: string): Exercise | undefined {
     const row = this.db.prepare("SELECT * FROM exercises WHERE id = ?").get(id) as
       | ExerciseRow
       | undefined;
     return row ? rowToExercise(row) : undefined;
   }
 
-  getAll(): Exercise[] {
+  getAll(_userId?: string): Exercise[] {
     const rows = this.db.prepare("SELECT * FROM exercises ORDER BY name").all() as ExerciseRow[];
     return rows.map(rowToExercise);
   }
 
-  getByMuscleGroup(muscleGroup: string): Exercise[] {
+  getByMuscleGroup(muscleGroup: string, _userId?: string): Exercise[] {
     const rows = this.db
       .prepare("SELECT * FROM exercises WHERE muscle_group = ? ORDER BY name")
       .all(muscleGroup) as ExerciseRow[];
     return rows.map(rowToExercise);
   }
 
-  create(id: string, input: NewExerciseInput): Exercise {
+  create(id: string, input: NewExerciseInput, _userId?: string): Exercise {
     const now = new Date().toISOString();
     this.db
       .prepare(
@@ -67,7 +67,7 @@ export class SqliteExerciseRepository implements ExerciseRepository {
     return this.getById(id) as Exercise;
   }
 
-  update(id: string, patch: Partial<NewExerciseInput>): Exercise | undefined {
+  update(id: string, patch: Partial<NewExerciseInput>, _userId?: string): Exercise | undefined {
     const existing = this.getById(id);
     if (!existing) return undefined;
 
@@ -102,12 +102,12 @@ export class SqliteExerciseRepository implements ExerciseRepository {
     return this.getById(id);
   }
 
-  delete(id: string): boolean {
+  delete(id: string, _userId?: string): boolean {
     const result = this.db.prepare("DELETE FROM exercises WHERE id = ?").run(id);
     return result.changes > 0;
   }
 
-  getByName(name: string): Exercise | undefined {
+  getByName(name: string, _userId?: string): Exercise | undefined {
     const row = this.db.prepare("SELECT * FROM exercises WHERE name = ?").get(name) as
       | ExerciseRow
       | undefined;

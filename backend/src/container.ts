@@ -41,7 +41,7 @@ export interface Container {
 }
 
 export function createContainer(config: AppConfig): Container {
-  const db = createDatabase(config.dbPath);
+  const db = createDatabase(config.dbPath, config.databaseUrl, config.tursoDatabaseToken);
   runMigrations(db, fileURLToPath(new URL("./shared/migrations/", import.meta.url)));
 
   const auth = initAuthModule(db, config);

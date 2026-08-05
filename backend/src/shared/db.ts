@@ -1,10 +1,27 @@
 import { existsSync, mkdirSync, statSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 
+import { type Client, createClient } from "@libsql/client";
 import Database from "better-sqlite3";
 import { logger } from "./logger.js";
 
-export function createDatabase(dbPath: string): Database.Database {
+export type DbConnection = Database.Database | Client;
+
+export function createDatabase(
+  dbPath: string,
+  databaseUrl?: string,
+  databaseToken?: string,
+): Database.Database {
+  if (databaseUrl) {
+    logger.info("Initializing Turso LibSQL database connection", { url: databaseUrl });
+    // Turso client mode
+    const client = createClient({
+      url: databaseUrl,
+      authToken: databaseToken,
+    });
+    return client as unknown as Database.Database;
+  }
+
   const isMemory = dbPath === ":memory:";
   const resolvedPath = isMemory ? ":memory:" : resolve(dbPath);
 

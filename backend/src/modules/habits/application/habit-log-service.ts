@@ -11,27 +11,27 @@ export class HabitLogService {
     private readonly habitLogRepo: HabitLogRepository,
   ) {}
 
-  logHabit(input: NewHabitLogEntryInput): HabitLogEntry {
+  logHabit(input: NewHabitLogEntryInput, userId = "default"): HabitLogEntry {
     const id = randomUUID();
-    return this.habitLogRepo.create(id, input);
+    return this.habitLogRepo.create(id, input, userId);
   }
 
-  removeLog(logId: string): boolean {
-    return this.habitLogRepo.delete(logId);
+  removeLog(logId: string, userId = "default"): boolean {
+    return this.habitLogRepo.delete(logId, userId);
   }
 
-  getLogsForHabitAndDate(habitId: string, date: string): HabitLogEntry[] {
-    return this.habitLogRepo.getByHabitAndDate(habitId, date);
+  getLogsForHabitAndDate(habitId: string, date: string, userId = "default"): HabitLogEntry[] {
+    return this.habitLogRepo.getByHabitAndDate(habitId, date, userId);
   }
 
-  getTodayDueHabits(today: string): HabitWithStreak[] {
-    const habits = this.habitRepo.getAll(false);
-    const todayLogs = this.habitLogRepo.getByDateRange(today, today);
+  getTodayDueHabits(today: string, userId = "default"): HabitWithStreak[] {
+    const habits = this.habitRepo.getAll(false, userId);
+    const todayLogs = this.habitLogRepo.getByDateRange(today, today, userId);
 
     return habits
       .filter((h) => isDueToday(h, today))
       .map((habit) => {
-        const logs = this.habitLogRepo.getByHabitId(habit.id);
+        const logs = this.habitLogRepo.getByHabitId(habit.id, userId);
         const habitTodayLogs = todayLogs.filter((l) => l.habitId === habit.id);
 
         const progress = getDailyProgress(habit, habitTodayLogs);
@@ -76,7 +76,7 @@ export class HabitLogService {
       });
   }
 
-  deleteLogsByHabitId(habitId: string): void {
-    this.habitLogRepo.deleteByHabitId(habitId);
+  deleteLogsByHabitId(habitId: string, userId = "default"): void {
+    this.habitLogRepo.deleteByHabitId(habitId, userId);
   }
 }

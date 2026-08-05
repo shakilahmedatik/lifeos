@@ -16,7 +16,7 @@ export interface DashboardDependencies {
   habitLogService?: HabitLogService;
   habitStatsService?: HabitStatsService;
   habitRepo?: {
-    getAll(includeArchived: boolean): HabitDefinition[];
+    getAll(includeArchived: boolean, userId?: string): HabitDefinition[];
   };
   reminderService?: ReminderService;
   workoutSessionRepo?: WorkoutSessionRepository;

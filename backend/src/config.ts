@@ -26,7 +26,7 @@ export function loadConfig(): AppConfig {
     frontendPort: Number(process.env.FRONTEND_PORT || 5173),
     databaseUrl: process.env.DATABASE_URL,
     tursoDatabaseToken: process.env.TURSO_DATABASE_TOKEN,
-    betterAuthSecret: process.env.BETTER_AUTH_SECRET || "lifeos-super-secret-development-key-12345",
+    betterAuthSecret: process.env.BETTER_AUTH_SECRET,
     allowedOrigins,
   };
 }

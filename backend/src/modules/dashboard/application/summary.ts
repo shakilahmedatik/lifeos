@@ -56,26 +56,32 @@ export function getTaskScheduleStack(
   return { previous: previousTask, now: nowTask, next: nextTask };
 }
 
-export function getDashboardSummary(deps: DashboardDependencies, nowIso: string): DashboardSummary {
+export function getDashboardSummary(
+  deps: DashboardDependencies,
+  nowIso: string,
+  userId = "default",
+): DashboardSummary {
   const today = nowIso.slice(0, 10);
-  const tasks = deps.taskRepo.getByDate(today);
+  const tasks = deps.taskRepo.getByDate(today, userId);
   const { previous, now, next } = getTaskScheduleStack(tasks, nowIso);
 
   // 1. Due Habits
-  const dueHabits = deps.habitLogService ? deps.habitLogService.getTodayDueHabits(today) : [];
+  const dueHabits = deps.habitLogService
+    ? deps.habitLogService.getTodayDueHabits(today, userId)
+    : [];
 
   // 2. Upcoming Reminders
   let upcomingReminders: Reminder[] = [];
   if (deps.reminderService) {
-    upcomingReminders = deps.reminderService.getUpcomingToday(today, 4);
+    upcomingReminders = deps.reminderService.getUpcomingToday(today, userId, 4);
   }
 
   // 3. Habit Consistency (7 days sparkline data)
   const habitConsistency: DashboardHabitConsistency[] = [];
   if (deps.habitRepo && deps.habitStatsService) {
-    const activeHabits = deps.habitRepo.getAll(false).slice(0, 4);
+    const activeHabits = deps.habitRepo.getAll(false, userId).slice(0, 4);
     for (const habit of activeHabits) {
-      const stats = deps.habitStatsService.getAnalytics(habit.id, "week");
+      const stats = deps.habitStatsService.getAnalytics(habit.id, "week", userId);
       if (stats) {
         const days = stats.dailyValues.map((d) =>
           d.target > 0 ? Math.min(100, Math.round((d.value / d.target) * 100)) : 0,

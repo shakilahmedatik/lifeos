@@ -21,10 +21,10 @@ export class WeeklyReviewService {
     private readonly habitLogRepo: HabitLogRepository,
   ) {}
 
-  getWeeklySummary(weekStart: string): WeeklySummary {
+  getWeeklySummary(weekStart: string, userId = "default"): WeeklySummary {
     const weekEnd = this.getWeekEnd(weekStart);
-    const habits = this.habitRepo.getAll(false);
-    const weekLogs = this.habitLogRepo.getByDateRange(weekStart, weekEnd);
+    const habits = this.habitRepo.getAll(false, userId);
+    const weekLogs = this.habitLogRepo.getByDateRange(weekStart, weekEnd, userId);
 
     const habitsSummary: WeeklyHabitSummary[] = habits.map((habit) => {
       const habitLogs = weekLogs.filter((l) => l.habitId === habit.id);

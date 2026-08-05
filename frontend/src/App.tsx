@@ -1,8 +1,11 @@
 import { lazy, Suspense } from "react";
 import { Link, Route, Routes } from "react-router-dom";
+import { AuthModal } from "./components/auth/AuthModal.js";
+import { PinLockScreen } from "./components/auth/PinLockScreen.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import Layout from "./components/layout/Layout.js";
 import PageSkeleton from "./components/PageSkeleton.js";
+import { AuthProvider, useAuth } from "./context/AuthContext.js";
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage.js"));
 const RoutinePage = lazy(() => import("./pages/RoutinePage.js"));
@@ -25,24 +28,42 @@ function NotFoundPage() {
   );
 }
 
+function MainContent() {
+  const { user, isPinLocked } = useAuth();
+
+  if (!user) {
+    return <AuthModal />;
+  }
+
+  if (isPinLocked) {
+    return <PinLockScreen />;
+  }
+
+  return (
+    <Routes>
+      <Route element={<Layout />}>
+        <Route index element={<DashboardPage />} />
+        <Route path="routine" element={<RoutinePage />} />
+        <Route path="habits" element={<HabitsPage />} />
+        <Route path="workouts" element={<WorkoutsPage />} />
+        <Route path="skills" element={<SkillsPage />} />
+        <Route path="finance" element={<FinancePage />} />
+        <Route path="news" element={<NewsPage />} />
+        <Route path="notifications" element={<NotificationsPage />} />
+        <Route path="*" element={<NotFoundPage />} />
+      </Route>
+    </Routes>
+  );
+}
+
 export default function App() {
   return (
     <ErrorBoundary>
-      <Suspense fallback={<PageSkeleton />}>
-        <Routes>
-          <Route element={<Layout />}>
-            <Route index element={<DashboardPage />} />
-            <Route path="routine" element={<RoutinePage />} />
-            <Route path="habits" element={<HabitsPage />} />
-            <Route path="workouts" element={<WorkoutsPage />} />
-            <Route path="skills" element={<SkillsPage />} />
-            <Route path="finance" element={<FinancePage />} />
-            <Route path="news" element={<NewsPage />} />
-            <Route path="notifications" element={<NotificationsPage />} />
-            <Route path="*" element={<NotFoundPage />} />
-          </Route>
-        </Routes>
-      </Suspense>
+      <AuthProvider>
+        <Suspense fallback={<PageSkeleton />}>
+          <MainContent />
+        </Suspense>
+      </AuthProvider>
     </ErrorBoundary>
   );
 }

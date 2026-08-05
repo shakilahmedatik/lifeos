@@ -36,22 +36,22 @@ export function createApp(container: Container): Express {
   app.use(express.json());
   app.use("/api", apiRateLimiter);
 
-  // Auth & Cron routes
+  // Auth & Cron & Health public routes
   app.use("/api/auth", modules.auth.router);
   app.use("/api/cron", modules.cron.router);
   app.use("/api/health", modules.health.router);
 
-  // Domain routes
-  app.use("/api/routine", modules.routine.router);
-  app.use("/api/habits", modules.habits.router);
-  app.use("/api/dashboard", modules.dashboard.router);
-  app.use("/api/notifications", modules.notifications.router);
-  app.use("/api/reminders", modules.reminders.router);
-  app.use("/api/workouts", modules.workouts.router);
-  app.use("/api/finance", modules.finance.router);
-  app.use("/api/news", modules.news.router);
-  app.use("/api/skills", modules.skills.router);
-  app.use("/api/backup", modules.backup.router);
+  // Authenticated domain routes
+  app.use("/api/routine", modules.auth.middleware, modules.routine.router);
+  app.use("/api/habits", modules.auth.middleware, modules.habits.router);
+  app.use("/api/dashboard", modules.auth.middleware, modules.dashboard.router);
+  app.use("/api/notifications", modules.auth.middleware, modules.notifications.router);
+  app.use("/api/reminders", modules.auth.middleware, modules.reminders.router);
+  app.use("/api/workouts", modules.auth.middleware, modules.workouts.router);
+  app.use("/api/finance", modules.auth.middleware, modules.finance.router);
+  app.use("/api/news", modules.auth.middleware, modules.news.router);
+  app.use("/api/skills", modules.auth.middleware, modules.skills.router);
+  app.use("/api/backup", modules.auth.middleware, modules.backup.router);
 
   // Global error handler
   app.use(

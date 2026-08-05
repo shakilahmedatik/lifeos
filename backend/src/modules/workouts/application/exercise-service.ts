@@ -6,40 +6,44 @@ import type { ExerciseRepository } from "../ports/exercise-repository.js";
 export class ExerciseService {
   constructor(private readonly exerciseRepo: ExerciseRepository) {}
 
-  createExercise(input: NewExerciseInput): Exercise {
-    const existing = this.exerciseRepo.getByName(input.name);
+  createExercise(input: NewExerciseInput, userId = "default"): Exercise {
+    const existing = this.exerciseRepo.getByName(input.name, userId);
     if (existing) {
       throw new Error("Exercise with this name already exists");
     }
 
     const id = randomUUID();
-    return this.exerciseRepo.create(id, input);
+    return this.exerciseRepo.create(id, input, userId);
   }
 
-  listExercises(): Exercise[] {
-    return this.exerciseRepo.getAll();
+  listExercises(userId = "default"): Exercise[] {
+    return this.exerciseRepo.getAll(userId);
   }
 
-  getExercise(id: string): Exercise | undefined {
-    return this.exerciseRepo.getById(id);
+  getExercise(id: string, userId = "default"): Exercise | undefined {
+    return this.exerciseRepo.getById(id, userId);
   }
 
-  updateExercise(id: string, patch: Partial<NewExerciseInput>): Exercise | undefined {
+  updateExercise(
+    id: string,
+    patch: Partial<NewExerciseInput>,
+    userId = "default",
+  ): Exercise | undefined {
     if (patch.name) {
-      const existing = this.exerciseRepo.getByName(patch.name);
+      const existing = this.exerciseRepo.getByName(patch.name, userId);
       if (existing && existing.id !== id) {
         throw new Error("Exercise with this name already exists");
       }
     }
 
-    return this.exerciseRepo.update(id, patch);
+    return this.exerciseRepo.update(id, patch, userId);
   }
 
-  deleteExercise(id: string): boolean {
-    return this.exerciseRepo.delete(id);
+  deleteExercise(id: string, userId = "default"): boolean {
+    return this.exerciseRepo.delete(id, userId);
   }
 
-  getExercisesByMuscleGroup(muscleGroup: string): Exercise[] {
-    return this.exerciseRepo.getByMuscleGroup(muscleGroup);
+  getExercisesByMuscleGroup(muscleGroup: string, userId = "default"): Exercise[] {
+    return this.exerciseRepo.getByMuscleGroup(muscleGroup, userId);
   }
 }

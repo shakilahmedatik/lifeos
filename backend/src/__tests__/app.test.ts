@@ -7,6 +7,7 @@ describe("Application Composition Root", () => {
   it("should initialize configuration, container, and app cleanly", () => {
     const config = loadConfig();
     config.dbPath = ":memory:";
+    config.databaseUrl = undefined;
     const container = createContainer(config);
     const app = createApp(container);
 

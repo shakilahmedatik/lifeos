@@ -11,6 +11,8 @@ import {
 import { Router } from "express";
 import { validateBody } from "../../../shared/validate.js";
 
+import type { AuthenticatedRequest } from "../../auth/middleware.js";
+
 import type { ExerciseService } from "../application/exercise-service.js";
 import type { WorkoutHistoryService } from "../application/workout-history-service.js";
 import type { WorkoutService } from "../application/workout-service.js";
@@ -25,18 +27,20 @@ export function createWorkoutsRouter(
   const router = Router();
 
   // Exercise routes
-  router.get("/exercises", (_req, res) => {
-    const exercises = exerciseService.listExercises();
+  router.get("/exercises", (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || "default";
+    const exercises = exerciseService.listExercises(userId);
     res.json(exercises);
   });
 
-  router.get("/exercises/:id/progress", (req, res) => {
-    const progress = workoutHistoryService.getExerciseProgress(req.params.id);
+  router.get("/exercises/:id/progress", (req: AuthenticatedRequest, res) => {
+    const progress = workoutHistoryService.getExerciseProgress(req.params.id as string);
     res.json(progress);
   });
 
-  router.get("/exercises/:id", (req, res) => {
-    const exercise = exerciseService.getExercise(req.params.id);
+  router.get("/exercises/:id", (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || "default";
+    const exercise = exerciseService.getExercise(req.params.id as string, userId);
     if (!exercise) {
       res.status(404).json({ error: "Exercise not found" });
       return;
@@ -44,18 +48,23 @@ export function createWorkoutsRouter(
     res.json(exercise);
   });
 
-  router.post("/exercises", validateBody(NewExerciseInputSchema), (req, res) => {
-    try {
-      const exercise = exerciseService.createExercise(req.body);
-      res.status(201).json(exercise);
-    } catch (error) {
-      if (error instanceof Error && error.message === "Exercise with this name already exists") {
-        res.status(409).json({ error: error.message });
-        return;
+  router.post(
+    "/exercises",
+    validateBody(NewExerciseInputSchema),
+    (req: AuthenticatedRequest, res) => {
+      const userId = req.user?.id || "default";
+      try {
+        const exercise = exerciseService.createExercise(req.body, userId);
+        res.status(201).json(exercise);
+      } catch (error) {
+        if (error instanceof Error && error.message === "Exercise with this name already exists") {
+          res.status(409).json({ error: error.message });
+          return;
+        }
+        res.status(500).json({ error: "Failed to create exercise" });
       }
-      res.status(500).json({ error: "Failed to create exercise" });
-    }
-  });
+    },
+  );
 
   router.patch("/exercises/:id", validateBody(UpdateExerciseSchema), (req, res) => {
     try {
