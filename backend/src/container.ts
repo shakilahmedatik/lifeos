@@ -1,5 +1,7 @@
+import { fileURLToPath } from "node:url";
 import type Database from "better-sqlite3";
 import type { AppConfig } from "./config.js";
+import { initAuthModule } from "./modules/auth/index.js";
 import { initBackupModule } from "./modules/backup/index.js";
 import { initDashboardModule } from "./modules/dashboard/index.js";
 import { initFinanceModule } from "./modules/finance/index.js";
@@ -19,6 +21,7 @@ export interface Container {
   config: AppConfig;
   db: Database.Database;
   modules: {
+    auth: ReturnType<typeof initAuthModule>;
     backup: ReturnType<typeof initBackupModule>;
     dashboard: ReturnType<typeof initDashboardModule>;
     finance: ReturnType<typeof initFinanceModule>;
@@ -37,8 +40,9 @@ export interface Container {
 
 export function createContainer(config: AppConfig): Container {
   const db = createDatabase(config.dbPath);
-  runMigrations(db, new URL("./shared/migrations/", import.meta.url).pathname);
+  runMigrations(db, fileURLToPath(new URL("./shared/migrations/", import.meta.url)));
 
+  const auth = initAuthModule(db, config);
   const backup = initBackupModule(config.dbPath);
   const routine = initRoutineModule(db);
   const habits = initHabitsModule(db);
@@ -89,6 +93,7 @@ export function createContainer(config: AppConfig): Container {
     config,
     db,
     modules: {
+      auth,
       backup,
       dashboard,
       finance,

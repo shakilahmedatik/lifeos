@@ -1,3 +1,4 @@
+import { fileURLToPath } from "node:url";
 import type Database from "better-sqlite3";
 import { beforeEach, describe, expect, it } from "vitest";
 import { createDatabase } from "../../../shared/db.js";
@@ -7,7 +8,7 @@ import { ReminderService } from "../application/reminder-service.js";
 
 function createTestDb(): Database.Database {
   const db = createDatabase(":memory:");
-  runMigrations(db, new URL("../../../shared/migrations/", import.meta.url).pathname);
+  runMigrations(db, fileURLToPath(new URL("../../../shared/migrations/", import.meta.url)));
   return db;
 }
 

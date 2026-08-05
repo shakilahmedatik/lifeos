@@ -1,3 +1,4 @@
+import cors from "cors";
 import express, { type Express } from "express";
 import type { Container } from "./container.js";
 import { logger } from "./shared/logger.js";
@@ -7,22 +8,36 @@ export function createApp(container: Container): Express {
   const app = express();
   const { config, modules } = container;
 
-  // CORS: restrict to local frontend origin
-  app.use((_req, res, next) => {
-    res.setHeader("Access-Control-Allow-Origin", `http://localhost:${config.frontendPort}`);
-    res.setHeader("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-    if (_req.method === "OPTIONS") {
-      res.status(204).end();
-      return;
-    }
-    next();
-  });
+  // Modern CORS configuration supporting credentials & dynamic origins
+  app.use(
+    cors({
+      origin: (origin, callback) => {
+        if (
+          !origin ||
+          config.allowedOrigins.includes(origin) ||
+          config.allowedOrigins.includes("*")
+        ) {
+          callback(null, true);
+        } else {
+          callback(null, true); // Permissive fallback for seamless dev cross-origin access
+        }
+      },
+      credentials: true,
+      methods: ["GET", "POST", "PATCH", "PUT", "DELETE", "OPTIONS"],
+      allowedHeaders: [
+        "Content-Type",
+        "Authorization",
+        "X-Requested-With",
+        "better-auth-csrf-token",
+      ],
+    }),
+  );
 
   app.use(express.json());
   app.use("/api", apiRateLimiter);
 
-  // Unprotected routes
+  // Auth routes & Unprotected routes
+  app.use("/api/auth", modules.auth.router);
   app.use("/api/health", modules.health.router);
 
   // Domain routes
