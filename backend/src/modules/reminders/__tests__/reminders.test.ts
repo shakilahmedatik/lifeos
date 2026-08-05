@@ -23,11 +23,14 @@ describe("Reminders Module", () => {
   });
 
   it("should create and retrieve reminders", () => {
-    const reminder = service.create({
-      title: "Standup Call",
-      time: "14:00",
-      kind: "event",
-    });
+    const reminder = service.create(
+      {
+        title: "Standup Call",
+        time: "14:00",
+        kind: "event",
+      },
+      "default",
+    );
 
     expect(reminder.id).toBeDefined();
     expect(reminder.title).toBe("Standup Call");
@@ -35,33 +38,41 @@ describe("Reminders Module", () => {
     expect(reminder.kind).toBe("event");
     expect(reminder.completed).toBe(false);
 
-    const all = service.getAll();
+    const all = service.getAll("default");
     expect(all).toHaveLength(1);
     expect(all[0].title).toBe("Standup Call");
   });
 
   it("should update reminder completion status", () => {
-    const created = service.create({
-      title: "Take vitamins",
-      time: "09:00",
-      kind: "reminder",
-    });
+    const created = service.create(
+      {
+        title: "Take vitamins",
+        time: "09:00",
+        kind: "reminder",
+      },
+      "default",
+    );
 
-    const updated = service.update(created.id, { completed: true });
+    const updated = service.update(created.id, { completed: true }, "default");
     expect(updated?.completed).toBe(true);
 
-    const todayReminders = service.getTodayReminders("2026-08-05");
+    const todayReminders = service.getTodayReminders("2026-08-05", "default");
     expect(todayReminders).toHaveLength(0); // completed item excluded from today's pending
   });
 
   it("should delete reminder", () => {
-    const created = service.create({
-      title: "Read book",
-      time: "21:00",
-    });
+    const created = service.create(
+      {
+        title: "Read book",
+        time: "21:00",
+      },
+      "default",
+    );
 
-    const deleted = service.delete(created.id);
-    expect(deleted).toBe(true);
-    expect(service.getAll()).toHaveLength(0);
+    const result = service.delete(created.id, "default");
+    expect(result).toBe(true);
+
+    const found = service.getById(created.id, "default");
+    expect(found).toBeUndefined();
   });
 });

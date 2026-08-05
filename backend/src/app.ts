@@ -36,8 +36,9 @@ export function createApp(container: Container): Express {
   app.use(express.json());
   app.use("/api", apiRateLimiter);
 
-  // Auth routes & Unprotected routes
+  // Auth & Cron routes
   app.use("/api/auth", modules.auth.router);
+  app.use("/api/cron", modules.cron.router);
   app.use("/api/health", modules.health.router);
 
   // Domain routes

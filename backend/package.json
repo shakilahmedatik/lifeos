@@ -17,6 +17,7 @@
   "dependencies": {
     "@libsql/client": "^0.17.4",
     "@lifeos/contracts": "workspace:*",
+    "@upstash/qstash": "^2.11.3",
     "better-auth": "^1.6.25",
     "better-sqlite3": "^13.0.1",
     "cors": "^2.8.6",

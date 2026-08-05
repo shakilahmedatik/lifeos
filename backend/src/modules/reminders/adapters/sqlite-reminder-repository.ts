@@ -29,21 +29,21 @@ function mapRowToReminder(row: ReminderRow): Reminder {
 export class SqliteReminderRepository implements ReminderRepository {
   constructor(private readonly db: Database.Database) {}
 
-  getAll(): Reminder[] {
+  getAll(_userId: string): Reminder[] {
     const rows = this.db
       .prepare("SELECT * FROM reminders ORDER BY time ASC, created_at DESC")
       .all() as ReminderRow[];
     return rows.map(mapRowToReminder);
   }
 
-  getByDate(date: string): Reminder[] {
+  getByDate(date: string, _userId: string): Reminder[] {
     const rows = this.db
       .prepare("SELECT * FROM reminders WHERE date = ? OR date IS NULL ORDER BY time ASC")
       .all(date) as ReminderRow[];
     return rows.map(mapRowToReminder);
   }
 
-  getTodayReminders(today: string): Reminder[] {
+  getTodayReminders(today: string, _userId: string): Reminder[] {
     const rows = this.db
       .prepare(
         "SELECT * FROM reminders WHERE (date = ? OR date IS NULL) AND completed = 0 ORDER BY time ASC",
@@ -52,14 +52,14 @@ export class SqliteReminderRepository implements ReminderRepository {
     return rows.map(mapRowToReminder);
   }
 
-  getById(id: string): Reminder | undefined {
+  getById(id: string, _userId: string): Reminder | undefined {
     const row = this.db.prepare("SELECT * FROM reminders WHERE id = ?").get(id) as
       | ReminderRow
       | undefined;
     return row ? mapRowToReminder(row) : undefined;
   }
 
-  create(id: string, input: NewReminderInput): Reminder {
+  create(id: string, input: NewReminderInput, _userId: string): Reminder {
     const now = new Date().toISOString();
     const kind = input.kind || "reminder";
     const date = input.date ?? null;
@@ -71,15 +71,15 @@ export class SqliteReminderRepository implements ReminderRepository {
       )
       .run(id, input.title, input.time, date, kind, now, now);
 
-    const reminder = this.getById(id);
+    const reminder = this.getById(id, _userId);
     if (!reminder) {
       throw new Error(`Failed to retrieve created reminder with id: ${id}`);
     }
     return reminder;
   }
 
-  update(id: string, patch: UpdateReminderInput): Reminder | undefined {
-    const existing = this.getById(id);
+  update(id: string, patch: UpdateReminderInput, _userId: string): Reminder | undefined {
+    const existing = this.getById(id, _userId);
     if (!existing) return undefined;
 
     const now = new Date().toISOString();
@@ -98,10 +98,10 @@ export class SqliteReminderRepository implements ReminderRepository {
       )
       .run(title, time, date, kind, completed, now, id);
 
-    return this.getById(id);
+    return this.getById(id, _userId);
   }
 
-  delete(id: string): boolean {
+  delete(id: string, _userId: string): boolean {
     const res = this.db.prepare("DELETE FROM reminders WHERE id = ?").run(id);
     return res.changes > 0;
   }

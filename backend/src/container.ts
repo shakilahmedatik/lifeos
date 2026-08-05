@@ -3,6 +3,7 @@ import type Database from "better-sqlite3";
 import type { AppConfig } from "./config.js";
 import { initAuthModule } from "./modules/auth/index.js";
 import { initBackupModule } from "./modules/backup/index.js";
+import { initCronModule } from "./modules/cron/index.js";
 import { initDashboardModule } from "./modules/dashboard/index.js";
 import { initFinanceModule } from "./modules/finance/index.js";
 import { initHabitsModule } from "./modules/habits/index.js";
@@ -23,6 +24,7 @@ export interface Container {
   modules: {
     auth: ReturnType<typeof initAuthModule>;
     backup: ReturnType<typeof initBackupModule>;
+    cron: ReturnType<typeof initCronModule>;
     dashboard: ReturnType<typeof initDashboardModule>;
     finance: ReturnType<typeof initFinanceModule>;
     habits: ReturnType<typeof initHabitsModule>;
@@ -52,6 +54,7 @@ export function createContainer(config: AppConfig): Container {
   const finance = initFinanceModule(db);
   const news = initNewsModule(db);
   const skills = initSkillsModule(db);
+  const cron = initCronModule(news.rssFetchService, config);
 
   const dashboard = initDashboardModule({
     taskRepo: routine.taskRepo,
@@ -86,7 +89,6 @@ export function createContainer(config: AppConfig): Container {
   const stopBackgroundJobs = () => {
     news.newsScheduler.stop();
     notifications.notificationScheduler.stop();
-    notifications.notificationBroadcaster.stop();
   };
 
   return {
@@ -95,6 +97,7 @@ export function createContainer(config: AppConfig): Container {
     modules: {
       auth,
       backup,
+      cron,
       dashboard,
       finance,
       habits,

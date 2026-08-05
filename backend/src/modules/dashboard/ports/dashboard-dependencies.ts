@@ -11,7 +11,7 @@ import type { WorkoutSessionRepository } from "../../workouts/ports/workout-sess
 
 export interface DashboardDependencies {
   taskRepo: {
-    getByDate(date: string): Task[];
+    getByDate(date: string, userId?: string): Task[];
   };
   habitLogService?: HabitLogService;
   habitStatsService?: HabitStatsService;

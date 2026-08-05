@@ -1,6 +1,5 @@
 import { logger } from "../../../shared/logger.js";
 import type { NotificationWithTask } from "../domain/types.js";
-import type { NotificationBroadcaster } from "./notification-broadcaster.js";
 import type { NotificationService } from "./notification-service.js";
 
 export type NotificationCallback = (notification: NotificationWithTask) => void;
@@ -12,10 +11,7 @@ export class NotificationScheduler {
   private error: string | undefined;
   public listeners: NotificationCallback[] = [];
 
-  constructor(
-    private notificationService: NotificationService,
-    public broadcaster?: NotificationBroadcaster,
-  ) {}
+  constructor(private notificationService: NotificationService) {}
 
   start(intervalMs = 10000): void {
     if (this.intervalId) return;
@@ -84,10 +80,6 @@ export class NotificationScheduler {
       taskTitle: notification.taskTitle,
       reminderTime: notification.reminderTime,
     });
-
-    if (this.broadcaster) {
-      this.broadcaster.broadcast(notification);
-    }
 
     for (const listener of this.listeners) {
       try {

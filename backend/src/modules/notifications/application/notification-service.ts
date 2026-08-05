@@ -45,7 +45,12 @@ export class NotificationService {
     return this.notificationRepo.update(id, { status: "sent" });
   }
 
-  cancelNotification(id: string): Notification | null {
-    return this.notificationRepo.update(id, { status: "cancelled" });
+  processDueRemindersForUser(userId = "default"): void {
+    const pending = this.notificationRepo.findPendingNotifications();
+    for (const notification of pending) {
+      if (notification.userId === userId || userId === "default") {
+        this.markNotificationAsSent(notification.id);
+      }
+    }
   }
 }

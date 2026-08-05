@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { NotificationBroadcaster } from "../application/notification-broadcaster.js";
 import { NotificationScheduler } from "../application/notification-scheduler.js";
 import type { NotificationService } from "../application/notification-service.js";
 import type { NotificationWithTask } from "../domain/types.js";
@@ -7,7 +6,6 @@ import type { NotificationWithTask } from "../domain/types.js";
 describe("NotificationScheduler", () => {
   let scheduler: NotificationScheduler;
   let mockNotificationService: NotificationService;
-  let mockBroadcaster: { broadcast: ReturnType<typeof vi.fn> };
 
   beforeEach(() => {
     mockNotificationService = {
@@ -15,14 +13,7 @@ describe("NotificationScheduler", () => {
       markNotificationAsSent: vi.fn().mockReturnValue({}),
     } as unknown as NotificationService;
 
-    mockBroadcaster = {
-      broadcast: vi.fn(),
-    };
-
-    scheduler = new NotificationScheduler(
-      mockNotificationService,
-      mockBroadcaster as unknown as NotificationBroadcaster,
-    );
+    scheduler = new NotificationScheduler(mockNotificationService);
   });
 
   it("should start and stop the scheduler", () => {
@@ -52,7 +43,6 @@ describe("NotificationScheduler", () => {
 
     expect(mockNotificationService.getPendingNotifications).toHaveBeenCalled();
     expect(mockNotificationService.markNotificationAsSent).toHaveBeenCalledWith("1");
-    expect(mockBroadcaster.broadcast).toHaveBeenCalledWith(mockNotification);
   });
 
   it("should register and unregister listeners", () => {
