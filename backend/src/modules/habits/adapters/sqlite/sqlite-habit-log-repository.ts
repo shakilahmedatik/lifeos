@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type { HabitLogEntry, NewHabitLogEntryInput } from "../../domain/types.js";
 import type { HabitLogRepository } from "../../ports/habit-log-repository.js";
@@ -24,63 +24,83 @@ function rowToHabitLog(row: HabitLogRow): HabitLogEntry {
 }
 
 export class SqliteHabitLogRepository implements HabitLogRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly client: Client) {}
 
-  getById(id: string): HabitLogEntry | undefined {
-    const row = this.db.prepare("SELECT * FROM habit_logs WHERE id = ?").get(id) as
-      | HabitLogRow
-      | undefined;
+  async getById(id: string, _userId: string): Promise<HabitLogEntry | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM habit_logs WHERE id = ?",
+      args: [id],
+    });
+    const row = res.rows[0] as unknown as HabitLogRow | undefined;
     return row ? rowToHabitLog(row) : undefined;
   }
 
-  getByHabitAndDate(habitId: string, date: string): HabitLogEntry[] {
-    const rows = this.db
-      .prepare("SELECT * FROM habit_logs WHERE habit_id = ? AND date = ? ORDER BY logged_at ASC")
-      .all(habitId, date) as HabitLogRow[];
+  async getByHabitAndDate(
+    habitId: string,
+    date: string,
+    _userId: string,
+  ): Promise<HabitLogEntry[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM habit_logs WHERE habit_id = ? AND date = ? ORDER BY logged_at ASC",
+      args: [habitId, date],
+    });
+    const rows = res.rows as unknown as HabitLogRow[];
     return rows.map(rowToHabitLog);
   }
 
-  getByDateRange(startDate: string, endDate: string): HabitLogEntry[] {
-    const rows = this.db
-      .prepare(
-        "SELECT * FROM habit_logs WHERE date >= ? AND date <= ? ORDER BY date, logged_at ASC",
-      )
-      .all(startDate, endDate) as HabitLogRow[];
+  async getByDateRange(
+    startDate: string,
+    endDate: string,
+    _userId: string,
+  ): Promise<HabitLogEntry[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM habit_logs WHERE date >= ? AND date <= ? ORDER BY date, logged_at ASC",
+      args: [startDate, endDate],
+    });
+    const rows = res.rows as unknown as HabitLogRow[];
     return rows.map(rowToHabitLog);
   }
 
-  getByHabitId(habitId: string): HabitLogEntry[] {
-    const rows = this.db
-      .prepare("SELECT * FROM habit_logs WHERE habit_id = ? ORDER BY date DESC, logged_at DESC")
-      .all(habitId) as HabitLogRow[];
+  async getByHabitId(habitId: string, _userId: string): Promise<HabitLogEntry[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM habit_logs WHERE habit_id = ? ORDER BY date DESC, logged_at DESC",
+      args: [habitId],
+    });
+    const rows = res.rows as unknown as HabitLogRow[];
     return rows.map(rowToHabitLog);
   }
 
-  getAllLogs(): HabitLogEntry[] {
-    const rows = this.db
-      .prepare("SELECT * FROM habit_logs ORDER BY date DESC, logged_at DESC")
-      .all() as HabitLogRow[];
+  async getAllLogs(_userId: string): Promise<HabitLogEntry[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM habit_logs ORDER BY date DESC, logged_at DESC",
+    });
+    const rows = res.rows as unknown as HabitLogRow[];
     return rows.map(rowToHabitLog);
   }
 
-  create(id: string, input: NewHabitLogEntryInput): HabitLogEntry {
+  async create(id: string, input: NewHabitLogEntryInput, userId: string): Promise<HabitLogEntry> {
     const now = new Date().toISOString();
-    this.db
-      .prepare(
-        `INSERT INTO habit_logs (id, habit_id, date, value, logged_at, meta)
-         VALUES (?, ?, ?, ?, ?, ?)`,
-      )
-      .run(id, input.habitId, input.date, input.value, now, input.meta ?? null);
+    await this.client.execute({
+      sql: `INSERT INTO habit_logs (id, habit_id, date, value, logged_at, meta)
+            VALUES (?, ?, ?, ?, ?, ?)`,
+      args: [id, input.habitId, input.date, input.value, now, input.meta ?? null],
+    });
 
-    return this.getById(id) as HabitLogEntry;
+    return (await this.getById(id, userId)) as HabitLogEntry;
   }
 
-  delete(id: string): boolean {
-    const result = this.db.prepare("DELETE FROM habit_logs WHERE id = ?").run(id);
-    return result.changes > 0;
+  async delete(id: string, _userId: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM habit_logs WHERE id = ?",
+      args: [id],
+    });
+    return res.rowsAffected > 0;
   }
 
-  deleteByHabitId(habitId: string): void {
-    this.db.prepare("DELETE FROM habit_logs WHERE habit_id = ?").run(habitId);
+  async deleteByHabitId(habitId: string, _userId: string): Promise<void> {
+    await this.client.execute({
+      sql: "DELETE FROM habit_logs WHERE habit_id = ?",
+      args: [habitId],
+    });
   }
 }

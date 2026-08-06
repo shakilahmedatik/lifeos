@@ -1,5 +1,5 @@
 import { fileURLToPath } from "node:url";
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 import type { AppConfig } from "./config.js";
 import { initAuthModule } from "./modules/auth/index.js";
 import { initBackupModule } from "./modules/backup/index.js";
@@ -20,7 +20,7 @@ import { runMigrations } from "./shared/migrations/runner.js";
 
 export interface Container {
   config: AppConfig;
-  db: Database.Database;
+  db: Client;
   modules: {
     auth: ReturnType<typeof initAuthModule>;
     backup: ReturnType<typeof initBackupModule>;
@@ -36,13 +36,14 @@ export interface Container {
     skills: ReturnType<typeof initSkillsModule>;
     workouts: ReturnType<typeof initWorkoutsModule>;
   };
+  triggerLazyJobs: () => Promise<void>;
   startBackgroundJobs: () => void;
   stopBackgroundJobs: () => void;
 }
 
-export function createContainer(config: AppConfig): Container {
+export async function createContainer(config: AppConfig): Promise<Container> {
   const db = createDatabase(config.dbPath, config.databaseUrl, config.tursoDatabaseToken);
-  runMigrations(db, fileURLToPath(new URL("./shared/migrations/", import.meta.url)));
+  await runMigrations(db, fileURLToPath(new URL("./shared/migrations/", import.meta.url)));
 
   const auth = initAuthModule(db, config);
   const backup = initBackupModule(config.dbPath);
@@ -81,6 +82,15 @@ export function createContainer(config: AppConfig): Container {
 
   const health = initHealthModule(db, getSchedulerStatus);
 
+  const triggerLazyJobs = async () => {
+    try {
+      await notifications.notificationScheduler.checkAndSendNotificationsLazy();
+      await news.newsScheduler.runFetchCycleIfNeeded();
+    } catch {
+      // Lazy background execution errors handled internally in schedulers
+    }
+  };
+
   const startBackgroundJobs = () => {
     news.newsScheduler.start();
     notifications.notificationScheduler.start();
@@ -109,6 +119,7 @@ export function createContainer(config: AppConfig): Container {
       skills,
       workouts,
     },
+    triggerLazyJobs,
     startBackgroundJobs,
     stopBackgroundJobs,
   };

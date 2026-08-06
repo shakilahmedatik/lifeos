@@ -1,29 +1,31 @@
 import { fileURLToPath } from "node:url";
-import type Database from "better-sqlite3";
+import { type Client, createClient } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
-import { createDatabase } from "../../../shared/db.js";
 import { runMigrations } from "../../../shared/migrations/runner.js";
 import { SqliteReminderRepository } from "../adapters/sqlite-reminder-repository.js";
 import { ReminderService } from "../application/reminder-service.js";
 
-function createTestDb(): Database.Database {
-  const db = createDatabase(":memory:");
-  runMigrations(db, fileURLToPath(new URL("../../../shared/migrations/", import.meta.url)));
-  return db;
+async function createTestClient(): Promise<Client> {
+  const client = createClient({ url: ":memory:" });
+  await runMigrations(
+    client,
+    fileURLToPath(new URL("../../../shared/migrations/", import.meta.url)),
+  );
+  return client;
 }
 
 describe("Reminders Module", () => {
-  let db: Database.Database;
+  let client: Client;
   let service: ReminderService;
 
-  beforeEach(() => {
-    db = createTestDb();
-    const repo = new SqliteReminderRepository(db);
+  beforeEach(async () => {
+    client = await createTestClient();
+    const repo = new SqliteReminderRepository(client);
     service = new ReminderService(repo);
   });
 
-  it("should create and retrieve reminders", () => {
-    const reminder = service.create(
+  it("should create and retrieve reminders", async () => {
+    const reminder = await service.create(
       {
         title: "Standup Call",
         time: "14:00",
@@ -38,13 +40,13 @@ describe("Reminders Module", () => {
     expect(reminder.kind).toBe("event");
     expect(reminder.completed).toBe(false);
 
-    const all = service.getAll("default");
+    const all = await service.getAll("default");
     expect(all).toHaveLength(1);
     expect(all[0].title).toBe("Standup Call");
   });
 
-  it("should update reminder completion status", () => {
-    const created = service.create(
+  it("should update reminder completion status", async () => {
+    const created = await service.create(
       {
         title: "Take vitamins",
         time: "09:00",
@@ -53,15 +55,15 @@ describe("Reminders Module", () => {
       "default",
     );
 
-    const updated = service.update(created.id, { completed: true }, "default");
+    const updated = await service.update(created.id, { completed: true }, "default");
     expect(updated?.completed).toBe(true);
 
-    const todayReminders = service.getTodayReminders("2026-08-05", "default");
+    const todayReminders = await service.getTodayReminders("2026-08-05", "default");
     expect(todayReminders).toHaveLength(0); // completed item excluded from today's pending
   });
 
-  it("should delete reminder", () => {
-    const created = service.create(
+  it("should delete reminder", async () => {
+    const created = await service.create(
       {
         title: "Read book",
         time: "21:00",
@@ -69,10 +71,10 @@ describe("Reminders Module", () => {
       "default",
     );
 
-    const result = service.delete(created.id, "default");
+    const result = await service.delete(created.id, "default");
     expect(result).toBe(true);
 
-    const found = service.getById(created.id, "default");
+    const found = await service.getById(created.id, "default");
     expect(found).toBeUndefined();
   });
 });

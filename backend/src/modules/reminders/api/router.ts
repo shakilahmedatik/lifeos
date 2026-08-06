@@ -8,26 +8,26 @@ import type { ReminderService } from "../application/reminder-service.js";
 export function createRemindersRouter(reminderService: ReminderService): Router {
   const router = Router();
 
-  router.get("/", (req: AuthenticatedRequest, res) => {
+  router.get("/", async (req: AuthenticatedRequest, res) => {
     const userId = req.user?.id || (req.query.userId as string) || "default";
-    reminderService.processDueRemindersForUser(userId);
+    await reminderService.processDueRemindersForUser(userId);
     const { date } = req.query;
     if (typeof date === "string") {
-      res.json(reminderService.getByDate(date, userId));
+      res.json(await reminderService.getByDate(date, userId));
     } else {
-      res.json(reminderService.getAll(userId));
+      res.json(await reminderService.getAll(userId));
     }
   });
 
-  router.get("/today", (req: AuthenticatedRequest, res) => {
+  router.get("/today", async (req: AuthenticatedRequest, res) => {
     const userId = req.user?.id || (req.query.userId as string) || "default";
     const today = todayInDhaka();
-    res.json(reminderService.getTodayReminders(today, userId));
+    res.json(await reminderService.getTodayReminders(today, userId));
   });
 
-  router.get("/:id", (req: AuthenticatedRequest, res) => {
+  router.get("/:id", async (req: AuthenticatedRequest, res) => {
     const userId = req.user?.id || (req.query.userId as string) || "default";
-    const reminder = reminderService.getById(req.params.id as string, userId);
+    const reminder = await reminderService.getById(req.params.id as string, userId);
     if (!reminder) {
       res.status(404).json({ error: "Reminder not found" });
       return;
@@ -35,33 +35,37 @@ export function createRemindersRouter(reminderService: ReminderService): Router 
     res.json(reminder);
   });
 
-  router.post("/", validateBody(NewReminderSchema), (req: AuthenticatedRequest, res) => {
+  router.post("/", validateBody(NewReminderSchema), async (req: AuthenticatedRequest, res) => {
     const userId = req.user?.id || (req.query.userId as string) || "default";
     try {
-      const reminder = reminderService.create(req.body, userId);
+      const reminder = await reminderService.create(req.body, userId);
       res.status(201).json(reminder);
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
     }
   });
 
-  router.patch("/:id", validateBody(UpdateReminderSchema), (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
-    try {
-      const updated = reminderService.update(req.params.id as string, req.body, userId);
-      if (!updated) {
-        res.status(404).json({ error: "Reminder not found" });
-        return;
+  router.patch(
+    "/:id",
+    validateBody(UpdateReminderSchema),
+    async (req: AuthenticatedRequest, res) => {
+      const userId = req.user?.id || (req.query.userId as string) || "default";
+      try {
+        const updated = await reminderService.update(req.params.id as string, req.body, userId);
+        if (!updated) {
+          res.status(404).json({ error: "Reminder not found" });
+          return;
+        }
+        res.json(updated);
+      } catch (err) {
+        res.status(400).json({ error: (err as Error).message });
       }
-      res.json(updated);
-    } catch (err) {
-      res.status(400).json({ error: (err as Error).message });
-    }
-  });
+    },
+  );
 
-  router.delete("/:id", (req: AuthenticatedRequest, res) => {
+  router.delete("/:id", async (req: AuthenticatedRequest, res) => {
     const userId = req.user?.id || (req.query.userId as string) || "default";
-    const deleted = reminderService.delete(req.params.id as string, userId);
+    const deleted = await reminderService.delete(req.params.id as string, userId);
     if (!deleted) {
       res.status(404).json({ error: "Reminder not found" });
       return;

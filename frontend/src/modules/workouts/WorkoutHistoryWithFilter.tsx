@@ -46,8 +46,14 @@ export function WorkoutHistoryWithFilter({
     }
 
     if (dateFilter) {
-      const filterDate = new Date(dateFilter).toISOString().split("T")[0];
-      result = result.filter((session) => session.startedAt.startsWith(filterDate));
+      result = result.filter((session) => {
+        const d = new Date(session.startedAt);
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, "0");
+        const day = String(d.getDate()).padStart(2, "0");
+        const localSessionDate = `${year}-${month}-${day}`;
+        return localSessionDate === dateFilter;
+      });
     }
 
     result.sort((a, b) => {

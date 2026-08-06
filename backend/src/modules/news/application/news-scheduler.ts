@@ -2,48 +2,33 @@ import { logger } from "../../../shared/logger.js";
 import type { createRssFetchService } from "./rss-fetch-service.js";
 
 export function createNewsScheduler(rssFetchService: ReturnType<typeof createRssFetchService>) {
-  let intervalId: ReturnType<typeof setInterval> | null = null;
   let fetchIntervalMinutes = 60;
   let lastRun: string | undefined;
+  let lastRunTimestamp = 0;
   let error: string | undefined;
   let running = false;
+  let _active = false;
 
   return {
     start(intervalMinutes?: number): void {
-      if (intervalId) {
-        this.stop();
-      }
-
+      _active = true;
       if (intervalMinutes) {
         fetchIntervalMinutes = intervalMinutes;
       }
-
-      logger.info("Starting news scheduler", { intervalMinutes: fetchIntervalMinutes });
-
-      this.runFetchCycle();
-
-      intervalId = setInterval(
-        () => {
-          this.runFetchCycle();
-        },
-        fetchIntervalMinutes * 60 * 1000,
-      );
+      logger.info("News scheduler enabled (lazy request-driven execution)", {
+        intervalMinutes: fetchIntervalMinutes,
+      });
+      // Trigger lazy cycle immediately if needed
+      this.runFetchCycleIfNeeded();
     },
 
     stop(): void {
-      if (intervalId) {
-        clearInterval(intervalId);
-        intervalId = null;
-        logger.info("News scheduler stopped");
-      }
+      _active = false;
+      logger.info("News scheduler disabled");
     },
 
     setInterval(minutes: number): void {
       fetchIntervalMinutes = minutes;
-      if (intervalId) {
-        this.stop();
-        this.start();
-      }
     },
 
     getInterval(): number {
@@ -64,6 +49,15 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
       };
     },
 
+    async runFetchCycleIfNeeded(): Promise<void> {
+      const now = Date.now();
+      const intervalMs = fetchIntervalMinutes * 60 * 1000;
+      if (running || (lastRunTimestamp > 0 && now - lastRunTimestamp < intervalMs)) {
+        return;
+      }
+      await this.runFetchCycle();
+    },
+
     async runFetchCycle(): Promise<void> {
       if (running) return;
       running = true;
@@ -74,12 +68,14 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
           totalFeeds: result.totalFeeds,
           newArticles: result.totalNewArticles,
         });
-        lastRun = new Date().toISOString();
+        lastRunTimestamp = Date.now();
+        lastRun = new Date(lastRunTimestamp).toISOString();
         error = undefined;
       } catch (err) {
         logger.error("Error in news fetch cycle", { error: (err as Error).message });
         error = (err as Error).message;
-        lastRun = new Date().toISOString();
+        lastRunTimestamp = Date.now();
+        lastRun = new Date(lastRunTimestamp).toISOString();
       } finally {
         running = false;
       }

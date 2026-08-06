@@ -1,4 +1,4 @@
-import Database from "better-sqlite3";
+import { type Client, createClient } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { HabitLogService } from "../application/habit-log-service.js";
 import type { HabitService } from "../application/habit-service.js";
@@ -107,15 +107,16 @@ describe("Typed Habit Domain Rules", () => {
 });
 
 describe("Habit Module Services Integration", () => {
-  let db: Database.Database;
+  let client: Client;
   let habitService: HabitService;
   let habitLogService: HabitLogService;
 
-  beforeEach(() => {
-    db = new Database(":memory:");
-    db.exec(`
+  beforeEach(async () => {
+    client = createClient({ url: ":memory:" });
+    await client.execute(`
       CREATE TABLE habits (
         id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL DEFAULT 'default',
         name TEXT NOT NULL UNIQUE,
         type TEXT NOT NULL DEFAULT 'boolean',
         category TEXT NOT NULL DEFAULT 'general',
@@ -127,8 +128,11 @@ describe("Habit Module Services Integration", () => {
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
         updated_at TEXT NOT NULL DEFAULT (datetime('now'))
       );
+    `);
+    await client.execute(`
       CREATE TABLE habit_logs (
         id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL DEFAULT 'default',
         habit_id TEXT NOT NULL,
         date TEXT NOT NULL,
         value REAL NOT NULL DEFAULT 1,
@@ -138,13 +142,13 @@ describe("Habit Module Services Integration", () => {
       );
     `);
 
-    const module = initHabitsModule(db);
+    const module = initHabitsModule(client);
     habitService = module.habitService;
     habitLogService = module.habitLogService;
   });
 
-  it("creates, retrieves, and logs typed habits", () => {
-    const created = habitService.createHabit({
+  it("creates, retrieves, and logs typed habits", async () => {
+    const created = await habitService.createHabit({
       name: "Water Intake",
       type: "water",
       category: "health",
@@ -159,7 +163,7 @@ describe("Habit Module Services Integration", () => {
       expect(created.config.dailyGoalMl).toBe(3000);
     }
 
-    const log1 = habitLogService.logHabit({
+    const log1 = await habitLogService.logHabit({
       habitId: created.id,
       date: "2026-08-04",
       value: 1000,
@@ -167,7 +171,7 @@ describe("Habit Module Services Integration", () => {
     expect(log1.id).toBeDefined();
     expect(log1.value).toBe(1000);
 
-    const due = habitLogService.getTodayDueHabits("2026-08-04");
+    const due = await habitLogService.getTodayDueHabits("2026-08-04");
     expect(due).toHaveLength(1);
     expect(due[0].todayValue).toBe(1000);
     expect(due[0].todayTarget).toBe(3000);

@@ -1,6 +1,7 @@
 import type { AccountWithBalance, CategoryBreakdown, MonthlySummary } from "@lifeos/contracts";
 import { getClientMonthString } from "@lifeos/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useAppToast } from "../../../components/Toast.js";
 import * as api from "../api.js";
 
 export function useFinanceSummary(yearMonth?: string) {
@@ -9,6 +10,8 @@ export function useFinanceSummary(yearMonth?: string) {
   const [breakdown, setBreakdown] = useState<CategoryBreakdown[]>([]);
   const [balances, setBalances] = useState<AccountWithBalance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const toast = useAppToast();
   const prevYm = useRef(ym);
   const mountedRef = useRef(true);
 
@@ -23,6 +26,7 @@ export function useFinanceSummary(yearMonth?: string) {
     if (prevYm.current !== ym) {
       setLoading(true);
     }
+    setError(null);
     try {
       const [s, b, bal] = await Promise.all([
         api.fetchMonthlySummary(ym),
@@ -35,16 +39,22 @@ export function useFinanceSummary(yearMonth?: string) {
         setBalances(bal);
         prevYm.current = ym;
       }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to load finance summary";
+      if (mountedRef.current) {
+        setError(msg);
+        toast.error(msg);
+      }
     } finally {
       if (mountedRef.current) {
         setLoading(false);
       }
     }
-  }, [ym]);
+  }, [ym, toast]);
 
   useEffect(() => {
     load();
   }, [load]);
 
-  return { summary, breakdown, balances, loading, refresh: load };
+  return { summary, breakdown, balances, loading, error, refresh: load };
 }

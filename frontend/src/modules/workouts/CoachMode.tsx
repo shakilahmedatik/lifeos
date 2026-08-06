@@ -4,14 +4,13 @@ import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { Input } from "../../components/ui/Input.js";
-import { api } from "../../lib/api.js";
+import { api, request } from "../../lib/api.js";
 import { playNotificationSound } from "../notifications/sound-player.js";
 import { addExerciseLog, cancelSession, completeSession, startSession } from "./api.js";
 import { CoachStartModal } from "./components/CoachStartModal.js";
 import { RestTimerDisplay } from "./components/RestTimerDisplay.js";
 import { VideoPlayer } from "./components/VideoPlayer.js";
 import { useExercises, useWorkout } from "./useWorkouts.js";
-import { useWorkoutTimerSSE } from "./useWorkoutTimerSSE.js";
 
 interface CoachModeProps {
   workoutId: string;
@@ -52,12 +51,12 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (sessionId && !isFinishedRef.current) {
-        fetch(`/api/workouts/sessions/${sessionId}`, {
+        request(`/api/workouts/sessions/${sessionId}`, {
           method: "DELETE",
           keepalive: true,
         }).catch(console.error);
         if (taskId) {
-          fetch(`/api/tasks/${taskId}/status`, {
+          request(`/api/routine/tasks/${taskId}/status`, {
             method: "PATCH",
             body: JSON.stringify({ status: "planned" }),
             headers: { "Content-Type": "application/json" },
@@ -192,9 +191,14 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
     }
   }, [sessionId, startTime, taskId, onComplete]);
 
-  const handleCompleteSet = useCallback(async () => {
-    if (!sessionId || !currentExercise || !workout) return;
+  const [isSubmittingSet, setIsSubmittingSet] = useState(false);
+  const isSubmittingSetRef = useRef(false);
 
+  const handleCompleteSet = useCallback(async () => {
+    if (isSubmittingSetRef.current || !sessionId || !currentExercise || !workout) return;
+
+    isSubmittingSetRef.current = true;
+    setIsSubmittingSet(true);
     try {
       await addExerciseLog(sessionId, {
         exerciseId: currentExercise.exerciseId,
@@ -220,6 +224,9 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
       }
     } catch (err) {
       console.error("Failed to complete set", err);
+    } finally {
+      isSubmittingSetRef.current = false;
+      setIsSubmittingSet(false);
     }
   }, [
     sessionId,
@@ -249,21 +256,6 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
 
   const handleCompleteSetRef = useRef<() => void>(null);
   handleCompleteSetRef.current = handleCompleteSet;
-
-  useWorkoutTimerSSE({
-    onAlert: (alert) => {
-      if (alert.sessionId === sessionId) {
-        if (alert.type === "set_complete") {
-          playNotificationSound("workout_set");
-        } else if (alert.type === "rest_complete") {
-          playNotificationSound("workout_rest");
-        } else if (alert.type === "workout_complete") {
-          playNotificationSound("workout_complete");
-        }
-      }
-    },
-    autoPlaySound: false,
-  });
 
   if (loading) return <div className="p-4 text-gray-400">Loading workout...</div>;
   if (error || !workout)

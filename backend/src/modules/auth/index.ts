@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 import type { Router } from "express";
 import type { AppConfig } from "../../config.js";
 import { type AuthInstance, createAuth } from "./auth.js";
@@ -11,8 +11,8 @@ export interface AuthModule {
   middleware: ReturnType<typeof createAuthMiddleware>;
 }
 
-export function initAuthModule(db: Database.Database, config: AppConfig): AuthModule {
-  const auth = createAuth(db, config);
+export function initAuthModule(client: Client, config: AppConfig): AuthModule {
+  const auth = createAuth(client, config);
   const router = createAuthRouter(auth);
   const middleware = createAuthMiddleware(auth);
 

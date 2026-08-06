@@ -8,19 +8,19 @@ function createMockFeedRepository(): RssFeedRepository {
   const feeds = new Map<string, RssFeed>();
 
   return {
-    getById(id: string): RssFeed | undefined {
+    async getById(id: string): Promise<RssFeed | undefined> {
       return feeds.get(id);
     },
-    getAll(): RssFeed[] {
+    async getAll(): Promise<RssFeed[]> {
       return Array.from(feeds.values());
     },
-    getActive(): RssFeed[] {
+    async getActive(): Promise<RssFeed[]> {
       return Array.from(feeds.values()).filter((f) => f.status === "active");
     },
-    getByUrl(url: string): RssFeed | undefined {
+    async getByUrl(url: string): Promise<RssFeed | undefined> {
       return Array.from(feeds.values()).find((f) => f.url === url);
     },
-    create(id: string, input: NewRssFeedInput): RssFeed {
+    async create(id: string, input: NewRssFeedInput): Promise<RssFeed> {
       const feed: RssFeed = {
         id,
         title: input.title,
@@ -32,25 +32,25 @@ function createMockFeedRepository(): RssFeedRepository {
       feeds.set(id, feed);
       return feed;
     },
-    update(id: string, patch: Partial<NewRssFeedInput>): RssFeed | undefined {
+    async update(id: string, patch: Partial<NewRssFeedInput>): Promise<RssFeed | undefined> {
       const feed = feeds.get(id);
       if (!feed) return undefined;
       const updated = { ...feed, ...patch, updatedAt: new Date().toISOString() };
       feeds.set(id, updated);
       return updated;
     },
-    updateStatus(id: string, status: "active" | "inactive"): RssFeed | undefined {
+    async updateStatus(id: string, status: "active" | "inactive"): Promise<RssFeed | undefined> {
       const feed = feeds.get(id);
       if (!feed) return undefined;
       const updated = { ...feed, status, updatedAt: new Date().toISOString() };
       feeds.set(id, updated);
       return updated;
     },
-    updateFetchStatus(
+    async updateFetchStatus(
       id: string,
       lastFetchedAt: string,
       lastFetchError?: string,
-    ): RssFeed | undefined {
+    ): Promise<RssFeed | undefined> {
       const feed = feeds.get(id);
       if (!feed) return undefined;
       const updated = {
@@ -62,7 +62,7 @@ function createMockFeedRepository(): RssFeedRepository {
       feeds.set(id, updated);
       return updated;
     },
-    delete(id: string): boolean {
+    async delete(id: string): Promise<boolean> {
       return feeds.delete(id);
     },
   };
@@ -78,8 +78,8 @@ describe("FeedService", () => {
   });
 
   describe("createFeed", () => {
-    it("should create a new feed successfully", () => {
-      const result = feedService.createFeed({
+    it("should create a new feed successfully", async () => {
+      const result = await feedService.createFeed({
         title: "Test Feed",
         url: "https://example.com/feed.xml",
       });
@@ -91,13 +91,13 @@ describe("FeedService", () => {
       expect(result.feed?.status).toBe("active");
     });
 
-    it("should fail when creating duplicate feed", () => {
-      feedService.createFeed({
+    it("should fail when creating duplicate feed", async () => {
+      await feedService.createFeed({
         title: "Test Feed",
         url: "https://example.com/feed.xml",
       });
 
-      const result = feedService.createFeed({
+      const result = await feedService.createFeed({
         title: "Duplicate Feed",
         url: "https://example.com/feed.xml",
       });
@@ -108,67 +108,67 @@ describe("FeedService", () => {
   });
 
   describe("getAllFeeds", () => {
-    it("should return all feeds", () => {
-      feedService.createFeed({ title: "Feed 1", url: "https://example.com/feed1.xml" });
-      feedService.createFeed({ title: "Feed 2", url: "https://example.com/feed2.xml" });
+    it("should return all feeds", async () => {
+      await feedService.createFeed({ title: "Feed 1", url: "https://example.com/feed1.xml" });
+      await feedService.createFeed({ title: "Feed 2", url: "https://example.com/feed2.xml" });
 
-      const feeds = feedService.getAllFeeds();
+      const feeds = await feedService.getAllFeeds();
       expect(feeds).toHaveLength(2);
     });
 
-    it("should return empty array when no feeds exist", () => {
-      const feeds = feedService.getAllFeeds();
+    it("should return empty array when no feeds exist", async () => {
+      const feeds = await feedService.getAllFeeds();
       expect(feeds).toHaveLength(0);
     });
   });
 
   describe("deleteFeed", () => {
-    it("should delete an existing feed", () => {
-      const result = feedService.createFeed({
+    it("should delete an existing feed", async () => {
+      const result = await feedService.createFeed({
         title: "Test Feed",
         url: "https://example.com/feed.xml",
       });
       expect(result.feed).toBeDefined();
       const feedId = result.feed?.id as string;
 
-      const deleteResult = feedService.deleteFeed(feedId);
+      const deleteResult = await feedService.deleteFeed(feedId);
       expect(deleteResult.success).toBe(true);
 
-      const feeds = feedService.getAllFeeds();
+      const feeds = await feedService.getAllFeeds();
       expect(feeds).toHaveLength(0);
     });
 
-    it("should fail when deleting non-existent feed", () => {
-      const result = feedService.deleteFeed("non-existent-id");
+    it("should fail when deleting non-existent feed", async () => {
+      const result = await feedService.deleteFeed("non-existent-id");
       expect(result.success).toBe(false);
       expect(result.error).toBe("Feed not found");
     });
   });
 
   describe("toggleFeedStatus", () => {
-    it("should toggle feed from active to inactive", () => {
-      const result = feedService.createFeed({
+    it("should toggle feed from active to inactive", async () => {
+      const result = await feedService.createFeed({
         title: "Test Feed",
         url: "https://example.com/feed.xml",
       });
       expect(result.feed).toBeDefined();
       const feedId = result.feed?.id as string;
 
-      const toggleResult = feedService.toggleFeedStatus(feedId);
+      const toggleResult = await feedService.toggleFeedStatus(feedId);
       expect(toggleResult.success).toBe(true);
       expect(toggleResult.feed?.status).toBe("inactive");
     });
 
-    it("should toggle feed from inactive to active", () => {
-      const result = feedService.createFeed({
+    it("should toggle feed from inactive to active", async () => {
+      const result = await feedService.createFeed({
         title: "Test Feed",
         url: "https://example.com/feed.xml",
       });
       expect(result.feed).toBeDefined();
       const feedId = result.feed?.id as string;
 
-      feedService.toggleFeedStatus(feedId);
-      const toggleResult = feedService.toggleFeedStatus(feedId);
+      await feedService.toggleFeedStatus(feedId);
+      const toggleResult = await feedService.toggleFeedStatus(feedId);
       expect(toggleResult.success).toBe(true);
       expect(toggleResult.feed?.status).toBe("active");
     });

@@ -1,15 +1,26 @@
+import type { Client } from "@libsql/client";
+import { LibsqlDialect } from "@libsql/kysely-libsql";
 import { betterAuth } from "better-auth";
-import type Database from "better-sqlite3";
+import { Kysely } from "kysely";
 import type { AppConfig } from "../../config.js";
 
 // Export type alias for better-auth instance
 export type AuthInstance = ReturnType<typeof betterAuth>;
 
-export function createAuth(db: Database.Database, config: AppConfig): AuthInstance {
+export function createAuth(client: Client, config: AppConfig): AuthInstance {
+  const kysely = new Kysely({
+    dialect: new LibsqlDialect({
+      client: client as unknown as Extract<
+        ConstructorParameters<typeof LibsqlDialect>[0],
+        { client: unknown }
+      >["client"],
+    }),
+  });
+
   return betterAuth({
     database: {
-      db,
-      provider: "sqlite",
+      db: kysely,
+      type: "sqlite",
     },
     secret: config.betterAuthSecret,
     emailAndPassword: {
@@ -17,13 +28,5 @@ export function createAuth(db: Database.Database, config: AppConfig): AuthInstan
       autoSignIn: true,
     },
     trustedOrigins: config.allowedOrigins,
-    user: {
-      additionalFields: {
-        pin: {
-          type: "string",
-          required: false,
-        },
-      },
-    },
   }) as unknown as AuthInstance;
 }

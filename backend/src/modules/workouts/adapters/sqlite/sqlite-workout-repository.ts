@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type {
   NewWorkoutExerciseInput,
@@ -65,64 +65,71 @@ function rowToWorkoutExercise(row: WorkoutExerciseRow): WorkoutExercise {
 }
 
 export class SqliteWorkoutRepository implements WorkoutRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly client: Client) {}
 
-  getById(id: string): Workout | undefined {
-    const row = this.db.prepare("SELECT * FROM workouts WHERE id = ?").get(id) as
-      | WorkoutRow
-      | undefined;
+  async getById(id: string, userId = "default"): Promise<Workout | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM workouts WHERE id = ? AND (user_id = ? OR user_id = '')",
+      args: [id, userId],
+    });
+    const row = res.rows[0] as unknown as WorkoutRow | undefined;
     return row ? rowToWorkout(row) : undefined;
   }
 
-  getAll(): Workout[] {
-    const rows = this.db
-      .prepare(`
+  async getAll(userId = "default"): Promise<Workout[]> {
+    const res = await this.client.execute({
+      sql: `
         SELECT w.*, COUNT(we.id) as exercise_count 
         FROM workouts w 
         LEFT JOIN workout_exercises we ON w.id = we.workout_id 
+        WHERE (w.user_id = ? OR w.user_id = '')
         GROUP BY w.id 
         ORDER BY w.created_at DESC
-      `)
-      .all() as WorkoutRow[];
+      `,
+      args: [userId],
+    });
+    const rows = res.rows as unknown as WorkoutRow[];
     return rows.map(rowToWorkout);
   }
 
-  getByScheduledDay(day: string): Workout[] {
-    const rows = this.db
-      .prepare(`
+  async getByScheduledDay(day: string, userId = "default"): Promise<Workout[]> {
+    const res = await this.client.execute({
+      sql: `
         SELECT w.*, COUNT(we.id) as exercise_count 
         FROM workouts w 
         LEFT JOIN workout_exercises we ON w.id = we.workout_id 
-        WHERE w.scheduled_day = ? 
+        WHERE w.scheduled_day = ? AND (w.user_id = ? OR w.user_id = '')
         GROUP BY w.id 
         ORDER BY w.scheduled_time
-      `)
-      .all(day) as WorkoutRow[];
+      `,
+      args: [day, userId],
+    });
+    const rows = res.rows as unknown as WorkoutRow[];
     return rows.map(rowToWorkout);
   }
 
-  create(id: string, input: NewWorkoutInput): Workout {
+  async create(id: string, input: NewWorkoutInput, userId = "default"): Promise<Workout> {
     const now = new Date().toISOString();
-    this.db
-      .prepare(
-        `INSERT INTO workouts (id, name, description, scheduled_day, scheduled_time, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.client.execute({
+      sql: `INSERT INTO workouts (id, user_id, name, description, scheduled_day, scheduled_time, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         id,
+        userId,
         input.name,
         input.description ?? null,
         input.scheduledDay ?? null,
         input.scheduledTime ?? null,
         now,
         now,
-      );
+      ],
+    });
 
-    return this.getById(id) as Workout;
+    return (await this.getById(id, userId)) as Workout;
   }
 
-  update(id: string, patch: Partial<NewWorkoutInput>): Workout | undefined {
-    const existing = this.getById(id);
+  async update(id: string, patch: Partial<NewWorkoutInput>): Promise<Workout | undefined> {
+    const existing = await this.getById(id);
     if (!existing) return undefined;
 
     const fields: string[] = [];
@@ -151,29 +158,36 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
     values.push(new Date().toISOString());
     values.push(id);
 
-    this.db.prepare(`UPDATE workouts SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+    await this.client.execute({
+      sql: `UPDATE workouts SET ${fields.join(", ")} WHERE id = ?`,
+      args: values,
+    });
 
-    return this.getById(id);
+    return await this.getById(id);
   }
 
-  completeSession(id: string, durationSeconds: number): void {
-    this.db
-      .prepare(`
-      UPDATE workout_sessions
-      SET completed_at = ?, duration_seconds = ?
-      WHERE id = ?
-    `)
-      .run(new Date().toISOString(), durationSeconds, id);
+  async completeSession(id: string, durationSeconds: number): Promise<void> {
+    await this.client.execute({
+      sql: `UPDATE workout_sessions
+            SET completed_at = ?, duration_seconds = ?
+            WHERE id = ?`,
+      args: [new Date().toISOString(), durationSeconds, id],
+    });
   }
 
-  cancelSession(id: string): void {
-    this.db.prepare("DELETE FROM workout_sessions WHERE id = ?").run(id);
+  async cancelSession(id: string): Promise<void> {
+    await this.client.execute({
+      sql: "DELETE FROM workout_sessions WHERE id = ?",
+      args: [id],
+    });
   }
 
-  reorderExercises(workoutId: string, exerciseIds: string[]): void {
-    const currentRows = this.db
-      .prepare("SELECT id FROM workout_exercises WHERE workout_id = ?")
-      .all(workoutId) as { id: string }[];
+  async reorderExercises(workoutId: string, exerciseIds: string[]): Promise<void> {
+    const currentRes = await this.client.execute({
+      sql: "SELECT id FROM workout_exercises WHERE workout_id = ?",
+      args: [workoutId],
+    });
+    const currentRows = currentRes.rows as unknown as Array<{ id: string }>;
     const currentIds = currentRows.map((row) => row.id);
 
     const isDuplicateFree = new Set(exerciseIds).size === exerciseIds.length;
@@ -185,28 +199,31 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
       throw new Error("Invalid exerciseIds payload for reordering");
     }
 
-    const updateOrder = this.db.prepare(
-      "UPDATE workout_exercises SET order_index = ? WHERE id = ? AND workout_id = ?",
-    );
-    this.db.transaction(() => {
-      for (let i = 0; i < exerciseIds.length; i++) {
-        updateOrder.run(i, exerciseIds[i], workoutId);
-      }
-    })();
+    const statements = exerciseIds.map((id, i) => ({
+      sql: "UPDATE workout_exercises SET order_index = ? WHERE id = ? AND workout_id = ?",
+      args: [i, id, workoutId],
+    }));
+
+    await this.client.batch(statements, "write");
   }
 
-  delete(id: string): boolean {
-    const result = this.db.prepare("DELETE FROM workouts WHERE id = ?").run(id);
-    return result.changes > 0;
+  async delete(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM workouts WHERE id = ?",
+      args: [id],
+    });
+    return res.rowsAffected > 0;
   }
 
-  getWithExercises(id: string): WorkoutWithExercises | undefined {
-    const workout = this.getById(id);
+  async getWithExercises(id: string): Promise<WorkoutWithExercises | undefined> {
+    const workout = await this.getById(id);
     if (!workout) return undefined;
 
-    const exerciseRows = this.db
-      .prepare("SELECT * FROM workout_exercises WHERE workout_id = ? ORDER BY order_index")
-      .all(id) as WorkoutExerciseRow[];
+    const res = await this.client.execute({
+      sql: "SELECT * FROM workout_exercises WHERE workout_id = ? ORDER BY order_index",
+      args: [id],
+    });
+    const exerciseRows = res.rows as unknown as WorkoutExerciseRow[];
 
     return {
       ...workout,
@@ -214,20 +231,18 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
     };
   }
 
-  addExercise(
+  async addExercise(
     workoutId: string,
     exerciseId: string,
     input: NewWorkoutExerciseInput,
-  ): WorkoutExercise {
+  ): Promise<WorkoutExercise> {
     const id = randomUUID();
     const now = new Date().toISOString();
 
-    this.db
-      .prepare(
-        `INSERT INTO workout_exercises (id, workout_id, exercise_id, sets, reps, reps_per_set, weight, weight_per_set, rest_seconds, order_index, created_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.client.execute({
+      sql: `INSERT INTO workout_exercises (id, workout_id, exercise_id, sets, reps, reps_per_set, weight, weight_per_set, rest_seconds, order_index, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         id,
         workoutId,
         exerciseId,
@@ -239,13 +254,17 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
         input.restSeconds ?? 60,
         input.orderIndex ?? 0,
         now,
-      );
+      ],
+    });
 
-    return this.getExerciseById(id) as WorkoutExercise;
+    return (await this.getExerciseById(id)) as WorkoutExercise;
   }
 
-  updateExercise(id: string, patch: Partial<NewWorkoutExerciseInput>): WorkoutExercise | undefined {
-    const existing = this.getExerciseById(id);
+  async updateExercise(
+    id: string,
+    patch: Partial<NewWorkoutExerciseInput>,
+  ): Promise<WorkoutExercise | undefined> {
+    const existing = await this.getExerciseById(id);
     if (!existing) return undefined;
 
     const fields: string[] = [];
@@ -284,29 +303,37 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
 
     values.push(id);
 
-    this.db
-      .prepare(`UPDATE workout_exercises SET ${fields.join(", ")} WHERE id = ?`)
-      .run(...values);
+    await this.client.execute({
+      sql: `UPDATE workout_exercises SET ${fields.join(", ")} WHERE id = ?`,
+      args: values,
+    });
 
-    return this.getExerciseById(id);
+    return await this.getExerciseById(id);
   }
 
-  removeExercise(id: string): boolean {
-    const result = this.db.prepare("DELETE FROM workout_exercises WHERE id = ?").run(id);
-    return result.changes > 0;
+  async removeExercise(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM workout_exercises WHERE id = ?",
+      args: [id],
+    });
+    return res.rowsAffected > 0;
   }
 
-  getExerciseById(id: string): WorkoutExercise | undefined {
-    const row = this.db.prepare("SELECT * FROM workout_exercises WHERE id = ?").get(id) as
-      | WorkoutExerciseRow
-      | undefined;
+  async getExerciseById(id: string): Promise<WorkoutExercise | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM workout_exercises WHERE id = ?",
+      args: [id],
+    });
+    const row = res.rows[0] as unknown as WorkoutExerciseRow | undefined;
     return row ? rowToWorkoutExercise(row) : undefined;
   }
 
-  getExercisesByWorkoutId(workoutId: string): WorkoutExercise[] {
-    const rows = this.db
-      .prepare("SELECT * FROM workout_exercises WHERE workout_id = ? ORDER BY order_index")
-      .all(workoutId) as WorkoutExerciseRow[];
+  async getExercisesByWorkoutId(workoutId: string): Promise<WorkoutExercise[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM workout_exercises WHERE workout_id = ? ORDER BY order_index",
+      args: [workoutId],
+    });
+    const rows = res.rows as unknown as WorkoutExerciseRow[];
     return rows.map(rowToWorkoutExercise);
   }
 }

@@ -110,7 +110,9 @@ export function MonthlyView({ refreshTrigger }: MonthlyViewProps) {
           <input
             type="month"
             value={yearMonth}
-            onChange={(e) => setYearMonth(e.target.value)}
+            onChange={(e) => {
+              if (e.target.value) setYearMonth(e.target.value);
+            }}
             className="bg-transparent text-xs text-primary focus:outline-none cursor-pointer"
           />
         </div>

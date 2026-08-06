@@ -7,4 +7,3 @@ export { SoundSettings } from "./SoundSettings.js";
 export { playNotificationSound, resumeAudioContext } from "./sound-player.js";
 export type { SoundPreset } from "./sound-presets.js";
 export { SOUND_PRESET_OPTIONS, SOUND_PRESETS } from "./sound-presets.js";
-export { useNotificationSSE } from "./useNotificationSSE.js";

@@ -182,7 +182,11 @@ describe("Finance Frontend Components", () => {
     vi.spyOn(financeApi, "fetchCategoryBreakdown").mockResolvedValue([]);
     vi.spyOn(financeApi, "fetchAccountBalances").mockResolvedValue([]);
 
-    render(<FinanceWidget />);
+    render(
+      <ToastProvider>
+        <FinanceWidget />
+      </ToastProvider>,
+    );
 
     await waitFor(() => {
       expect(screen.getByText("Finance This Month")).toBeDefined();

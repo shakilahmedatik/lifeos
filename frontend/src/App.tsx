@@ -1,7 +1,6 @@
 import { lazy, Suspense } from "react";
 import { Link, Route, Routes } from "react-router-dom";
 import { AuthModal } from "./components/auth/AuthModal.js";
-import { PinLockScreen } from "./components/auth/PinLockScreen.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import Layout from "./components/layout/Layout.js";
 import PageSkeleton from "./components/PageSkeleton.js";
@@ -21,7 +20,7 @@ function NotFoundPage() {
     <div className="flex flex-col items-center justify-center gap-4 py-24 text-center">
       <p className="text-6xl font-bold text-gray-400">404</p>
       <p className="text-gray-500">Page not found</p>
-      <Link to="/" className="text-blue-500 hover:underline">
+      <Link to="/" className="text-amber-500 hover:underline">
         Go to dashboard
       </Link>
     </div>
@@ -29,14 +28,14 @@ function NotFoundPage() {
 }
 
 function MainContent() {
-  const { user, isPinLocked } = useAuth();
+  const { user, isLoadingSession } = useAuth();
+
+  if (isLoadingSession && !user) {
+    return <PageSkeleton />;
+  }
 
   if (!user) {
     return <AuthModal />;
-  }
-
-  if (isPinLocked) {
-    return <PinLockScreen />;
   }
 
   return (

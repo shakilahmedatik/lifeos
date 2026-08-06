@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type { Category, NewCategoryInput } from "../../domain/types.js";
 import type { CategoryRepository } from "../../ports/category-repository.js";
@@ -17,57 +17,60 @@ function rowToCategory(row: CategoryRow): Category {
     id: row.id,
     name: row.name,
     kind: row.kind,
-    archived: row.archived === 1,
+    archived: Boolean(row.archived),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
 export class SqliteCategoryRepository implements CategoryRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly client: Client) {}
 
-  getById(id: string): Category | undefined {
-    const row = this.db.prepare("SELECT * FROM categories WHERE id = ?").get(id) as
-      | CategoryRow
-      | undefined;
+  async getById(id: string): Promise<Category | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM categories WHERE id = ?",
+      args: [id],
+    });
+    const row = res.rows[0] as unknown as CategoryRow | undefined;
     return row ? rowToCategory(row) : undefined;
   }
 
-  getAll(): Category[] {
-    const rows = this.db
-      .prepare("SELECT * FROM categories ORDER BY kind, name")
-      .all() as CategoryRow[];
+  async getAll(): Promise<Category[]> {
+    const res = await this.client.execute("SELECT * FROM categories ORDER BY kind, name");
+    const rows = res.rows as unknown as CategoryRow[];
     return rows.map(rowToCategory);
   }
 
-  getActive(): Category[] {
-    const rows = this.db
-      .prepare("SELECT * FROM categories WHERE archived = 0 ORDER BY kind, name")
-      .all() as CategoryRow[];
+  async getActive(): Promise<Category[]> {
+    const res = await this.client.execute(
+      "SELECT * FROM categories WHERE archived = 0 ORDER BY kind, name",
+    );
+    const rows = res.rows as unknown as CategoryRow[];
     return rows.map(rowToCategory);
   }
 
-  getByKind(kind: Category["kind"]): Category[] {
-    const rows = this.db
-      .prepare("SELECT * FROM categories WHERE kind = ? AND archived = 0 ORDER BY name")
-      .all(kind) as CategoryRow[];
+  async getByKind(kind: Category["kind"]): Promise<Category[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM categories WHERE kind = ? AND archived = 0 ORDER BY name",
+      args: [kind],
+    });
+    const rows = res.rows as unknown as CategoryRow[];
     return rows.map(rowToCategory);
   }
 
-  create(id: string, input: NewCategoryInput): Category {
+  async create(id: string, input: NewCategoryInput): Promise<Category> {
     const now = new Date().toISOString();
-    this.db
-      .prepare(
-        `INSERT INTO categories (id, name, kind, archived, created_at, updated_at)
-         VALUES (?, ?, ?, 0, ?, ?)`,
-      )
-      .run(id, input.name, input.kind, now, now);
+    await this.client.execute({
+      sql: `INSERT INTO categories (id, name, kind, archived, created_at, updated_at)
+            VALUES (?, ?, ?, 0, ?, ?)`,
+      args: [id, input.name, input.kind, now, now],
+    });
 
-    return this.getById(id) as Category;
+    return (await this.getById(id)) as Category;
   }
 
-  update(id: string, patch: Partial<NewCategoryInput>): Category | undefined {
-    const existing = this.getById(id);
+  async update(id: string, patch: Partial<NewCategoryInput>): Promise<Category | undefined> {
+    const existing = await this.getById(id);
     if (!existing) return undefined;
 
     const fields: string[] = [];
@@ -88,27 +91,35 @@ export class SqliteCategoryRepository implements CategoryRepository {
     values.push(new Date().toISOString());
     values.push(id);
 
-    this.db.prepare(`UPDATE categories SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+    await this.client.execute({
+      sql: `UPDATE categories SET ${fields.join(", ")} WHERE id = ?`,
+      args: values,
+    });
 
-    return this.getById(id);
+    return await this.getById(id);
   }
 
-  archive(id: string): boolean {
-    const result = this.db
-      .prepare("UPDATE categories SET archived = 1, updated_at = ? WHERE id = ?")
-      .run(new Date().toISOString(), id);
-    return result.changes > 0;
+  async archive(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "UPDATE categories SET archived = 1, updated_at = ? WHERE id = ?",
+      args: [new Date().toISOString(), id],
+    });
+    return res.rowsAffected > 0;
   }
 
-  unarchive(id: string): boolean {
-    const result = this.db
-      .prepare("UPDATE categories SET archived = 0, updated_at = ? WHERE id = ?")
-      .run(new Date().toISOString(), id);
-    return result.changes > 0;
+  async unarchive(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "UPDATE categories SET archived = 0, updated_at = ? WHERE id = ?",
+      args: [new Date().toISOString(), id],
+    });
+    return res.rowsAffected > 0;
   }
 
-  delete(id: string): boolean {
-    const result = this.db.prepare("DELETE FROM categories WHERE id = ?").run(id);
-    return result.changes > 0;
+  async delete(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM categories WHERE id = ?",
+      args: [id],
+    });
+    return res.rowsAffected > 0;
   }
 }

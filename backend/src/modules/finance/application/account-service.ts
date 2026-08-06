@@ -10,40 +10,46 @@ export class AccountService {
     private readonly transactionRepo: TransactionRepository,
   ) {}
 
-  createAccount(input: NewAccountInput): Account {
+  async createAccount(input: NewAccountInput): Promise<Account> {
     const id = randomUUID();
-    return this.accountRepo.create(id, input);
+    return await this.accountRepo.create(id, input);
   }
 
-  listAccounts(): Account[] {
-    return this.accountRepo.getAll();
+  async listAccounts(): Promise<Account[]> {
+    return await this.accountRepo.getAll();
   }
 
-  listActiveAccounts(): Account[] {
-    return this.accountRepo.getActive();
+  async listActiveAccounts(): Promise<Account[]> {
+    return await this.accountRepo.getActive();
   }
 
-  getAccount(id: string): Account | undefined {
-    return this.accountRepo.getById(id);
+  async getAccount(id: string): Promise<Account | undefined> {
+    return await this.accountRepo.getById(id);
   }
 
-  updateAccount(id: string, patch: Partial<NewAccountInput>): Account | undefined {
-    return this.accountRepo.update(id, patch);
+  async updateAccount(id: string, patch: Partial<NewAccountInput>): Promise<Account | undefined> {
+    return await this.accountRepo.update(id, patch);
   }
 
-  archiveAccount(id: string): boolean {
-    return this.accountRepo.archive(id);
+  async archiveAccount(id: string): Promise<boolean> {
+    return await this.accountRepo.archive(id);
   }
 
-  unarchiveAccount(id: string): boolean {
-    return this.accountRepo.unarchive(id);
+  async unarchiveAccount(id: string): Promise<boolean> {
+    return await this.accountRepo.unarchive(id);
   }
 
-  deleteAccount(id: string): boolean {
-    return this.accountRepo.delete(id);
+  async deleteAccount(id: string): Promise<boolean> {
+    const txs = await this.transactionRepo.getByAccountId(id);
+    if (txs.length > 0) {
+      throw new Error(
+        "Cannot delete account with existing transactions. Archive the account instead.",
+      );
+    }
+    return await this.accountRepo.delete(id);
   }
 
-  getAccountBalance(id: string): number {
-    return this.transactionRepo.getAccountBalance(id);
+  async getAccountBalance(id: string): Promise<number> {
+    return await this.transactionRepo.getAccountBalance(id);
   }
 }

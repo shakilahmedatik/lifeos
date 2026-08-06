@@ -2,15 +2,26 @@ import { z } from "zod";
 import { isValidDateString } from "./date-utils.js";
 
 export const TaskCategorySchema = z.enum([
+  "routine",
+  "must_do",
   "work",
   "workout",
   "learning",
   "habit",
   "personal",
   "general",
+  "flex",
 ]);
 
-export const TaskStatusSchema = z.enum(["planned", "in_progress", "done", "skipped"]);
+export const TaskStatusSchema = z.enum([
+  "todo",
+  "planned",
+  "in_progress",
+  "done",
+  "missed",
+  "cancelled",
+  "skipped",
+]);
 
 export const TaskRecurrenceSchema = z.enum(["none", "daily", "weekdays", "weekly"]);
 
@@ -191,7 +202,10 @@ export const NewTransactionInputSchema = z.object({
   accountId: z.string().min(1, "Account is required"),
   categoryId: z.string().min(1, "Category is required"),
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be YYYY-MM-DD"),
-  amountMinor: z.number().int("Amount must be in minor units (integer)"),
+  amountMinor: z
+    .number()
+    .int("Amount must be in minor units (integer)")
+    .positive("Amount must be positive"),
   currency: z.string().optional(),
   note: z.string().optional(),
   transferPairId: z.string().optional(),
@@ -290,14 +304,14 @@ export const NewExerciseInputSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
   muscleGroup: MuscleGroupSchema.optional(),
   equipment: EquipmentTypeSchema.optional(),
-  videoUrl: z.string().url("Must be a valid URL").optional(),
+  videoUrl: z.string().url("Must be a valid URL").or(z.literal("")).optional(),
 });
 
 export const UpdateExerciseSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   muscleGroup: MuscleGroupSchema.optional(),
   equipment: EquipmentTypeSchema.optional(),
-  videoUrl: z.string().url("Must be a valid URL").optional(),
+  videoUrl: z.string().url("Must be a valid URL").or(z.literal("")).optional(),
 });
 
 export const NewWorkoutInputSchema = z.object({

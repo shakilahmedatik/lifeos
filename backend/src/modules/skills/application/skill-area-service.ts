@@ -6,30 +6,30 @@ import type { SkillAreaRepository } from "../ports/skill-area-repository.js";
 export class SkillAreaService {
   constructor(private readonly repo: SkillAreaRepository) {}
 
-  create(input: NewSkillAreaInput): SkillArea {
-    const existing = this.repo.getByName(input.name);
+  async create(input: NewSkillAreaInput): Promise<SkillArea> {
+    const existing = await this.repo.getByName(input.name);
     if (existing) throw new Error("Skill area with this name already exists");
     const id = randomUUID();
-    return this.repo.create(id, input);
+    return await this.repo.create(id, input);
   }
 
-  list(): SkillArea[] {
-    return this.repo.getAll();
+  async list(): Promise<SkillArea[]> {
+    return await this.repo.getAll();
   }
 
-  getById(id: string): SkillArea | undefined {
-    return this.repo.getById(id);
+  async getById(id: string): Promise<SkillArea | undefined> {
+    return await this.repo.getById(id);
   }
 
-  update(id: string, patch: Partial<NewSkillAreaInput>): SkillArea | undefined {
+  async update(id: string, patch: Partial<NewSkillAreaInput>): Promise<SkillArea | undefined> {
     if (patch.name) {
-      const dup = this.repo.getByName(patch.name);
+      const dup = await this.repo.getByName(patch.name);
       if (dup && dup.id !== id) throw new Error("Skill area with this name already exists");
     }
-    return this.repo.update(id, patch);
+    return await this.repo.update(id, patch);
   }
 
-  delete(id: string): boolean {
-    return this.repo.delete(id);
+  async delete(id: string): Promise<boolean> {
+    return await this.repo.delete(id);
   }
 }

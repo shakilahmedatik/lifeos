@@ -7,23 +7,9 @@ import type {
   WeeklySummary,
 } from "@lifeos/contracts";
 
-const BASE = "/api/habits";
+import { request } from "../../lib/api.js";
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(url, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      ...(options?.headers || {}),
-    },
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => "");
-    throw new Error(`API error ${res.status}: ${body || res.statusText}`);
-  }
-  if (res.status === 204) return undefined as T;
-  return res.json() as Promise<T>;
-}
+const BASE = "/api/habits";
 
 export const habitApi = {
   getHabits: async (activeOnly?: boolean): Promise<HabitDefinition[]> => {

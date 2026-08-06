@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type {
   HabitCategory,
@@ -12,6 +12,7 @@ import type { HabitRepository } from "../../ports/habit-repository.js";
 
 interface HabitRow {
   id: string;
+  user_id: string;
   name: string;
   type: HabitType;
   category: HabitCategory;
@@ -39,71 +40,109 @@ function rowToHabit(row: HabitRow): HabitDefinition {
     icon: row.icon || undefined,
     color: row.color || undefined,
     config: config && typeof config === "object" ? config : { type: "boolean" },
-    archived: row.archived === 1,
+    archived: Boolean(row.archived),
     sortOrder: row.sort_order ?? 0,
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    updatedAt: row.updated_at || row.created_at,
   };
 }
 
 export class SqliteHabitRepository implements HabitRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly client: Client) {}
 
-  getById(id: string): HabitDefinition | undefined {
-    const row = this.db.prepare("SELECT * FROM habits WHERE id = ?").get(id) as
-      | HabitRow
-      | undefined;
+  async getById(id: string, userId: string): Promise<HabitDefinition | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM habits WHERE id = ? AND (user_id = ? OR user_id = '')",
+      args: [id, userId],
+    });
+    const row = res.rows[0] as unknown as HabitRow | undefined;
     return row ? rowToHabit(row) : undefined;
   }
 
-  getByName(name: string): HabitDefinition | undefined {
-    const row = this.db.prepare("SELECT * FROM habits WHERE LOWER(name) = LOWER(?)").get(name) as
-      | HabitRow
-      | undefined;
+  async getByName(name: string, userId: string): Promise<HabitDefinition | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM habits WHERE LOWER(name) = LOWER(?) AND (user_id = ? OR user_id = '')",
+      args: [name, userId],
+    });
+    const row = res.rows[0] as unknown as HabitRow | undefined;
     return row ? rowToHabit(row) : undefined;
   }
 
-  getAll(includeArchived = false): HabitDefinition[] {
-    let query = "SELECT * FROM habits";
+  async getAll(includeArchived = false, userId: string): Promise<HabitDefinition[]> {
+    let sql = "SELECT * FROM habits WHERE (user_id = ? OR user_id = '')";
     if (!includeArchived) {
-      query += " WHERE archived = 0";
+      sql += " AND archived = 0";
     }
-    query += " ORDER BY sort_order ASC, created_at DESC";
+    sql += " ORDER BY sort_order ASC, created_at DESC";
 
-    const rows = this.db.prepare(query).all() as HabitRow[];
+    const res = await this.client.execute({
+      sql,
+      args: [userId],
+    });
+    const rows = res.rows as unknown as HabitRow[];
     return rows.map(rowToHabit);
   }
 
-  create(id: string, input: NewHabitDefinitionInput, sortOrder: number): HabitDefinition {
+  async create(
+    id: string,
+    input: NewHabitDefinitionInput,
+    sortOrder: number,
+    userId: string,
+  ): Promise<HabitDefinition> {
     const now = new Date().toISOString();
-    this.db
-      .prepare(
-        `INSERT INTO habits (id, name, type, category, icon, color, config, archived, sort_order, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
-        id,
-        input.name,
-        input.type,
-        input.category ?? "general",
-        input.icon ?? null,
-        input.color ?? null,
-        JSON.stringify(input.config),
-        0, // archived
-        sortOrder,
-        now,
-        now,
-      );
+    const frequency = (input as { frequency?: string }).frequency ?? "daily";
+    const category = input.category ?? "general";
 
-    return this.getById(id) as HabitDefinition;
+    try {
+      await this.client.execute({
+        sql: `INSERT INTO habits (id, user_id, name, type, category, icon, color, config, archived, sort_order, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
+        args: [
+          id,
+          userId,
+          input.name,
+          input.type,
+          category,
+          input.icon ?? null,
+          input.color ?? null,
+          JSON.stringify(input.config),
+          sortOrder,
+          now,
+          now,
+        ],
+      });
+    } catch {
+      await this.client.execute({
+        sql: `INSERT INTO habits (id, user_id, name, frequency, type, icon, color, config, archived, sort_order, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+        args: [
+          id,
+          userId,
+          input.name,
+          frequency,
+          input.type,
+          input.icon ?? null,
+          input.color ?? null,
+          JSON.stringify(input.config),
+          sortOrder,
+          now,
+        ],
+      });
+    }
+
+    return (await this.getById(id, userId)) as HabitDefinition;
   }
 
-  update(id: string, patch: UpdateHabitDefinitionInput): HabitDefinition | undefined {
-    const existing = this.getById(id);
+  async update(
+    id: string,
+    patch: UpdateHabitDefinitionInput,
+    userId: string,
+  ): Promise<HabitDefinition | undefined> {
+    const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
     const fields: string[] = [];
-    const values: (string | number)[] = [];
+    const values: (string | number | null)[] = [];
 
     if (patch.name !== undefined) {
       fields.push("name = ?");
@@ -131,31 +170,41 @@ export class SqliteHabitRepository implements HabitRepository {
     fields.push("updated_at = ?");
     values.push(new Date().toISOString());
     values.push(id);
+    values.push(userId);
 
-    this.db.prepare(`UPDATE habits SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+    await this.client.execute({
+      sql: `UPDATE habits SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '')`,
+      args: values,
+    });
 
-    return this.getById(id);
+    return await this.getById(id, userId);
   }
 
-  delete(id: string): boolean {
-    const result = this.db.prepare("DELETE FROM habits WHERE id = ?").run(id);
-    return result.changes > 0;
+  async delete(id: string, userId: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM habits WHERE id = ? AND (user_id = ? OR user_id = '')",
+      args: [id, userId],
+    });
+    return res.rowsAffected > 0;
   }
 
-  archive(id: string, archived: boolean): void {
-    this.db
-      .prepare("UPDATE habits SET archived = ?, updated_at = ? WHERE id = ?")
-      .run(archived ? 1 : 0, new Date().toISOString(), id);
+  async archive(id: string, archived: boolean, userId: string): Promise<void> {
+    await this.client.execute({
+      sql: "UPDATE habits SET archived = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
+      args: [archived ? 1 : 0, new Date().toISOString(), id, userId],
+    });
   }
 
-  updateSortOrders(updates: { id: string; sortOrder: number }[]): void {
-    const stmt = this.db.prepare("UPDATE habits SET sort_order = ?, updated_at = ? WHERE id = ?");
+  async updateSortOrders(
+    updates: { id: string; sortOrder: number }[],
+    userId: string,
+  ): Promise<void> {
     const now = new Date().toISOString();
+    const statements = updates.map((update) => ({
+      sql: "UPDATE habits SET sort_order = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
+      args: [update.sortOrder, now, update.id, userId],
+    }));
 
-    this.db.transaction(() => {
-      for (const update of updates) {
-        stmt.run(update.sortOrder, now, update.id);
-      }
-    })();
+    await this.client.batch(statements, "write");
   }
 }

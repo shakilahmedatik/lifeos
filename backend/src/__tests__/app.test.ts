@@ -4,11 +4,11 @@ import { loadConfig } from "../config.js";
 import { createContainer } from "../container.js";
 
 describe("Application Composition Root", () => {
-  it("should initialize configuration, container, and app cleanly", () => {
+  it("should initialize configuration, container, and app cleanly", async () => {
     const config = loadConfig();
     config.dbPath = ":memory:";
     config.databaseUrl = undefined;
-    const container = createContainer(config);
+    const container = await createContainer(config);
     const app = createApp(container);
 
     expect(container.db).toBeDefined();

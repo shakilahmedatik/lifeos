@@ -3,67 +3,71 @@ import type { RssFeedRepository } from "../ports/repositories.js";
 
 export function createFeedService(feedRepository: RssFeedRepository) {
   return {
-    getAllFeeds(): RssFeed[] {
-      return feedRepository.getAll();
+    async getAllFeeds(): Promise<RssFeed[]> {
+      return await feedRepository.getAll();
     },
 
-    getActiveFeeds(): RssFeed[] {
-      return feedRepository.getActive();
+    async getActiveFeeds(): Promise<RssFeed[]> {
+      return await feedRepository.getActive();
     },
 
-    getFeedById(id: string): RssFeed | undefined {
-      return feedRepository.getById(id);
+    async getFeedById(id: string): Promise<RssFeed | undefined> {
+      return await feedRepository.getById(id);
     },
 
-    createFeed(input: NewRssFeedInput): { success: boolean; feed?: RssFeed; error?: string } {
-      const existing = feedRepository.getByUrl(input.url);
+    async createFeed(
+      input: NewRssFeedInput,
+    ): Promise<{ success: boolean; feed?: RssFeed; error?: string }> {
+      const existing = await feedRepository.getByUrl(input.url);
       if (existing) {
         return { success: false, error: "Feed already exists" };
       }
 
       const id = crypto.randomUUID();
-      const feed = feedRepository.create(id, input);
+      const feed = await feedRepository.create(id, input);
       return { success: true, feed };
     },
 
-    updateFeed(
+    async updateFeed(
       id: string,
       patch: Partial<NewRssFeedInput>,
-    ): { success: boolean; feed?: RssFeed; error?: string } {
-      const existing = feedRepository.getById(id);
+    ): Promise<{ success: boolean; feed?: RssFeed; error?: string }> {
+      const existing = await feedRepository.getById(id);
       if (!existing) {
         return { success: false, error: "Feed not found" };
       }
 
       if (patch.url) {
-        const duplicate = feedRepository.getByUrl(patch.url);
+        const duplicate = await feedRepository.getByUrl(patch.url);
         if (duplicate && duplicate.id !== id) {
           return { success: false, error: "Feed URL already exists" };
         }
       }
 
-      const feed = feedRepository.update(id, patch);
+      const feed = await feedRepository.update(id, patch);
       return { success: true, feed };
     },
 
-    deleteFeed(id: string): { success: boolean; error?: string } {
-      const existing = feedRepository.getById(id);
+    async deleteFeed(id: string): Promise<{ success: boolean; error?: string }> {
+      const existing = await feedRepository.getById(id);
       if (!existing) {
         return { success: false, error: "Feed not found" };
       }
 
-      feedRepository.delete(id);
+      await feedRepository.delete(id);
       return { success: true };
     },
 
-    toggleFeedStatus(id: string): { success: boolean; feed?: RssFeed; error?: string } {
-      const existing = feedRepository.getById(id);
+    async toggleFeedStatus(
+      id: string,
+    ): Promise<{ success: boolean; feed?: RssFeed; error?: string }> {
+      const existing = await feedRepository.getById(id);
       if (!existing) {
         return { success: false, error: "Feed not found" };
       }
 
       const newStatus = existing.status === "active" ? "inactive" : "active";
-      const feed = feedRepository.updateStatus(id, newStatus);
+      const feed = await feedRepository.updateStatus(id, newStatus);
       return { success: true, feed };
     },
   };

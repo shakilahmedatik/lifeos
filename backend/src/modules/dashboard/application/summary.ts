@@ -16,12 +16,18 @@ function timeToMinutes(time: string): number {
   return h * 60 + m;
 }
 
+function extractTimeFromIso(isoString: string): string {
+  const match = isoString.match(/T(\d{2}:\d{2})/);
+  if (match) return match[1];
+  const d = new Date(isoString);
+  return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
+}
+
 export function getTaskScheduleStack(
   tasks: Task[],
   nowIso: string,
 ): { previous: Task | null; now: Task | null; next: Task | null } {
-  const now = new Date(nowIso);
-  const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+  const currentTime = extractTimeFromIso(nowIso);
   const currentMinutes = timeToMinutes(currentTime);
 
   let nowTask: Task | null = null;
@@ -35,8 +41,13 @@ export function getTaskScheduleStack(
   for (const task of sortedTasks) {
     const start = timeToMinutes(task.startTime);
     const end = timeToMinutes(task.endTime);
+    const isOvernight = task.isOvernight || start >= end;
 
-    if (currentMinutes >= start && currentMinutes < end) {
+    const isActive = isOvernight
+      ? currentMinutes >= start || currentMinutes < end
+      : currentMinutes >= start && currentMinutes < end;
+
+    if (isActive) {
       nowTask = task;
     } else if (start > currentMinutes && !nextTask) {
       nextTask = task;
@@ -44,7 +55,16 @@ export function getTaskScheduleStack(
   }
 
   // Find previous task: most recent done task before now, or task whose end time passed
-  const passedTasks = sortedTasks.filter((t) => timeToMinutes(t.endTime) <= currentMinutes);
+  const passedTasks = sortedTasks.filter((t) => {
+    const start = timeToMinutes(t.startTime);
+    const end = timeToMinutes(t.endTime);
+    const isOvernight = t.isOvernight || start >= end;
+    if (isOvernight) {
+      return currentMinutes >= end && currentMinutes < start;
+    }
+    return end <= currentMinutes;
+  });
+
   if (passedTasks.length > 0) {
     const donePassed = passedTasks.filter((t) => t.status === "done");
     previousTask =
@@ -56,32 +76,32 @@ export function getTaskScheduleStack(
   return { previous: previousTask, now: nowTask, next: nextTask };
 }
 
-export function getDashboardSummary(
+export async function getDashboardSummary(
   deps: DashboardDependencies,
   nowIso: string,
   userId = "default",
-): DashboardSummary {
+): Promise<DashboardSummary> {
   const today = nowIso.slice(0, 10);
-  const tasks = deps.taskRepo.getByDate(today, userId);
+  const tasks = await deps.taskRepo.getByDate(today, userId);
   const { previous, now, next } = getTaskScheduleStack(tasks, nowIso);
 
   // 1. Due Habits
   const dueHabits = deps.habitLogService
-    ? deps.habitLogService.getTodayDueHabits(today, userId)
+    ? await deps.habitLogService.getTodayDueHabits(today, userId)
     : [];
 
   // 2. Upcoming Reminders
   let upcomingReminders: Reminder[] = [];
   if (deps.reminderService) {
-    upcomingReminders = deps.reminderService.getUpcomingToday(today, userId, 4);
+    upcomingReminders = await deps.reminderService.getUpcomingToday(today, userId, 4);
   }
 
   // 3. Habit Consistency (7 days sparkline data)
   const habitConsistency: DashboardHabitConsistency[] = [];
   if (deps.habitRepo && deps.habitStatsService) {
-    const activeHabits = deps.habitRepo.getAll(false, userId).slice(0, 4);
+    const activeHabits = (await deps.habitRepo.getAll(false, userId)).slice(0, 4);
     for (const habit of activeHabits) {
-      const stats = deps.habitStatsService.getAnalytics(habit.id, "week", userId);
+      const stats = await deps.habitStatsService.getAnalytics(habit.id, "week", userId);
       if (stats) {
         const days = stats.dailyValues.map((d) =>
           d.target > 0 ? Math.min(100, Math.round((d.value / d.target) * 100)) : 0,
@@ -115,13 +135,13 @@ export function getDashboardSummary(
     const mondayStr = monday.toISOString().split("T")[0];
     const weekEndStr = weekEnd.toISOString().split("T")[0];
 
-    const allSessions = deps.workoutSessionRepo.getAll();
+    const allSessions = await deps.workoutSessionRepo.getAll();
     const weekSessions = allSessions.filter((s) => {
       const sessionDate = s.startedAt.slice(0, 10);
       return sessionDate >= mondayStr && sessionDate <= weekEndStr;
     });
 
-    const workoutsMap = new Map(deps.workoutRepo.getAll().map((w) => [w.id, w.name]));
+    const workoutsMap = new Map((await deps.workoutRepo.getAll()).map((w) => [w.id, w.name]));
 
     // Initialize 7 days
     const dayBuckets: Record<string, Record<string, number>> = {};
@@ -152,7 +172,7 @@ export function getDashboardSummary(
   // 5. Skills Progress
   const skillsProgress: DashboardSkillProgress[] = [];
   if (deps.skillAreaService && deps.learningLogService) {
-    const areas = deps.skillAreaService.list().slice(0, 4);
+    const areas = (await deps.skillAreaService.list()).slice(0, 4);
     const nowUtc = new Date(`${today}T00:00:00Z`);
     const dayOfWeekIndex = (nowUtc.getUTCDay() + 6) % 7;
     const monday = new Date(nowUtc);
@@ -160,7 +180,7 @@ export function getDashboardSummary(
     const _mondayStr = monday.toISOString().split("T")[0];
 
     for (const area of areas) {
-      const summary = deps.learningLogService.getSkillAreaSummary(area.id);
+      const summary = await deps.learningLogService.getSkillAreaSummary(area.id);
       const hoursThisWeek = summary ? Math.round((summary.totalMinutesSpent / 60) * 10) / 10 : 0;
       const goal = area.weeklyGoalHours || 5;
       const pct = Math.min(100, Math.round((hoursThisWeek / goal) * 100));
@@ -178,8 +198,8 @@ export function getDashboardSummary(
   // 6. News Ticker Items
   const newsItems: DashboardNewsItem[] = [];
   if (deps.newsArticleRepo && deps.rssFeedRepo) {
-    const articles = deps.newsArticleRepo.getRecent(5);
-    const feedsMap = new Map(deps.rssFeedRepo.getAll().map((f) => [f.id, f.title]));
+    const articles = await deps.newsArticleRepo.getRecent(5);
+    const feedsMap = new Map((await deps.rssFeedRepo.getAll()).map((f) => [f.id, f.title]));
 
     for (const article of articles) {
       const feedTitle = feedsMap.get(article.feedId) || "tech";

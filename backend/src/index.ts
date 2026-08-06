@@ -4,7 +4,7 @@ import { createContainer } from "./container.js";
 import { logger } from "./shared/logger.js";
 
 const config = loadConfig();
-const container = createContainer(config);
+const container = await createContainer(config);
 const app = createApp(container);
 
 container.startBackgroundJobs();

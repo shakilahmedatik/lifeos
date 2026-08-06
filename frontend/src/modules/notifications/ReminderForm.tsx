@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { request } from "../../lib/api.js";
 
 import { SOUND_PRESET_OPTIONS, type SoundPreset } from "./sound-presets.js";
 
@@ -26,7 +27,7 @@ export function ReminderForm({ taskId, taskTitle, onSubmit, onCancel }: Reminder
       setLoading(true);
       setError(null);
 
-      const response = await fetch("/api/notifications", {
+      await request<void>("/api/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -35,10 +36,6 @@ export function ReminderForm({ taskId, taskTitle, onSubmit, onCancel }: Reminder
           soundType,
         }),
       });
-
-      if (!response.ok) {
-        throw new Error("Failed to create reminder");
-      }
 
       onSubmit(reminderTime, soundType);
     } catch (error) {

@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type { Exercise, NewExerciseInput } from "../../domain/types.js";
 import type { ExerciseRepository } from "../../ports/exercise-repository.js";
@@ -6,55 +6,59 @@ import type { ExerciseRepository } from "../../ports/exercise-repository.js";
 interface ExerciseRow {
   id: string;
   name: string;
-  muscle_group: string;
+  category?: string;
+  muscle_group?: string;
   equipment: string;
   video_url: string | null;
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
 function rowToExercise(row: ExerciseRow): Exercise {
   return {
     id: row.id,
     name: row.name,
-    muscleGroup: row.muscle_group as Exercise["muscleGroup"],
+    muscleGroup: (row.category || row.muscle_group || "general") as Exercise["muscleGroup"],
     equipment: row.equipment as Exercise["equipment"],
     videoUrl: row.video_url ?? undefined,
     createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    updatedAt: row.updated_at || row.created_at,
   };
 }
 
 export class SqliteExerciseRepository implements ExerciseRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly client: Client) {}
 
-  getById(id: string, _userId?: string): Exercise | undefined {
-    const row = this.db.prepare("SELECT * FROM exercises WHERE id = ?").get(id) as
-      | ExerciseRow
-      | undefined;
+  async getById(id: string, _userId?: string): Promise<Exercise | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM exercises WHERE id = ?",
+      args: [id],
+    });
+    const row = res.rows[0] as unknown as ExerciseRow | undefined;
     return row ? rowToExercise(row) : undefined;
   }
 
-  getAll(_userId?: string): Exercise[] {
-    const rows = this.db.prepare("SELECT * FROM exercises ORDER BY name").all() as ExerciseRow[];
+  async getAll(_userId?: string): Promise<Exercise[]> {
+    const res = await this.client.execute("SELECT * FROM exercises ORDER BY name");
+    const rows = res.rows as unknown as ExerciseRow[];
     return rows.map(rowToExercise);
   }
 
-  getByMuscleGroup(muscleGroup: string, _userId?: string): Exercise[] {
-    const rows = this.db
-      .prepare("SELECT * FROM exercises WHERE muscle_group = ? ORDER BY name")
-      .all(muscleGroup) as ExerciseRow[];
+  async getByMuscleGroup(muscleGroup: string, _userId?: string): Promise<Exercise[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM exercises WHERE category = ? ORDER BY name",
+      args: [muscleGroup],
+    });
+    const rows = res.rows as unknown as ExerciseRow[];
     return rows.map(rowToExercise);
   }
 
-  create(id: string, input: NewExerciseInput, _userId?: string): Exercise {
+  async create(id: string, input: NewExerciseInput, _userId?: string): Promise<Exercise> {
     const now = new Date().toISOString();
-    this.db
-      .prepare(
-        `INSERT INTO exercises (id, name, muscle_group, equipment, video_url, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.client.execute({
+      sql: `INSERT INTO exercises (id, name, category, equipment, video_url, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         id,
         input.name,
         input.muscleGroup ?? "general",
@@ -62,13 +66,18 @@ export class SqliteExerciseRepository implements ExerciseRepository {
         input.videoUrl ?? null,
         now,
         now,
-      );
+      ],
+    });
 
-    return this.getById(id) as Exercise;
+    return (await this.getById(id)) as Exercise;
   }
 
-  update(id: string, patch: Partial<NewExerciseInput>, _userId?: string): Exercise | undefined {
-    const existing = this.getById(id);
+  async update(
+    id: string,
+    patch: Partial<NewExerciseInput>,
+    _userId?: string,
+  ): Promise<Exercise | undefined> {
+    const existing = await this.getById(id);
     if (!existing) return undefined;
 
     const fields: string[] = [];
@@ -79,7 +88,7 @@ export class SqliteExerciseRepository implements ExerciseRepository {
       values.push(patch.name);
     }
     if (patch.muscleGroup !== undefined) {
-      fields.push("muscle_group = ?");
+      fields.push("category = ?");
       values.push(patch.muscleGroup);
     }
     if (patch.equipment !== undefined) {
@@ -88,7 +97,7 @@ export class SqliteExerciseRepository implements ExerciseRepository {
     }
     if (patch.videoUrl !== undefined) {
       fields.push("video_url = ?");
-      values.push(patch.videoUrl);
+      values.push(patch.videoUrl ?? null);
     }
 
     if (fields.length === 0) return existing;
@@ -97,20 +106,28 @@ export class SqliteExerciseRepository implements ExerciseRepository {
     values.push(new Date().toISOString());
     values.push(id);
 
-    this.db.prepare(`UPDATE exercises SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+    await this.client.execute({
+      sql: `UPDATE exercises SET ${fields.join(", ")} WHERE id = ?`,
+      args: values,
+    });
 
-    return this.getById(id);
+    return await this.getById(id);
   }
 
-  delete(id: string, _userId?: string): boolean {
-    const result = this.db.prepare("DELETE FROM exercises WHERE id = ?").run(id);
-    return result.changes > 0;
+  async delete(id: string, _userId?: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM exercises WHERE id = ?",
+      args: [id],
+    });
+    return res.rowsAffected > 0;
   }
 
-  getByName(name: string, _userId?: string): Exercise | undefined {
-    const row = this.db.prepare("SELECT * FROM exercises WHERE name = ?").get(name) as
-      | ExerciseRow
-      | undefined;
+  async getByName(name: string, _userId?: string): Promise<Exercise | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM exercises WHERE name = ?",
+      args: [name],
+    });
+    const row = res.rows[0] as unknown as ExerciseRow | undefined;
     return row ? rowToExercise(row) : undefined;
   }
 }

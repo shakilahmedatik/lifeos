@@ -10,34 +10,37 @@ export class LearningResourceService {
     private readonly skillAreaRepo: SkillAreaRepository,
   ) {}
 
-  create(input: NewLearningResourceInput): LearningResource {
-    const area = this.skillAreaRepo.getById(input.skillAreaId);
+  async create(input: NewLearningResourceInput): Promise<LearningResource> {
+    const area = await this.skillAreaRepo.getById(input.skillAreaId);
     if (!area) throw new Error("Skill area not found");
     const id = randomUUID();
-    return this.repo.create(id, input);
+    return await this.repo.create(id, input);
   }
 
-  list(): LearningResource[] {
-    return this.repo.getAll();
+  async list(): Promise<LearningResource[]> {
+    return await this.repo.getAll();
   }
 
-  getBySkillArea(skillAreaId: string): LearningResource[] {
-    return this.repo.getBySkillArea(skillAreaId);
+  async getBySkillArea(skillAreaId: string): Promise<LearningResource[]> {
+    return await this.repo.getBySkillArea(skillAreaId);
   }
 
-  getById(id: string): LearningResource | undefined {
-    return this.repo.getById(id);
+  async getById(id: string): Promise<LearningResource | undefined> {
+    return await this.repo.getById(id);
   }
 
-  update(id: string, patch: Partial<NewLearningResourceInput>): LearningResource | undefined {
+  async update(
+    id: string,
+    patch: Partial<NewLearningResourceInput>,
+  ): Promise<LearningResource | undefined> {
     if (patch.skillAreaId) {
-      const area = this.skillAreaRepo.getById(patch.skillAreaId);
+      const area = await this.skillAreaRepo.getById(patch.skillAreaId);
       if (!area) throw new Error("Skill area not found");
     }
-    return this.repo.update(id, patch);
+    return await this.repo.update(id, patch);
   }
 
-  delete(id: string): boolean {
-    return this.repo.delete(id);
+  async delete(id: string): Promise<boolean> {
+    return await this.repo.delete(id);
   }
 }

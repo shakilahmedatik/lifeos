@@ -1,72 +1,81 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type { NewsArticle } from "../../domain/types.js";
 import type { NewsArticleRepository } from "../../ports/repositories.js";
 
-export function createSqliteNewsArticleRepository(db: Database.Database): NewsArticleRepository {
+export function createSqliteNewsArticleRepository(client: Client): NewsArticleRepository {
   return {
-    getById(id: string): NewsArticle | undefined {
-      const row = db.prepare("SELECT * FROM news_articles WHERE id = ?").get(id) as
-        | Record<string, unknown>
-        | undefined;
+    async getById(id: string): Promise<NewsArticle | undefined> {
+      const res = await client.execute({
+        sql: "SELECT * FROM news_articles WHERE id = ?",
+        args: [id],
+      });
+      const row = res.rows[0] as unknown as Record<string, unknown> | undefined;
       if (!row) return undefined;
       return mapRowToNewsArticle(row);
     },
 
-    getAll(limit = 20, offset = 0): NewsArticle[] {
-      const rows = db
-        .prepare("SELECT * FROM news_articles ORDER BY published_at DESC LIMIT ? OFFSET ?")
-        .all(limit, offset) as Record<string, unknown>[];
+    async getAll(limit = 20, offset = 0): Promise<NewsArticle[]> {
+      const res = await client.execute({
+        sql: "SELECT * FROM news_articles ORDER BY published_at DESC LIMIT ? OFFSET ?",
+        args: [limit, offset],
+      });
+      const rows = res.rows as unknown as Record<string, unknown>[];
       return rows.map(mapRowToNewsArticle);
     },
 
-    getByFeedId(feedId: string, limit = 20, offset = 0): NewsArticle[] {
-      const rows = db
-        .prepare(
-          "SELECT * FROM news_articles WHERE feed_id = ? ORDER BY published_at DESC LIMIT ? OFFSET ?",
-        )
-        .all(feedId, limit, offset) as Record<string, unknown>[];
+    async getByFeedId(feedId: string, limit = 20, offset = 0): Promise<NewsArticle[]> {
+      const res = await client.execute({
+        sql: "SELECT * FROM news_articles WHERE feed_id = ? ORDER BY published_at DESC LIMIT ? OFFSET ?",
+        args: [feedId, limit, offset],
+      });
+      const rows = res.rows as unknown as Record<string, unknown>[];
       return rows.map(mapRowToNewsArticle);
     },
 
-    getRecent(limit: number): NewsArticle[] {
-      const rows = db
-        .prepare("SELECT * FROM news_articles ORDER BY published_at DESC LIMIT ?")
-        .all(limit) as Record<string, unknown>[];
+    async getRecent(limit: number): Promise<NewsArticle[]> {
+      const res = await client.execute({
+        sql: "SELECT * FROM news_articles ORDER BY published_at DESC LIMIT ?",
+        args: [limit],
+      });
+      const rows = res.rows as unknown as Record<string, unknown>[];
       return rows.map(mapRowToNewsArticle);
     },
 
-    search(query: string, limit = 20, offset = 0): NewsArticle[] {
-      const rows = db
-        .prepare(
-          "SELECT * FROM news_articles WHERE title LIKE ? OR summary LIKE ? ORDER BY published_at DESC LIMIT ? OFFSET ?",
-        )
-        .all(`%${query}%`, `%${query}%`, limit, offset) as Record<string, unknown>[];
+    async search(query: string, limit = 20, offset = 0): Promise<NewsArticle[]> {
+      const res = await client.execute({
+        sql: "SELECT * FROM news_articles WHERE title LIKE ? OR summary LIKE ? ORDER BY published_at DESC LIMIT ? OFFSET ?",
+        args: [`%${query}%`, `%${query}%`, limit, offset],
+      });
+      const rows = res.rows as unknown as Record<string, unknown>[];
       return rows.map(mapRowToNewsArticle);
     },
 
-    getByUrlAndFeedId(url: string, feedId: string): NewsArticle | undefined {
-      const row = db
-        .prepare("SELECT * FROM news_articles WHERE url = ? AND feed_id = ?")
-        .get(url, feedId) as Record<string, unknown> | undefined;
+    async getByUrlAndFeedId(url: string, feedId: string): Promise<NewsArticle | undefined> {
+      const res = await client.execute({
+        sql: "SELECT * FROM news_articles WHERE url = ? AND feed_id = ?",
+        args: [url, feedId],
+      });
+      const row = res.rows[0] as unknown as Record<string, unknown> | undefined;
       if (!row) return undefined;
       return mapRowToNewsArticle(row);
     },
 
-    create(article: Omit<NewsArticle, "id"> & { id?: string }): NewsArticle {
+    async create(article: Omit<NewsArticle, "id"> & { id?: string }): Promise<NewsArticle> {
       const id = article.id || crypto.randomUUID();
-      db.prepare(
-        "INSERT INTO news_articles (id, feed_id, title, url, summary, published_at, fetched_at, is_read) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-      ).run(
-        id,
-        article.feedId,
-        article.title,
-        article.url,
-        article.summary || null,
-        article.publishedAt || null,
-        article.fetchedAt,
-        article.isRead ? 1 : 0,
-      );
+      await client.execute({
+        sql: "INSERT INTO news_articles (id, feed_id, title, url, summary, published_at, fetched_at, is_read) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        args: [
+          id,
+          article.feedId,
+          article.title,
+          article.url,
+          article.summary || null,
+          article.publishedAt || null,
+          article.fetchedAt,
+          article.isRead ? 1 : 0,
+        ],
+      });
 
       return {
         id,
@@ -80,14 +89,20 @@ export function createSqliteNewsArticleRepository(db: Database.Database): NewsAr
       };
     },
 
-    markAsRead(id: string): NewsArticle | undefined {
-      db.prepare("UPDATE news_articles SET is_read = 1 WHERE id = ?").run(id);
-      return this.getById(id);
+    async markAsRead(id: string): Promise<NewsArticle | undefined> {
+      await client.execute({
+        sql: "UPDATE news_articles SET is_read = 1 WHERE id = ?",
+        args: [id],
+      });
+      return await this.getById(id);
     },
 
-    deleteOlderThan(date: string): number {
-      const result = db.prepare("DELETE FROM news_articles WHERE published_at < ?").run(date);
-      return result.changes;
+    async deleteOlderThan(date: string): Promise<number> {
+      const res = await client.execute({
+        sql: "DELETE FROM news_articles WHERE published_at < ?",
+        args: [date],
+      });
+      return res.rowsAffected;
     },
   };
 }

@@ -64,14 +64,6 @@ vi.mock("../useWorkouts.js", () => ({
   }),
 }));
 
-vi.mock("../useWorkoutTimerSSE.js", () => ({
-  useWorkoutTimerSSE: () => ({
-    isConnected: true,
-    lastAlert: null,
-    error: null,
-  }),
-}));
-
 vi.mock("../notifications/sound-player.js", () => ({
   playNotificationSound: vi.fn(),
 }));

@@ -19,9 +19,13 @@ export function ScheduleWidget({ previous, now, next, onNavigate }: ScheduleWidg
     if (!now) return;
     const tick = () => {
       const currentTime = new Date();
+      const [sh] = now.startTime.split(":").map(Number);
       const [h, m] = now.endTime.split(":").map(Number);
       const end = new Date(currentTime);
       end.setHours(h, m, 0, 0);
+      if ((now.isOvernight || sh > h) && currentTime.getHours() >= sh) {
+        end.setDate(end.getDate() + 1);
+      }
       const diff = end.getTime() - currentTime.getTime();
       if (diff <= 0) {
         setCountdown("00:00:00");

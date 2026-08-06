@@ -11,72 +11,73 @@ export class HabitLogService {
     private readonly habitLogRepo: HabitLogRepository,
   ) {}
 
-  logHabit(input: NewHabitLogEntryInput, userId = "default"): HabitLogEntry {
+  async logHabit(input: NewHabitLogEntryInput, userId = "default"): Promise<HabitLogEntry> {
     const id = randomUUID();
-    return this.habitLogRepo.create(id, input, userId);
+    return await this.habitLogRepo.create(id, input, userId);
   }
 
-  removeLog(logId: string, userId = "default"): boolean {
-    return this.habitLogRepo.delete(logId, userId);
+  async removeLog(logId: string, userId = "default"): Promise<boolean> {
+    return await this.habitLogRepo.delete(logId, userId);
   }
 
-  getLogsForHabitAndDate(habitId: string, date: string, userId = "default"): HabitLogEntry[] {
-    return this.habitLogRepo.getByHabitAndDate(habitId, date, userId);
+  async getLogsForHabitAndDate(
+    habitId: string,
+    date: string,
+    userId = "default",
+  ): Promise<HabitLogEntry[]> {
+    return await this.habitLogRepo.getByHabitAndDate(habitId, date, userId);
   }
 
-  getTodayDueHabits(today: string, userId = "default"): HabitWithStreak[] {
-    const habits = this.habitRepo.getAll(false, userId);
-    const todayLogs = this.habitLogRepo.getByDateRange(today, today, userId);
+  async getTodayDueHabits(today: string, userId = "default"): Promise<HabitWithStreak[]> {
+    const habits = await this.habitRepo.getAll(false, userId);
+    const todayLogs = await this.habitLogRepo.getByDateRange(today, today, userId);
 
-    return habits
-      .filter((h) => isDueToday(h, today))
-      .map((habit) => {
-        const logs = this.habitLogRepo.getByHabitId(habit.id, userId);
-        const habitTodayLogs = todayLogs.filter((l) => l.habitId === habit.id);
+    const results: HabitWithStreak[] = [];
 
-        const progress = getDailyProgress(habit, habitTodayLogs);
+    for (const habit of habits) {
+      if (!isDueToday(habit, today)) continue;
 
-        let todayValue = habitTodayLogs.reduce((sum, l) => sum + l.value, 0);
-        if (habit.type === "prayer") {
-          todayValue = habitTodayLogs.length;
-        } else if (habit.type === "boolean") {
-          todayValue = habitTodayLogs.length > 0 ? 1 : 0;
-        }
+      const logs = await this.habitLogRepo.getByHabitId(habit.id, userId);
+      const habitTodayLogs = todayLogs.filter((l) => l.habitId === habit.id);
 
-        let todayTarget = 1;
-        if (habit.type === "water" && "dailyGoalMl" in habit.config) {
-          todayTarget = habit.config.dailyGoalMl;
-        } else if (habit.type === "walking" && "dailyGoal" in habit.config) {
-          todayTarget = habit.config.dailyGoal;
-        } else if (habit.type === "timed" && "dailyGoalMinutes" in habit.config) {
-          todayTarget = habit.config.dailyGoalMinutes;
-        } else if (habit.type === "prayer") {
-          todayTarget = 5;
-        }
+      const progress = getDailyProgress(habit, habitTodayLogs);
 
-        const cStreak = currentStreak(habit, logs, today);
-        const lStreak = longestStreak(habit, logs);
+      let todayValue = habitTodayLogs.reduce((sum, l) => sum + l.value, 0);
+      if (habit.type === "prayer") {
+        todayValue = habitTodayLogs.length;
+      } else if (habit.type === "boolean") {
+        todayValue = habitTodayLogs.length > 0 ? 1 : 0;
+      }
 
-        return {
-          habit,
-          date: today,
-          currentValue: todayValue,
-          targetValue: todayTarget,
-          progress,
-          logs: habitTodayLogs,
-          currentStreak: cStreak,
-          longestStreak: lStreak,
-          // Backward compat aliases for HabitWithStreak
-          ...habit,
-          loggedToday: progress >= 1,
-          todayProgress: progress,
-          todayValue,
-          todayTarget,
-        };
+      let todayTarget = 1;
+      if (habit.type === "water" && "dailyGoalMl" in habit.config) {
+        todayTarget = habit.config.dailyGoalMl;
+      } else if (habit.type === "walking" && "dailyGoal" in habit.config) {
+        todayTarget = habit.config.dailyGoal;
+      } else if (habit.type === "timed" && "dailyGoalMinutes" in habit.config) {
+        todayTarget = habit.config.dailyGoalMinutes;
+      } else if (habit.type === "prayer") {
+        todayTarget = 5;
+      }
+
+      const cStreak = currentStreak(habit, logs, today);
+      const lStreak = longestStreak(habit, logs);
+
+      results.push({
+        ...habit,
+        currentStreak: cStreak,
+        longestStreak: lStreak,
+        loggedToday: progress >= 1,
+        todayProgress: progress,
+        todayValue,
+        todayTarget,
       });
+    }
+
+    return results;
   }
 
-  deleteLogsByHabitId(habitId: string, userId = "default"): void {
-    this.habitLogRepo.deleteByHabitId(habitId, userId);
+  async deleteLogsByHabitId(habitId: string, userId = "default"): Promise<void> {
+    await this.habitLogRepo.deleteByHabitId(habitId, userId);
   }
 }

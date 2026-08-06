@@ -10,8 +10,8 @@ export class FinanceReportService {
     private readonly categoryRepo: CategoryRepository,
   ) {}
 
-  getMonthlySummary(yearMonth: string): MonthlySummary {
-    const { totalIncome, totalExpense } = this.transactionRepo.getMonthlyTotals(yearMonth);
+  async getMonthlySummary(yearMonth: string): Promise<MonthlySummary> {
+    const { totalIncome, totalExpense } = await this.transactionRepo.getMonthlyTotals(yearMonth);
     return {
       yearMonth,
       totalIncome,
@@ -20,34 +20,41 @@ export class FinanceReportService {
     };
   }
 
-  getCategoryBreakdown(yearMonth: string): CategoryBreakdown[] {
-    const breakdown = this.transactionRepo.getCategoryBreakdown(yearMonth);
-    return breakdown.map((item) => {
-      const category = this.categoryRepo.getById(item.categoryId);
-      return {
+  async getCategoryBreakdown(yearMonth: string): Promise<CategoryBreakdown[]> {
+    const breakdown = await this.transactionRepo.getCategoryBreakdown(yearMonth);
+    const results: CategoryBreakdown[] = [];
+    for (const item of breakdown) {
+      const category = await this.categoryRepo.getById(item.categoryId);
+      results.push({
         categoryId: item.categoryId,
         categoryName: category?.name ?? "Unknown",
         kind: category?.kind ?? "expense",
         total: item.total,
-      };
-    });
+      });
+    }
+    return results;
   }
 
-  getAccountBalances(): AccountWithBalance[] {
-    const accounts = this.accountRepo.getAll();
-    return accounts.map((account) => ({
-      ...account,
-      balance: this.transactionRepo.getAccountBalance(account.id),
-    }));
+  async getAccountBalances(): Promise<AccountWithBalance[]> {
+    const accounts = await this.accountRepo.getAll();
+    const results: AccountWithBalance[] = [];
+    for (const account of accounts) {
+      const balance = await this.transactionRepo.getAccountBalance(account.id);
+      results.push({
+        ...account,
+        balance,
+      });
+    }
+    return results;
   }
 
-  getMonthlyTransactions(yearMonth: string) {
+  async getMonthlyTransactions(yearMonth: string) {
     const [yearStr, monthStr] = yearMonth.split("-");
     const year = Number.parseInt(yearStr, 10);
     const month = Number.parseInt(monthStr, 10);
     const lastDay = new Date(year, month, 0).getDate();
     const startDate = `${yearMonth}-01`;
     const endDate = `${yearMonth}-${String(lastDay).padStart(2, "0")}`;
-    return this.transactionRepo.getByDateRange(startDate, endDate);
+    return await this.transactionRepo.getByDateRange(startDate, endDate);
   }
 }

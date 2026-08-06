@@ -28,23 +28,23 @@ export function createSkillsRouter(
   const router = Router();
 
   // Skill Areas
-  router.get("/areas", (_req, res) => {
-    res.json(skillAreaService.list());
+  router.get("/areas", async (_req, res) => {
+    res.json(await skillAreaService.list());
   });
 
-  router.post("/areas", validateBody(NewSkillAreaInputSchema), (req, res) => {
+  router.post("/areas", validateBody(NewSkillAreaInputSchema), async (req, res) => {
     try {
-      const area = skillAreaService.create(req.body);
+      const area = await skillAreaService.create(req.body);
       res.status(201).json(area);
     } catch (err) {
       res.status(409).json({ error: (err as Error).message });
     }
   });
 
-  router.patch("/areas/:id", validateBody(UpdateSkillAreaInputSchema), (req, res) => {
+  router.patch("/areas/:id", validateBody(UpdateSkillAreaInputSchema), async (req, res) => {
     try {
       const id = String(req.params.id);
-      const area = skillAreaService.update(id, req.body);
+      const area = await skillAreaService.update(id, req.body);
       if (!area) {
         res.status(404).json({ error: "Skill area not found" });
         return;
@@ -55,8 +55,8 @@ export function createSkillsRouter(
     }
   });
 
-  router.delete("/areas/:id", (req, res) => {
-    if (skillAreaService.delete(String(req.params.id))) {
+  router.delete("/areas/:id", async (req, res) => {
+    if (await skillAreaService.delete(String(req.params.id))) {
       res.status(204).send();
     } else {
       res.status(404).json({ error: "Skill area not found" });
@@ -64,14 +64,14 @@ export function createSkillsRouter(
   });
 
   // Import (bulk restore from backup)
-  router.post("/import", validateBody(BackupImportSchema), (req, res) => {
+  router.post("/import", validateBody(BackupImportSchema), async (req, res) => {
     try {
       const { areas, resources, logs } = req.body;
       const result = { areasCreated: 0, resourcesCreated: 0, logsCreated: 0 };
 
       for (const area of areas) {
         try {
-          skillAreaService.create(area);
+          await skillAreaService.create(area);
           result.areasCreated++;
         } catch {
           // Skip duplicates
@@ -80,7 +80,7 @@ export function createSkillsRouter(
 
       for (const resource of resources) {
         try {
-          resourceService.create(resource);
+          await resourceService.create(resource);
           result.resourcesCreated++;
         } catch {
           // Skip if parent area missing
@@ -89,7 +89,7 @@ export function createSkillsRouter(
 
       for (const log of logs) {
         try {
-          logService.log(log);
+          await logService.log(log);
           result.logsCreated++;
         } catch {
           // Skip if parent resource deleted
@@ -103,16 +103,16 @@ export function createSkillsRouter(
   });
 
   // Learning Resources
-  router.get("/resources", (_req, res) => {
-    res.json(resourceService.list());
+  router.get("/resources", async (_req, res) => {
+    res.json(await resourceService.list());
   });
 
-  router.get("/resources/by-area/:areaId", (req, res) => {
-    res.json(resourceService.getBySkillArea(req.params.areaId));
+  router.get("/resources/by-area/:areaId", async (req, res) => {
+    res.json(await resourceService.getBySkillArea(req.params.areaId));
   });
 
-  router.get("/resources/:id/progress", (req, res) => {
-    const progress = logService.getResourceProgress(String(req.params.id));
+  router.get("/resources/:id/progress", async (req, res) => {
+    const progress = await logService.getResourceProgress(String(req.params.id));
     if (!progress) {
       res.status(404).json({ error: "Resource not found" });
       return;
@@ -120,7 +120,7 @@ export function createSkillsRouter(
     res.json(progress);
   });
 
-  router.post("/resources/progress-batch", (req, res) => {
+  router.post("/resources/progress-batch", async (req, res) => {
     const { resourceIds }: { resourceIds: string[] } = req.body;
     if (!Array.isArray(resourceIds) || resourceIds.length === 0) {
       res.status(400).json({ error: "resourceIds array is required" });
@@ -130,32 +130,36 @@ export function createSkillsRouter(
     const sliced = resourceIds.slice(0, MAX_BATCH);
     const progressArray: (import("@lifeos/contracts").ResourceWithProgress | undefined)[] = [];
     for (const id of sliced) {
-      const p = logService.getResourceProgress(id);
+      const p = await logService.getResourceProgress(id);
       if (p) progressArray.push(p);
     }
     res.json(progressArray);
   });
 
-  router.post("/resources", validateBody(NewLearningResourceInputSchema), (req, res) => {
+  router.post("/resources", validateBody(NewLearningResourceInputSchema), async (req, res) => {
     try {
-      const resource = resourceService.create(req.body);
+      const resource = await resourceService.create(req.body);
       res.status(201).json(resource);
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
     }
   });
 
-  router.patch("/resources/:id", validateBody(UpdateLearningResourceInputSchema), (req, res) => {
-    const resource = resourceService.update(String(req.params.id), req.body);
-    if (!resource) {
-      res.status(404).json({ error: "Resource not found" });
-      return;
-    }
-    res.json(resource);
-  });
+  router.patch(
+    "/resources/:id",
+    validateBody(UpdateLearningResourceInputSchema),
+    async (req, res) => {
+      const resource = await resourceService.update(String(req.params.id), req.body);
+      if (!resource) {
+        res.status(404).json({ error: "Resource not found" });
+        return;
+      }
+      res.json(resource);
+    },
+  );
 
-  router.delete("/resources/:id", (req, res) => {
-    if (resourceService.delete(String(req.params.id))) {
+  router.delete("/resources/:id", async (req, res) => {
+    if (await resourceService.delete(String(req.params.id))) {
       res.status(204).send();
     } else {
       res.status(404).json({ error: "Resource not found" });
@@ -163,30 +167,30 @@ export function createSkillsRouter(
   });
 
   // Learning Logs — static routes BEFORE parameterized routes
-  router.get("/logs/range", (req, res) => {
+  router.get("/logs/range", async (req, res) => {
     const { startDate, endDate } = req.query;
     if (!startDate || !endDate) {
       res.status(400).json({ error: "startDate and endDate required" });
       return;
     }
-    res.json(logService.getByDateRange(startDate as string, endDate as string));
+    res.json(await logService.getByDateRange(startDate as string, endDate as string));
   });
 
-  router.get("/logs/by-resource/:resourceId", (req, res) => {
-    res.json(logService.getByResourceId(req.params.resourceId));
+  router.get("/logs/by-resource/:resourceId", async (req, res) => {
+    res.json(await logService.getByResourceId(req.params.resourceId));
   });
 
-  router.post("/logs", validateBody(NewLearningLogInputSchema), (req, res) => {
+  router.post("/logs", validateBody(NewLearningLogInputSchema), async (req, res) => {
     try {
-      const log = logService.log(req.body);
+      const log = await logService.log(req.body);
       res.status(201).json(log);
     } catch (err) {
       res.status(400).json({ error: (err as Error).message });
     }
   });
 
-  router.patch("/logs/:id", validateBody(UpdateLearningLogInputSchema), (req, res) => {
-    const log = logService.updateLog(String(req.params.id), req.body);
+  router.patch("/logs/:id", validateBody(UpdateLearningLogInputSchema), async (req, res) => {
+    const log = await logService.updateLog(String(req.params.id), req.body);
     if (!log) {
       res.status(404).json({ error: "Log not found" });
       return;
@@ -194,8 +198,8 @@ export function createSkillsRouter(
     res.json(log);
   });
 
-  router.delete("/logs/:id", (req, res) => {
-    if (logService.delete(String(req.params.id))) {
+  router.delete("/logs/:id", async (req, res) => {
+    if (await logService.delete(String(req.params.id))) {
       res.status(204).send();
     } else {
       res.status(404).json({ error: "Log not found" });
@@ -203,8 +207,8 @@ export function createSkillsRouter(
   });
 
   // Summary
-  router.get("/summary/:areaId", (req, res) => {
-    const summary = logService.getSkillAreaSummary(req.params.areaId);
+  router.get("/summary/:areaId", async (req, res) => {
+    const summary = await logService.getSkillAreaSummary(req.params.areaId);
     if (!summary) {
       res.status(404).json({ error: "Skill area not found" });
       return;

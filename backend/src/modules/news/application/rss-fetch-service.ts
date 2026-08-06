@@ -23,7 +23,7 @@ export function createRssFetchService(
         return { success: false, newArticles: 0, error: "Fetch already in progress" };
       }
 
-      const feed = feedRepository.getById(feedId);
+      const feed = await feedRepository.getById(feedId);
       if (!feed) {
         return { success: false, newArticles: 0, error: "Feed not found" };
       }
@@ -37,10 +37,10 @@ export function createRssFetchService(
         for (const item of parsed.items) {
           if (!item.link || !item.title) continue;
 
-          const existingArticle = articleRepository.getByUrlAndFeedId(item.link, feedId);
+          const existingArticle = await articleRepository.getByUrlAndFeedId(item.link, feedId);
           if (existingArticle) continue;
 
-          articleRepository.create({
+          await articleRepository.create({
             feedId,
             title: item.title,
             url: item.link,
@@ -53,12 +53,12 @@ export function createRssFetchService(
           newArticleCount++;
         }
 
-        feedRepository.updateFetchStatus(feedId, new Date().toISOString());
+        await feedRepository.updateFetchStatus(feedId, new Date().toISOString());
 
         return { success: true, newArticles: newArticleCount };
       } catch (error) {
         const errorMessage = error instanceof Error ? error.message : "Unknown error";
-        feedRepository.updateFetchStatus(feedId, new Date().toISOString(), errorMessage);
+        await feedRepository.updateFetchStatus(feedId, new Date().toISOString(), errorMessage);
 
         return { success: false, newArticles: 0, error: errorMessage };
       } finally {
@@ -67,7 +67,7 @@ export function createRssFetchService(
     },
 
     async fetchAllActiveFeeds(): Promise<{ totalFeeds: number; totalNewArticles: number }> {
-      const activeFeeds = feedRepository.getActive();
+      const activeFeeds = await feedRepository.getActive();
       let totalNewArticles = 0;
 
       for (const feed of activeFeeds) {

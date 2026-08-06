@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type { LearningLog, NewLearningLogInput } from "../../domain/types.js";
 import type { LearningLogRepository } from "../../ports/learning-log-repository.js";
@@ -28,49 +28,52 @@ function rowToLog(row: LearningLogRow): LearningLog {
 }
 
 export class SqliteLearningLogRepository implements LearningLogRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly client: Client) {}
 
-  getById(id: string): LearningLog | undefined {
-    const row = this.db.prepare("SELECT * FROM learning_logs WHERE id = ?").get(id) as
-      | LearningLogRow
-      | undefined;
+  async getById(id: string): Promise<LearningLog | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM learning_logs WHERE id = ?",
+      args: [id],
+    });
+    const row = res.rows[0] as unknown as LearningLogRow | undefined;
     return row ? rowToLog(row) : undefined;
   }
 
-  getByResourceId(resourceId: string): LearningLog[] {
-    return (
-      this.db
-        .prepare("SELECT * FROM learning_logs WHERE resource_id = ? ORDER BY date DESC")
-        .all(resourceId) as LearningLogRow[]
-    ).map(rowToLog);
+  async getByResourceId(resourceId: string): Promise<LearningLog[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM learning_logs WHERE resource_id = ? ORDER BY date DESC",
+      args: [resourceId],
+    });
+    const rows = res.rows as unknown as LearningLogRow[];
+    return rows.map(rowToLog);
   }
 
-  getByResourceIds(resourceIds: string[]): LearningLog[] {
+  async getByResourceIds(resourceIds: string[]): Promise<LearningLog[]> {
     if (resourceIds.length === 0) return [];
     const placeholders = resourceIds.map(() => "?").join(",");
-    return (
-      this.db
-        .prepare(`SELECT * FROM learning_logs WHERE resource_id IN (${placeholders}) ORDER BY date`)
-        .all(...resourceIds) as LearningLogRow[]
-    ).map(rowToLog);
+    const res = await this.client.execute({
+      sql: `SELECT * FROM learning_logs WHERE resource_id IN (${placeholders}) ORDER BY date`,
+      args: resourceIds,
+    });
+    const rows = res.rows as unknown as LearningLogRow[];
+    return rows.map(rowToLog);
   }
 
-  getByDateRange(startDate: string, endDate: string): LearningLog[] {
-    return (
-      this.db
-        .prepare("SELECT * FROM learning_logs WHERE date >= ? AND date <= ? ORDER BY date")
-        .all(startDate, endDate) as LearningLogRow[]
-    ).map(rowToLog);
+  async getByDateRange(startDate: string, endDate: string): Promise<LearningLog[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM learning_logs WHERE date >= ? AND date <= ? ORDER BY date",
+      args: [startDate, endDate],
+    });
+    const rows = res.rows as unknown as LearningLogRow[];
+    return rows.map(rowToLog);
   }
 
-  create(id: string, input: NewLearningLogInput): LearningLog {
+  async create(id: string, input: NewLearningLogInput): Promise<LearningLog> {
     const now = new Date().toISOString();
-    this.db
-      .prepare(
-        `INSERT INTO learning_logs (id, resource_id, date, minutes_spent, units_completed, notes, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.client.execute({
+      sql: `INSERT INTO learning_logs (id, resource_id, date, minutes_spent, units_completed, notes, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         id,
         input.resourceId,
         input.date,
@@ -79,12 +82,13 @@ export class SqliteLearningLogRepository implements LearningLogRepository {
         input.notes ?? null,
         now,
         now,
-      );
-    return this.getById(id) as LearningLog;
+      ],
+    });
+    return (await this.getById(id)) as LearningLog;
   }
 
-  update(id: string, patch: Partial<NewLearningLogInput>): LearningLog | undefined {
-    const existing = this.getById(id);
+  async update(id: string, patch: Partial<NewLearningLogInput>): Promise<LearningLog | undefined> {
+    const existing = await this.getById(id);
     if (!existing) return undefined;
 
     const fields: string[] = [];
@@ -112,12 +116,18 @@ export class SqliteLearningLogRepository implements LearningLogRepository {
     values.push(new Date().toISOString());
     values.push(id);
 
-    this.db.prepare(`UPDATE learning_logs SET ${fields.join(", ")} WHERE id = ?`).run(...values);
-    return this.getById(id);
+    await this.client.execute({
+      sql: `UPDATE learning_logs SET ${fields.join(", ")} WHERE id = ?`,
+      args: values,
+    });
+    return await this.getById(id);
   }
 
-  delete(id: string): boolean {
-    const result = this.db.prepare("DELETE FROM learning_logs WHERE id = ?").run(id);
-    return result.changes > 0;
+  async delete(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM learning_logs WHERE id = ?",
+      args: [id],
+    });
+    return res.rowsAffected > 0;
   }
 }

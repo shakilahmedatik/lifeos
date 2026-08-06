@@ -24,7 +24,7 @@ import type {
   WeeklySummary,
 } from "@lifeos/contracts";
 
-async function request<T>(url: string, options?: RequestInit): Promise<T> {
+export async function request<T>(url: string, options?: RequestInit): Promise<T> {
   const token =
     typeof localStorage !== "undefined" ? localStorage.getItem("lifeos_session_token") : null;
   const headers = new Headers(options?.headers);
@@ -95,6 +95,8 @@ export const api = {
     }),
   unlogHabit: (habitId: string, date: string) =>
     request<void>(`/api/habits/${habitId}/log/${date}`, { method: "DELETE" }),
+  unlogHabitByLogId: (logId: string) =>
+    request<void>(`/api/habits/log/${logId}`, { method: "DELETE" }),
   getTodayHabits: () => request<HabitWithStreak[]>("/api/habits/today"),
   getHabitStats: (id: string, startDate: string, endDate: string) =>
     request<HabitStats>(`/api/habits/${id}/stats?startDate=${startDate}&endDate=${endDate}`),

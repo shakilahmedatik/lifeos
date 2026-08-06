@@ -4,14 +4,14 @@ import type { WorkoutSessionRepository } from "../ports/workout-session-reposito
 export class WorkoutHistoryService {
   constructor(private readonly sessionRepo: WorkoutSessionRepository) {}
 
-  getWorkoutHistory(): WorkoutSession[] {
-    return this.sessionRepo.getAll();
+  async getWorkoutHistory(): Promise<WorkoutSession[]> {
+    return await this.sessionRepo.getAll();
   }
 
-  getWorkoutStats(): WorkoutStats {
-    const totalSessions = this.sessionRepo.getTotalSessions();
-    const totalDuration = this.sessionRepo.getTotalDuration();
-    const recentSessions = this.sessionRepo.getRecentSessions(1);
+  async getWorkoutStats(): Promise<WorkoutStats> {
+    const totalSessions = await this.sessionRepo.getTotalSessions();
+    const totalDuration = await this.sessionRepo.getTotalDuration();
+    const recentSessions = await this.sessionRepo.getRecentSessions(1);
 
     return {
       totalWorkouts: totalSessions,
@@ -22,15 +22,15 @@ export class WorkoutHistoryService {
     };
   }
 
-  getSessionsByWorkoutId(workoutId: string): WorkoutSession[] {
-    return this.sessionRepo.getByWorkoutId(workoutId);
+  async getSessionsByWorkoutId(workoutId: string): Promise<WorkoutSession[]> {
+    return await this.sessionRepo.getByWorkoutId(workoutId);
   }
 
-  getRecentSessions(limit: number): WorkoutSession[] {
-    return this.sessionRepo.getRecentSessions(limit);
+  async getRecentSessions(limit: number): Promise<WorkoutSession[]> {
+    return await this.sessionRepo.getRecentSessions(limit);
   }
 
-  getExerciseProgress(exerciseId: string): ExerciseProgressPoint[] {
-    return this.sessionRepo.getExerciseProgress(exerciseId);
+  async getExerciseProgress(exerciseId: string): Promise<ExerciseProgressPoint[]> {
+    return await this.sessionRepo.getExerciseProgress(exerciseId);
   }
 }

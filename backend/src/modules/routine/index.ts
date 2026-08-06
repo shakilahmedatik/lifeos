@@ -1,9 +1,9 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 import { SqliteTaskRepository } from "./adapters/sqlite/sqlite-task-repository.js";
 import { createRoutineRouter } from "./api/router.js";
 
-export function initRoutineModule(db: Database.Database) {
-  const taskRepo = new SqliteTaskRepository(db);
+export function initRoutineModule(client: Client) {
+  const taskRepo = new SqliteTaskRepository(client);
   const router = createRoutineRouter(taskRepo);
 
   return {

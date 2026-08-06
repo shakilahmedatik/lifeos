@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 import type { NewReminderInput, Reminder, UpdateReminderInput } from "../domain/types.js";
 import type { ReminderRepository } from "../ports/reminder-repository.js";
 
@@ -27,59 +27,68 @@ function mapRowToReminder(row: ReminderRow): Reminder {
 }
 
 export class SqliteReminderRepository implements ReminderRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly client: Client) {}
 
-  getAll(_userId: string): Reminder[] {
-    const rows = this.db
-      .prepare("SELECT * FROM reminders ORDER BY time ASC, created_at DESC")
-      .all() as ReminderRow[];
+  async getAll(userId: string): Promise<Reminder[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM reminders WHERE (user_id = ? OR user_id = '') ORDER BY time ASC, created_at DESC",
+      args: [userId],
+    });
+    const rows = res.rows as unknown as ReminderRow[];
     return rows.map(mapRowToReminder);
   }
 
-  getByDate(date: string, _userId: string): Reminder[] {
-    const rows = this.db
-      .prepare("SELECT * FROM reminders WHERE date = ? OR date IS NULL ORDER BY time ASC")
-      .all(date) as ReminderRow[];
+  async getByDate(date: string, userId: string): Promise<Reminder[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM reminders WHERE (user_id = ? OR user_id = '') AND (date = ? OR date IS NULL) ORDER BY time ASC",
+      args: [userId, date],
+    });
+    const rows = res.rows as unknown as ReminderRow[];
     return rows.map(mapRowToReminder);
   }
 
-  getTodayReminders(today: string, _userId: string): Reminder[] {
-    const rows = this.db
-      .prepare(
-        "SELECT * FROM reminders WHERE (date = ? OR date IS NULL) AND completed = 0 ORDER BY time ASC",
-      )
-      .all(today) as ReminderRow[];
+  async getTodayReminders(today: string, userId: string): Promise<Reminder[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM reminders WHERE (user_id = ? OR user_id = '') AND (date = ? OR date IS NULL) AND completed = 0 ORDER BY time ASC",
+      args: [userId, today],
+    });
+    const rows = res.rows as unknown as ReminderRow[];
     return rows.map(mapRowToReminder);
   }
 
-  getById(id: string, _userId: string): Reminder | undefined {
-    const row = this.db.prepare("SELECT * FROM reminders WHERE id = ?").get(id) as
-      | ReminderRow
-      | undefined;
+  async getById(id: string, userId: string): Promise<Reminder | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM reminders WHERE id = ? AND (user_id = ? OR user_id = '')",
+      args: [id, userId],
+    });
+    const row = res.rows[0] as unknown as ReminderRow | undefined;
     return row ? mapRowToReminder(row) : undefined;
   }
 
-  create(id: string, input: NewReminderInput, _userId: string): Reminder {
+  async create(id: string, input: NewReminderInput, userId: string): Promise<Reminder> {
     const now = new Date().toISOString();
     const kind = input.kind || "reminder";
     const date = input.date ?? null;
 
-    this.db
-      .prepare(
-        `INSERT INTO reminders (id, title, time, date, kind, completed, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, 0, ?, ?)`,
-      )
-      .run(id, input.title, input.time, date, kind, now, now);
+    await this.client.execute({
+      sql: `INSERT INTO reminders (id, user_id, title, time, date, kind, completed, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?)`,
+      args: [id, userId, input.title, input.time, date, kind, now, now],
+    });
 
-    const reminder = this.getById(id, _userId);
+    const reminder = await this.getById(id, userId);
     if (!reminder) {
       throw new Error(`Failed to retrieve created reminder with id: ${id}`);
     }
     return reminder;
   }
 
-  update(id: string, patch: UpdateReminderInput, _userId: string): Reminder | undefined {
-    const existing = this.getById(id, _userId);
+  async update(
+    id: string,
+    patch: UpdateReminderInput,
+    userId: string,
+  ): Promise<Reminder | undefined> {
+    const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
     const now = new Date().toISOString();
@@ -90,19 +99,21 @@ export class SqliteReminderRepository implements ReminderRepository {
     const completed =
       patch.completed !== undefined ? (patch.completed ? 1 : 0) : existing.completed ? 1 : 0;
 
-    this.db
-      .prepare(
-        `UPDATE reminders
-         SET title = ?, time = ?, date = ?, kind = ?, completed = ?, updated_at = ?
-         WHERE id = ?`,
-      )
-      .run(title, time, date, kind, completed, now, id);
+    await this.client.execute({
+      sql: `UPDATE reminders
+            SET title = ?, time = ?, date = ?, kind = ?, completed = ?, updated_at = ?
+            WHERE id = ? AND (user_id = ? OR user_id = '')`,
+      args: [title, time, date, kind, completed, now, id, userId],
+    });
 
-    return this.getById(id, _userId);
+    return await this.getById(id, userId);
   }
 
-  delete(id: string, _userId: string): boolean {
-    const res = this.db.prepare("DELETE FROM reminders WHERE id = ?").run(id);
-    return res.changes > 0;
+  async delete(id: string, userId: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM reminders WHERE id = ? AND (user_id = ? OR user_id = '')",
+      args: [id, userId],
+    });
+    return res.rowsAffected > 0;
   }
 }

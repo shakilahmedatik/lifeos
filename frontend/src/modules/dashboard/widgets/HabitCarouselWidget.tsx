@@ -181,7 +181,7 @@ export function HabitCarouselWidget({ habits, onLog }: HabitCarouselWidgetProps)
               <span
                 key={i}
                 className={`w-1.5 h-1.5 rounded-full transition-all ${
-                  i === index ? "bg-accent w-3" : "bg-border"
+                  i === (index % habits.length) ? "bg-accent w-3" : "bg-border"
                 }`}
               />
             ))}

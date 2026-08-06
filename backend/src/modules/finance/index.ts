@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 import { SqliteAccountRepository } from "./adapters/sqlite/sqlite-account-repository.js";
 import { SqliteCategoryRepository } from "./adapters/sqlite/sqlite-category-repository.js";
 import { SqliteTransactionRepository } from "./adapters/sqlite/sqlite-transaction-repository.js";
@@ -8,13 +8,13 @@ import { CategoryService } from "./application/category-service.js";
 import { FinanceReportService } from "./application/finance-report-service.js";
 import { TransactionService } from "./application/transaction-service.js";
 
-export function initFinanceModule(db: Database.Database) {
-  const accountRepo = new SqliteAccountRepository(db);
-  const categoryRepo = new SqliteCategoryRepository(db);
-  const transactionRepo = new SqliteTransactionRepository(db);
+export function initFinanceModule(client: Client) {
+  const accountRepo = new SqliteAccountRepository(client);
+  const categoryRepo = new SqliteCategoryRepository(client);
+  const transactionRepo = new SqliteTransactionRepository(client);
 
   const accountService = new AccountService(accountRepo, transactionRepo);
-  const categoryService = new CategoryService(categoryRepo);
+  const categoryService = new CategoryService(categoryRepo, transactionRepo);
   const transactionService = new TransactionService(transactionRepo, accountRepo, categoryRepo);
   const financeReportService = new FinanceReportService(transactionRepo, accountRepo, categoryRepo);
 

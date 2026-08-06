@@ -28,20 +28,31 @@ export function WorkoutProgress({ workoutId, onViewHistory, onViewSession }: Wor
     const totalDuration = completedSessions.reduce((acc, s) => acc + (s.durationSeconds || 0), 0);
     const avgDuration = completedSessions.length > 0 ? totalDuration / completedSessions.length : 0;
 
-    const last7Days = Array.from({ length: 7 }, (_, i) => {
-      const date = new Date();
-      date.setDate(date.getDate() - i);
-      return date.toISOString().split("T")[0];
-    }).reverse();
+    const toLocalDateString = (d: Date) => {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
 
-    const sessionsPerDay = last7Days.map(
-      (date) => completedSessions.filter((s) => s.startedAt.startsWith(date)).length,
+    const last7DaysDates = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      return d;
+    });
+
+    const last7DaysStr = last7DaysDates.map((d) => toLocalDateString(d));
+
+    const sessionsPerDay = last7DaysStr.map(
+      (dateStr) =>
+        completedSessions.filter((s) => toLocalDateString(new Date(s.startedAt)) === dateStr)
+          .length,
     );
 
-    const chartData = last7Days.map((date, index) => ({
-      label: new Date(date).toLocaleDateString("en", { weekday: "short" }),
+    const chartData = last7DaysDates.map((d, index) => ({
+      label: d.toLocaleDateString("en", { weekday: "short" }),
       value: sessionsPerDay[index],
-      fullDate: new Date(date).toLocaleDateString(undefined, { month: "short", day: "numeric" }),
+      fullDate: d.toLocaleDateString(undefined, { month: "short", day: "numeric" }),
     }));
 
     const thisWeekTotal = sessionsPerDay.reduce((a, b) => a + b, 0);

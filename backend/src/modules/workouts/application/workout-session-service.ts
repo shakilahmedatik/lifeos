@@ -11,44 +11,48 @@ import type { WorkoutSessionRepository } from "../ports/workout-session-reposito
 export class WorkoutSessionService {
   constructor(private readonly sessionRepo: WorkoutSessionRepository) {}
 
-  startSession(workoutId: string): WorkoutSession {
+  async startSession(workoutId: string): Promise<WorkoutSession> {
     const id = randomUUID();
-    return this.sessionRepo.create(id, workoutId);
+    return await this.sessionRepo.create(id, workoutId);
   }
 
-  completeSession(id: string, durationSeconds: number, notes?: string): WorkoutSession | undefined {
-    return this.sessionRepo.complete(id, durationSeconds, notes);
+  async completeSession(
+    id: string,
+    durationSeconds: number,
+    notes?: string,
+  ): Promise<WorkoutSession | undefined> {
+    return await this.sessionRepo.complete(id, durationSeconds, notes);
   }
 
-  getSession(id: string): WorkoutSession | undefined {
-    return this.sessionRepo.getById(id);
+  async getSession(id: string): Promise<WorkoutSession | undefined> {
+    return await this.sessionRepo.getById(id);
   }
 
-  getSessionWithLogs(id: string): WorkoutSessionWithLogs | undefined {
-    return this.sessionRepo.getWithLogs(id);
+  async getSessionWithLogs(id: string): Promise<WorkoutSessionWithLogs | undefined> {
+    return await this.sessionRepo.getWithLogs(id);
   }
 
-  listSessions(): WorkoutSession[] {
-    return this.sessionRepo.getAll();
+  async listSessions(): Promise<WorkoutSession[]> {
+    return await this.sessionRepo.getAll();
   }
 
-  getSessionsByWorkoutId(workoutId: string): WorkoutSession[] {
-    return this.sessionRepo.getByWorkoutId(workoutId);
+  async getSessionsByWorkoutId(workoutId: string): Promise<WorkoutSession[]> {
+    return await this.sessionRepo.getByWorkoutId(workoutId);
   }
 
-  addExerciseLog(sessionId: string, input: NewExerciseLogInput): ExerciseLog {
-    return this.sessionRepo.addLog(sessionId, input);
+  async addExerciseLog(sessionId: string, input: NewExerciseLogInput): Promise<ExerciseLog> {
+    return await this.sessionRepo.addLog(sessionId, input);
   }
 
-  getSessionLogs(sessionId: string): ExerciseLog[] {
-    return this.sessionRepo.getLogsBySessionId(sessionId);
+  async getSessionLogs(sessionId: string): Promise<ExerciseLog[]> {
+    return await this.sessionRepo.getLogsBySessionId(sessionId);
   }
 
-  deleteSession(id: string): boolean {
-    return this.sessionRepo.delete(id);
+  async deleteSession(id: string): Promise<boolean> {
+    return await this.sessionRepo.delete(id);
   }
 
-  getRecentSessions(limit: number): WorkoutSession[] {
-    return this.sessionRepo.getRecentSessions(limit);
+  async getRecentSessions(limit: number): Promise<WorkoutSession[]> {
+    return await this.sessionRepo.getRecentSessions(limit);
   }
 }

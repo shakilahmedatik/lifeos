@@ -23,9 +23,8 @@ export function BackupPanel({ onImportComplete }: BackupPanelProps) {
   const handleExportCsv = async () => {
     setExportingCsv(true);
     try {
-      const now = new Date();
-      const startDate = "2020-01-01";
-      const endDate = `${now.getFullYear() + 5}-12-31`;
+      const startDate = "1900-01-01";
+      const endDate = "2100-01-01";
 
       const [transactions, categories, accounts] = await Promise.all([
         fetchTransactionsByDateRange(startDate, endDate),
@@ -59,7 +58,7 @@ export function BackupPanel({ onImportComplete }: BackupPanelProps) {
       const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
-      const dateStr = now.toISOString().split("T")[0];
+      const dateStr = new Date().toISOString().split("T")[0];
       link.setAttribute("href", url);
       link.setAttribute("download", `finance-transactions-${dateStr}.csv`);
       document.body.appendChild(link);
@@ -79,8 +78,8 @@ export function BackupPanel({ onImportComplete }: BackupPanelProps) {
     setExportingJson(true);
     try {
       const now = new Date();
-      const startDate = "2020-01-01";
-      const endDate = `${now.getFullYear() + 5}-12-31`;
+      const startDate = "1900-01-01";
+      const endDate = "2100-01-01";
 
       const [accounts, categories, transactions] = await Promise.all([
         fetchAccounts(),
@@ -134,7 +133,14 @@ export function BackupPanel({ onImportComplete }: BackupPanelProps) {
           return;
         }
 
-        const { createAccount, createCategory, createTransaction } = await import("./api.js");
+        const { fetchAccounts, fetchCategories, createAccount, createCategory, createTransaction } =
+          await import("./api.js");
+
+        const existingAccounts = await fetchAccounts();
+        const existingCategories = await fetchCategories();
+
+        const accountIdMap = new Map<string, string>();
+        const categoryIdMap = new Map<string, string>();
 
         let accountsAdded = 0;
         let categoriesAdded = 0;
@@ -143,10 +149,18 @@ export function BackupPanel({ onImportComplete }: BackupPanelProps) {
         if (Array.isArray(data.accounts)) {
           for (const acc of data.accounts) {
             try {
-              await createAccount({ name: acc.name, type: acc.type });
-              accountsAdded++;
+              const matched = existingAccounts.find(
+                (ea) => ea.name === acc.name && ea.type === acc.type,
+              );
+              if (matched) {
+                if (acc.id) accountIdMap.set(acc.id, matched.id);
+              } else {
+                const created = await createAccount({ name: acc.name, type: acc.type });
+                if (acc.id) accountIdMap.set(acc.id, created.id);
+                accountsAdded++;
+              }
             } catch {
-              // skip duplicate or existing
+              // skip failed
             }
           }
         }
@@ -154,10 +168,18 @@ export function BackupPanel({ onImportComplete }: BackupPanelProps) {
         if (Array.isArray(data.categories)) {
           for (const cat of data.categories) {
             try {
-              await createCategory({ name: cat.name, kind: cat.kind });
-              categoriesAdded++;
+              const matched = existingCategories.find(
+                (ec) => ec.name === cat.name && ec.kind === cat.kind,
+              );
+              if (matched) {
+                if (cat.id) categoryIdMap.set(cat.id, matched.id);
+              } else {
+                const created = await createCategory({ name: cat.name, kind: cat.kind });
+                if (cat.id) categoryIdMap.set(cat.id, created.id);
+                categoriesAdded++;
+              }
             } catch {
-              // skip duplicate or existing
+              // skip failed
             }
           }
         }
@@ -165,9 +187,12 @@ export function BackupPanel({ onImportComplete }: BackupPanelProps) {
         if (Array.isArray(data.transactions)) {
           for (const tx of data.transactions) {
             try {
+              const targetAccId = accountIdMap.get(tx.accountId) ?? tx.accountId;
+              const targetCatId = categoryIdMap.get(tx.categoryId) ?? tx.categoryId;
+
               await createTransaction({
-                accountId: tx.accountId,
-                categoryId: tx.categoryId,
+                accountId: targetAccId,
+                categoryId: targetCatId,
                 date: tx.date,
                 amountMinor: tx.amountMinor,
                 currency: tx.currency,

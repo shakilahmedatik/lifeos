@@ -1,21 +1,18 @@
 import type React from "react";
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useEffect, useState } from "react";
 
 export interface UserSession {
   id: string;
   name: string;
   email: string;
-  pin?: string | null;
 }
 
 interface AuthContextType {
   user: UserSession | null;
   token: string | null;
-  isPinLocked: boolean;
+  isLoadingSession: boolean;
   login: (token: string, user: UserSession) => void;
   logout: () => void;
-  unlockPin: (pin: string) => boolean;
-  setPin: (pin: string) => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -30,49 +27,68 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
-  const [isPinLocked, setIsPinLocked] = useState<boolean>(() => {
-    const savedUser = localStorage.getItem("lifeos_user");
-    if (savedUser) {
-      const parsed = JSON.parse(savedUser);
-      return Boolean(parsed.pin);
-    }
-    return false;
-  });
+  const [isLoadingSession, setIsLoadingSession] = useState<boolean>(true);
+
+  useEffect(() => {
+    let isMounted = true;
+    const checkSession = async () => {
+      try {
+        const headers: Record<string, string> = {};
+        if (token) {
+          headers.Authorization = `Bearer ${token}`;
+        }
+        const res = await fetch("/api/auth/get-session", {
+          headers,
+          credentials: "include",
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.user && isMounted) {
+            setUser(data.user);
+            const sessionToken = data.session?.token || token || "session-token";
+            setToken(sessionToken);
+            localStorage.setItem("lifeos_user", JSON.stringify(data.user));
+            localStorage.setItem("lifeos_session_token", sessionToken);
+          } else if (isMounted) {
+            // Session expired or invalid on backend
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem("lifeos_user");
+            localStorage.removeItem("lifeos_session_token");
+          }
+        }
+      } catch (_err) {
+        // Network or fetch error - keep cached local user state if offline
+      } finally {
+        if (isMounted) {
+          setIsLoadingSession(false);
+        }
+      }
+    };
+
+    checkSession();
+    return () => {
+      isMounted = false;
+    };
+  }, [token]);
 
   const login = (newToken: string, newUser: UserSession) => {
     setToken(newToken);
     setUser(newUser);
     localStorage.setItem("lifeos_session_token", newToken);
     localStorage.setItem("lifeos_user", JSON.stringify(newUser));
-    if (newUser.pin) {
-      setIsPinLocked(true);
-    } else {
-      setIsPinLocked(false);
-    }
   };
 
   const logout = () => {
+    fetch("/api/auth/sign-out", {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => {});
     setToken(null);
     setUser(null);
-    setIsPinLocked(false);
     localStorage.removeItem("lifeos_session_token");
     localStorage.removeItem("lifeos_user");
-  };
-
-  const unlockPin = (enteredPin: string): boolean => {
-    if (user?.pin && user.pin === enteredPin) {
-      setIsPinLocked(false);
-      return true;
-    }
-    return false;
-  };
-
-  const setPin = (newPin: string) => {
-    if (user) {
-      const updated = { ...user, pin: newPin };
-      setUser(updated);
-      localStorage.setItem("lifeos_user", JSON.stringify(updated));
-    }
   };
 
   return (
@@ -80,11 +96,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       value={{
         user,
         token,
-        isPinLocked,
+        isLoadingSession,
         login,
         logout,
-        unlockPin,
-        setPin,
       }}
     >
       {children}

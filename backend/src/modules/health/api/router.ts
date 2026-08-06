@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 import { Router } from "express";
 
 export interface SchedulerStatus {
@@ -9,21 +9,21 @@ export interface SchedulerStatus {
 }
 
 export function createHealthRouter(
-  db: Database.Database,
+  client: Client,
   getSchedulerStatus?: () => SchedulerStatus[],
 ): Router {
   const router = Router();
 
-  router.get("/", (_req, res) => {
+  router.get("/", async (_req, res) => {
     let dbOk = false;
     try {
-      db.prepare("SELECT 1 AS alive").get();
+      await client.execute("SELECT 1 AS alive");
       dbOk = true;
     } catch {
       dbOk = false;
     }
 
-    const dbState = { open: db.open, readonly: db.readonly };
+    const dbState = { open: true, readonly: false };
 
     const status = dbOk ? "ok" : "degraded";
     const code = dbOk ? 200 : 503;

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type {
   ExerciseLog,
@@ -53,67 +53,80 @@ function rowToExerciseLog(row: ExerciseLogRow): ExerciseLog {
 }
 
 export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly client: Client) {}
 
-  getById(id: string): WorkoutSession | undefined {
-    const row = this.db.prepare("SELECT * FROM workout_sessions WHERE id = ?").get(id) as
-      | WorkoutSessionRow
-      | undefined;
+  async getById(id: string, userId = "default"): Promise<WorkoutSession | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM workout_sessions WHERE id = ? AND (user_id = ? OR user_id = '')",
+      args: [id, userId],
+    });
+    const row = res.rows[0] as unknown as WorkoutSessionRow | undefined;
     return row ? rowToWorkoutSession(row) : undefined;
   }
 
-  getAll(): WorkoutSession[] {
-    const rows = this.db
-      .prepare("SELECT * FROM workout_sessions ORDER BY started_at DESC")
-      .all() as WorkoutSessionRow[];
+  async getAll(userId = "default"): Promise<WorkoutSession[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM workout_sessions WHERE (user_id = ? OR user_id = '') ORDER BY started_at DESC",
+      args: [userId],
+    });
+    const rows = res.rows as unknown as WorkoutSessionRow[];
     return rows.map(rowToWorkoutSession);
   }
 
-  getByWorkoutId(workoutId: string): WorkoutSession[] {
-    const rows = this.db
-      .prepare("SELECT * FROM workout_sessions WHERE workout_id = ? ORDER BY started_at DESC")
-      .all(workoutId) as WorkoutSessionRow[];
+  async getByWorkoutId(workoutId: string): Promise<WorkoutSession[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM workout_sessions WHERE workout_id = ? ORDER BY started_at DESC",
+      args: [workoutId],
+    });
+    const rows = res.rows as unknown as WorkoutSessionRow[];
     return rows.map(rowToWorkoutSession);
   }
 
-  create(id: string, workoutId: string): WorkoutSession {
+  async create(id: string, workoutId: string, userId = "default"): Promise<WorkoutSession> {
     const now = new Date().toISOString();
-    this.db
-      .prepare(
-        `INSERT INTO workout_sessions (id, workout_id, started_at)
-         VALUES (?, ?, ?)`,
-      )
-      .run(id, workoutId, now);
+    await this.client.execute({
+      sql: `INSERT INTO workout_sessions (id, user_id, workout_id, started_at)
+            VALUES (?, ?, ?, ?)`,
+      args: [id, userId, workoutId, now],
+    });
 
-    return this.getById(id) as WorkoutSession;
+    return (await this.getById(id, userId)) as WorkoutSession;
   }
 
-  complete(id: string, durationSeconds: number, notes?: string): WorkoutSession | undefined {
-    const existing = this.getById(id);
+  async complete(
+    id: string,
+    durationSeconds: number,
+    notes?: string,
+  ): Promise<WorkoutSession | undefined> {
+    const existing = await this.getById(id);
     if (!existing) return undefined;
 
     const now = new Date().toISOString();
-    this.db
-      .prepare(
-        "UPDATE workout_sessions SET completed_at = ?, duration_seconds = ?, notes = ? WHERE id = ?",
-      )
-      .run(now, durationSeconds, notes ?? null, id);
+    await this.client.execute({
+      sql: "UPDATE workout_sessions SET completed_at = ?, duration_seconds = ?, notes = ? WHERE id = ?",
+      args: [now, durationSeconds, notes ?? null, id],
+    });
 
-    return this.getById(id);
+    return await this.getById(id);
   }
 
-  delete(id: string): boolean {
-    const result = this.db.prepare("DELETE FROM workout_sessions WHERE id = ?").run(id);
-    return result.changes > 0;
+  async delete(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM workout_sessions WHERE id = ?",
+      args: [id],
+    });
+    return res.rowsAffected > 0;
   }
 
-  getWithLogs(id: string): WorkoutSessionWithLogs | undefined {
-    const session = this.getById(id);
+  async getWithLogs(id: string): Promise<WorkoutSessionWithLogs | undefined> {
+    const session = await this.getById(id);
     if (!session) return undefined;
 
-    const logRows = this.db
-      .prepare("SELECT * FROM exercise_logs WHERE session_id = ? ORDER BY exercise_id, set_number")
-      .all(id) as ExerciseLogRow[];
+    const res = await this.client.execute({
+      sql: "SELECT * FROM exercise_logs WHERE session_id = ? ORDER BY exercise_id, set_number",
+      args: [id],
+    });
+    const logRows = res.rows as unknown as ExerciseLogRow[];
 
     return {
       ...session,
@@ -121,16 +134,14 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
     };
   }
 
-  addLog(sessionId: string, input: NewExerciseLogInput): ExerciseLog {
+  async addLog(sessionId: string, input: NewExerciseLogInput): Promise<ExerciseLog> {
     const id = randomUUID();
     const now = new Date().toISOString();
 
-    this.db
-      .prepare(
-        `INSERT INTO exercise_logs (id, session_id, exercise_id, set_number, actual_reps, actual_weight, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.client.execute({
+      sql: `INSERT INTO exercise_logs (id, session_id, exercise_id, set_number, actual_reps, actual_weight, completed_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         id,
         sessionId,
         input.exerciseId,
@@ -138,61 +149,69 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
         input.actualReps,
         input.actualWeight ?? null,
         now,
-      );
+      ],
+    });
 
-    const logRow = this.db.prepare("SELECT * FROM exercise_logs WHERE id = ?").get(id) as
-      | ExerciseLogRow
-      | undefined;
+    const res = await this.client.execute({
+      sql: "SELECT * FROM exercise_logs WHERE id = ?",
+      args: [id],
+    });
+    const logRow = res.rows[0] as unknown as ExerciseLogRow | undefined;
     if (!logRow) {
       throw new Error("Failed to retrieve created exercise log");
     }
     return rowToExerciseLog(logRow);
   }
 
-  getLogsBySessionId(sessionId: string): ExerciseLog[] {
-    const rows = this.db
-      .prepare("SELECT * FROM exercise_logs WHERE session_id = ? ORDER BY exercise_id, set_number")
-      .all(sessionId) as ExerciseLogRow[];
+  async getLogsBySessionId(sessionId: string): Promise<ExerciseLog[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM exercise_logs WHERE session_id = ? ORDER BY exercise_id, set_number",
+      args: [sessionId],
+    });
+    const rows = res.rows as unknown as ExerciseLogRow[];
     return rows.map(rowToExerciseLog);
   }
 
-  getRecentSessions(limit: number): WorkoutSession[] {
-    const rows = this.db
-      .prepare("SELECT * FROM workout_sessions ORDER BY started_at DESC LIMIT ?")
-      .all(limit) as WorkoutSessionRow[];
+  async getRecentSessions(limit: number): Promise<WorkoutSession[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM workout_sessions ORDER BY started_at DESC LIMIT ?",
+      args: [limit],
+    });
+    const rows = res.rows as unknown as WorkoutSessionRow[];
     return rows.map(rowToWorkoutSession);
   }
 
-  getTotalSessions(): number {
-    const result = this.db.prepare("SELECT COUNT(*) as count FROM workout_sessions").get() as {
-      count: number;
-    };
-    return result.count;
+  async getTotalSessions(): Promise<number> {
+    const res = await this.client.execute("SELECT COUNT(*) as count FROM workout_sessions");
+    return Number(res.rows[0]?.count ?? 0);
   }
 
-  getTotalDuration(): number {
-    const result = this.db
-      .prepare("SELECT COALESCE(SUM(duration_seconds), 0) as total FROM workout_sessions")
-      .get() as { total: number };
-    return result.total;
+  async getTotalDuration(): Promise<number> {
+    const res = await this.client.execute(
+      "SELECT COALESCE(SUM(duration_seconds), 0) as total FROM workout_sessions",
+    );
+    return Number(res.rows[0]?.total ?? 0);
   }
 
-  getExerciseProgress(exerciseId: string): ExerciseProgressPoint[] {
-    const rows = this.db
-      .prepare(`
-      SELECT
-        el.session_id,
-        ws.started_at as date,
-        MAX(el.actual_weight) as max_weight,
-        AVG(el.actual_reps) as avg_reps,
-        COUNT(*) as total_sets
-      FROM exercise_logs el
-      JOIN workout_sessions ws ON ws.id = el.session_id
-      WHERE el.exercise_id = ? AND ws.completed_at IS NOT NULL
-      GROUP BY el.session_id
-      ORDER BY ws.started_at ASC
-    `)
-      .all(exerciseId) as Array<{
+  async getExerciseProgress(exerciseId: string): Promise<ExerciseProgressPoint[]> {
+    const res = await this.client.execute({
+      sql: `
+        SELECT
+          el.session_id,
+          ws.started_at as date,
+          MAX(el.actual_weight) as max_weight,
+          AVG(el.actual_reps) as avg_reps,
+          COUNT(*) as total_sets
+        FROM exercise_logs el
+        JOIN workout_sessions ws ON ws.id = el.session_id
+        WHERE el.exercise_id = ? AND ws.completed_at IS NOT NULL
+        GROUP BY el.session_id
+        ORDER BY ws.started_at ASC
+      `,
+      args: [exerciseId],
+    });
+
+    const rows = res.rows as unknown as Array<{
       session_id: string;
       date: string;
       max_weight: number | null;

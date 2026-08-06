@@ -1,11 +1,11 @@
-import Database from "better-sqlite3";
+import { type Client, createClient } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { SqliteCategoryRepository } from "../adapters/sqlite/sqlite-category-repository.js";
 
-function createTestDb(): Database.Database {
-  const db = new Database(":memory:");
-  db.exec(`
+async function createTestClient(): Promise<Client> {
+  const client = createClient({ url: ":memory:" });
+  await client.execute(`
     CREATE TABLE categories (
       id TEXT PRIMARY KEY,
       name TEXT NOT NULL,
@@ -15,48 +15,48 @@ function createTestDb(): Database.Database {
       updated_at TEXT NOT NULL DEFAULT (datetime('now'))
     );
   `);
-  return db;
+  return client;
 }
 
 describe("SqliteCategoryRepository", () => {
-  let db: Database.Database;
+  let client: Client;
   let repo: SqliteCategoryRepository;
 
-  beforeEach(() => {
-    db = createTestDb();
-    repo = new SqliteCategoryRepository(db);
+  beforeEach(async () => {
+    client = await createTestClient();
+    repo = new SqliteCategoryRepository(client);
   });
 
-  it("creates and retrieves a category", () => {
-    const category = repo.create("cat-1", { name: "Salary", kind: "income" });
+  it("creates and retrieves a category", async () => {
+    const category = await repo.create("cat-1", { name: "Salary", kind: "income" });
     expect(category.id).toBe("cat-1");
     expect(category.name).toBe("Salary");
     expect(category.kind).toBe("income");
     expect(category.archived).toBe(false);
 
-    const fetched = repo.getById("cat-1");
+    const fetched = await repo.getById("cat-1");
     expect(fetched).toEqual(category);
   });
 
-  it("gets active and kind-filtered categories", () => {
-    repo.create("cat-1", { name: "Salary", kind: "income" });
-    repo.create("cat-2", { name: "Rent", kind: "expense" });
-    repo.create("cat-3", { name: "Bonus", kind: "income" });
-    repo.archive("cat-3");
+  it("gets active and kind-filtered categories", async () => {
+    await repo.create("cat-1", { name: "Salary", kind: "income" });
+    await repo.create("cat-2", { name: "Rent", kind: "expense" });
+    await repo.create("cat-3", { name: "Bonus", kind: "income" });
+    await repo.archive("cat-3");
 
-    expect(repo.getAll()).toHaveLength(3);
-    expect(repo.getActive()).toHaveLength(2);
-    expect(repo.getByKind("income")).toHaveLength(1);
-    expect(repo.getByKind("expense")).toHaveLength(1);
+    expect(await repo.getAll()).toHaveLength(3);
+    expect(await repo.getActive()).toHaveLength(2);
+    expect(await repo.getByKind("income")).toHaveLength(1);
+    expect(await repo.getByKind("expense")).toHaveLength(1);
   });
 
-  it("updates and archives a category", () => {
-    repo.create("cat-1", { name: "Food", kind: "expense" });
-    const updated = repo.update("cat-1", { name: "Dining & Groceries" });
+  it("updates and archives a category", async () => {
+    await repo.create("cat-1", { name: "Food", kind: "expense" });
+    const updated = await repo.update("cat-1", { name: "Dining & Groceries" });
     expect(updated?.name).toBe("Dining & Groceries");
 
-    const archived = repo.archive("cat-1");
+    const archived = await repo.archive("cat-1");
     expect(archived).toBe(true);
-    expect(repo.getById("cat-1")?.archived).toBe(true);
+    expect((await repo.getById("cat-1"))?.archived).toBe(true);
   });
 });

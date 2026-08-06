@@ -106,7 +106,18 @@ export function TransactionForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!accountId || !categoryId || !amount) return;
+    if (!accountId) {
+      toast.error("Please select an account");
+      return;
+    }
+    if (!categoryId) {
+      toast.error("Please select a category");
+      return;
+    }
+    if (!amount) {
+      toast.error("Please enter an amount");
+      return;
+    }
 
     const cleanAmount = amount.replace(/,/g, "").trim();
     const amountNum = Number.parseFloat(cleanAmount);
@@ -157,8 +168,20 @@ export function TransactionForm({
 
   if (loading) return <div className="text-sm text-gray-500 py-4">Loading form...</div>;
 
+  const noAccounts = activeAccounts.length === 0;
+  const noCategories = filteredCategories.length === 0;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {(noAccounts || noCategories) && (
+        <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs">
+          {noAccounts && noCategories
+            ? "Please create an account and a category before adding transactions."
+            : noAccounts
+              ? "No active financial accounts found. Please add an account first."
+              : `No active ${transactionKind} categories found. Please add a category first.`}
+        </div>
+      )}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <Select
           id="transaction-kind"

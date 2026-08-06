@@ -6,48 +6,50 @@ export function createArticleService(
   _feedRepository: RssFeedRepository,
 ) {
   return {
-    getArticles(limit = 20, offset = 0): NewsArticle[] {
-      return articleRepository.getAll(limit, offset);
+    async getArticles(limit = 20, offset = 0): Promise<NewsArticle[]> {
+      return await articleRepository.getAll(limit, offset);
     },
 
-    getArticlesByFeedId(feedId: string, limit = 20, offset = 0): NewsArticle[] {
-      return articleRepository.getByFeedId(feedId, limit, offset);
+    async getArticlesByFeedId(feedId: string, limit = 20, offset = 0): Promise<NewsArticle[]> {
+      return await articleRepository.getByFeedId(feedId, limit, offset);
     },
 
-    getRecentArticles(limit: number): NewsArticle[] {
-      return articleRepository.getRecent(limit);
+    async getRecentArticles(limit: number): Promise<NewsArticle[]> {
+      return await articleRepository.getRecent(limit);
     },
 
-    searchArticles(query: string, limit = 20, offset = 0): NewsArticle[] {
-      return articleRepository.search(query, limit, offset);
+    async searchArticles(query: string, limit = 20, offset = 0): Promise<NewsArticle[]> {
+      return await articleRepository.search(query, limit, offset);
     },
 
-    getArticleById(id: string): NewsArticle | undefined {
-      return articleRepository.getById(id);
+    async getArticleById(id: string): Promise<NewsArticle | undefined> {
+      return await articleRepository.getById(id);
     },
 
-    markAsRead(id: string): { success: boolean; article?: NewsArticle; error?: string } {
-      const article = articleRepository.getById(id);
+    async markAsRead(
+      id: string,
+    ): Promise<{ success: boolean; article?: NewsArticle; error?: string }> {
+      const article = await articleRepository.getById(id);
       if (!article) {
         return { success: false, error: "Article not found" };
       }
 
-      const updated = articleRepository.markAsRead(id);
+      const updated = await articleRepository.markAsRead(id);
       return { success: true, article: updated };
     },
 
-    createArticle(article: Omit<NewsArticle, "id"> & { id?: string }): NewsArticle {
-      return articleRepository.create(article);
+    async createArticle(article: Omit<NewsArticle, "id"> & { id?: string }): Promise<NewsArticle> {
+      return await articleRepository.create(article);
     },
 
-    articleExists(url: string, feedId: string): boolean {
-      return articleRepository.getByUrlAndFeedId(url, feedId) !== undefined;
+    async articleExists(url: string, feedId: string): Promise<boolean> {
+      return (await articleRepository.getByUrlAndFeedId(url, feedId)) !== undefined;
     },
 
-    cleanupOldArticles(retentionDays = 30): number {
+    async cleanupOldArticles(retentionDays = 30): Promise<number> {
       const cutoffDate = new Date();
       cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
-      return articleRepository.deleteOlderThan(cutoffDate.toISOString());
+      return await articleRepository.deleteOlderThan(cutoffDate.toISOString());
     },
   };
 }

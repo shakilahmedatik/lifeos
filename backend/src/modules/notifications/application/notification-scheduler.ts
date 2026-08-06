@@ -5,35 +5,29 @@ import type { NotificationService } from "./notification-service.js";
 export type NotificationCallback = (notification: NotificationWithTask) => void;
 
 export class NotificationScheduler {
-  private intervalId: ReturnType<typeof setInterval> | null = null;
   private running = false;
   private lastRun: string | undefined;
+  private lastRunTimestamp = 0;
   private error: string | undefined;
   public listeners: NotificationCallback[] = [];
 
   constructor(private notificationService: NotificationService) {}
 
-  start(intervalMs = 10000): void {
-    if (this.intervalId) return;
-
-    this.intervalId = setInterval(() => {
-      if (!this.running) {
-        this.checkAndSendNotifications();
-      }
-    }, intervalMs);
-
-    logger.info("Notification scheduler started", { intervalMs });
+  start(_intervalMs = 10000): void {
+    logger.info("Notification scheduler enabled (lazy request-driven execution)");
+    this.checkAndSendNotificationsLazy();
   }
 
   stop(): void {
-    if (this.intervalId) {
-      clearInterval(this.intervalId);
-      this.intervalId = null;
-      logger.info("Notification scheduler stopped");
-    }
+    logger.info("Notification scheduler disabled");
   }
 
   onNotification(callback: NotificationCallback): () => void {
+    if (this.listeners.length >= 50) {
+      logger.warn("High number of notification listeners registered. Check for memory leak.", {
+        count: this.listeners.length,
+      });
+    }
     this.listeners.push(callback);
     return () => {
       this.listeners = this.listeners.filter((l) => l !== callback);
@@ -54,22 +48,35 @@ export class NotificationScheduler {
     };
   }
 
+  public async checkAndSendNotificationsLazy(minIntervalMs = 5000): Promise<void> {
+    const now = Date.now();
+    if (
+      this.running ||
+      (this.lastRunTimestamp > 0 && now - this.lastRunTimestamp < minIntervalMs)
+    ) {
+      return;
+    }
+    await this.checkAndSendNotifications();
+  }
+
   public async checkAndSendNotifications(): Promise<void> {
     if (this.running) return;
     this.running = true;
     try {
-      const pendingNotifications = this.notificationService.getPendingNotifications();
+      const pendingNotifications = await this.notificationService.getPendingNotifications();
 
       for (const notification of pendingNotifications) {
         await this.sendNotification(notification);
-        this.notificationService.markNotificationAsSent(notification.id);
+        await this.notificationService.markNotificationAsSent(notification.id);
       }
-      this.lastRun = new Date().toISOString();
+      this.lastRunTimestamp = Date.now();
+      this.lastRun = new Date(this.lastRunTimestamp).toISOString();
       this.error = undefined;
     } catch (error) {
       logger.error("Error checking notifications", { error: (error as Error).message });
       this.error = (error as Error).message;
-      this.lastRun = new Date().toISOString();
+      this.lastRunTimestamp = Date.now();
+      this.lastRun = new Date(this.lastRunTimestamp).toISOString();
     } finally {
       this.running = false;
     }

@@ -3,7 +3,10 @@ import { CreditCard, Landmark, Smartphone, Wallet } from "lucide-react";
 import type { ReactNode } from "react";
 
 export function formatBDT(amountMinor: number, decimals = 2): string {
-  return `BDT ${(amountMinor / 100).toLocaleString("en-BD", { minimumFractionDigits: decimals })}`;
+  return `BDT ${(amountMinor / 100).toLocaleString("en-BD", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  })}`;
 }
 
 export function getTypeIcon(type: AccountWithBalance["type"], size = 16): ReactNode {

@@ -1,5 +1,5 @@
+import type { Client } from "@libsql/client";
 import { getDayOfWeekIndex, isWeekday } from "@lifeos/contracts";
-import type Database from "better-sqlite3";
 
 import { isOvernightTask } from "../../domain/rules.js";
 import type { NewTaskInput, Task, TaskRecurrence, TaskSubtask } from "../../domain/types.js";
@@ -56,20 +56,24 @@ function rowToTask(row: TaskRow, dateOverride?: string): Task {
 }
 
 export class SqliteTaskRepository implements TaskRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly client: Client) {}
 
-  getById(id: string, userId: string): Task | undefined {
-    const row = this.db
-      .prepare("SELECT * FROM tasks WHERE id = ? AND user_id = ?")
-      .get(id, userId) as TaskRow | undefined;
+  async getById(id: string, userId: string): Promise<Task | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM tasks WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      args: [id, userId],
+    });
+    const row = res.rows[0] as unknown as TaskRow | undefined;
     return row ? rowToTask(row) : undefined;
   }
 
-  getByDate(date: string, userId: string): Task[] {
+  async getByDate(date: string, userId: string): Promise<Task[]> {
     // 1. Direct date tasks
-    const directRows = this.db
-      .prepare("SELECT * FROM tasks WHERE date = ? AND user_id = ?")
-      .all(date, userId) as TaskRow[];
+    const directRes = await this.client.execute({
+      sql: "SELECT * FROM tasks WHERE date = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      args: [date, userId],
+    });
+    const directRows = directRes.rows as unknown as TaskRow[];
 
     const taskMap = new Map<string, Task>();
     for (const r of directRows) {
@@ -77,9 +81,11 @@ export class SqliteTaskRepository implements TaskRepository {
     }
 
     // 2. Recurring tasks starting on or before date
-    const recurringRows = this.db
-      .prepare("SELECT * FROM tasks WHERE recurrence != 'none' AND date <= ? AND user_id = ?")
-      .all(date, userId) as TaskRow[];
+    const recurringRes = await this.client.execute({
+      sql: "SELECT * FROM tasks WHERE recurrence != 'none' AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      args: [date, userId],
+    });
+    const recurringRows = recurringRes.rows as unknown as TaskRow[];
 
     const targetDayIndex = getDayOfWeekIndex(date);
     const targetIsWeekday = isWeekday(date, "bd"); // Bangladesh: Sun-Thu
@@ -105,16 +111,14 @@ export class SqliteTaskRepository implements TaskRepository {
     return tasks.sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
-  create(id: string, input: NewTaskInput, userId: string): Task {
+  async create(id: string, input: NewTaskInput, userId: string): Promise<Task> {
     const now = new Date().toISOString();
     const subtasksJson = JSON.stringify(input.subtasks ?? []);
 
-    this.db
-      .prepare(
-        `INSERT INTO tasks (id, title, category, date, start_time, end_time, status, notes, reminder_minutes_before, reminder_sound, recurrence, subtasks, reference_id, user_id, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.client.execute({
+      sql: `INSERT INTO tasks (id, title, category, date, start_time, end_time, status, notes, reminder_minutes_before, reminder_sound, recurrence, subtasks, reference_id, user_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         id,
         input.title,
         input.category ?? "general",
@@ -130,13 +134,18 @@ export class SqliteTaskRepository implements TaskRepository {
         userId,
         now,
         now,
-      );
+      ],
+    });
 
-    return this.getById(id, userId) as Task;
+    return (await this.getById(id, userId)) as Task;
   }
 
-  update(id: string, patch: Partial<NewTaskInput>, userId: string): Task | undefined {
-    const existing = this.getById(id, userId);
+  async update(
+    id: string,
+    patch: Partial<NewTaskInput>,
+    userId: string,
+  ): Promise<Task | undefined> {
+    const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
     const fields: string[] = [];
@@ -194,28 +203,35 @@ export class SqliteTaskRepository implements TaskRepository {
     values.push(id);
     values.push(userId);
 
-    this.db
-      .prepare(`UPDATE tasks SET ${fields.join(", ")} WHERE id = ? AND user_id = ?`)
-      .run(...values);
+    await this.client.execute({
+      sql: `UPDATE tasks SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)`,
+      args: values,
+    });
 
-    return this.getById(id, userId);
+    return await this.getById(id, userId);
   }
 
-  updateStatus(id: string, status: Task["status"], userId: string): Task | undefined {
-    const existing = this.getById(id, userId);
+  async updateStatus(
+    id: string,
+    status: Task["status"],
+    userId: string,
+  ): Promise<Task | undefined> {
+    const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
-    this.db
-      .prepare("UPDATE tasks SET status = ?, updated_at = ? WHERE id = ? AND user_id = ?")
-      .run(status, new Date().toISOString(), id, userId);
+    await this.client.execute({
+      sql: "UPDATE tasks SET status = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      args: [status, new Date().toISOString(), id, userId],
+    });
 
-    return this.getById(id, userId);
+    return await this.getById(id, userId);
   }
 
-  delete(id: string, userId: string): boolean {
-    const result = this.db
-      .prepare("DELETE FROM tasks WHERE id = ? AND user_id = ?")
-      .run(id, userId);
-    return result.changes > 0;
+  async delete(id: string, userId: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM tasks WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      args: [id, userId],
+    });
+    return res.rowsAffected > 0;
   }
 }

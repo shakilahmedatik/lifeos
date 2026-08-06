@@ -32,6 +32,7 @@ export function ExerciseFormModal({
       <div className="space-y-4">
         <Select
           value={selectedExerciseId}
+          disabled={isEditing}
           onChange={(e) => onSelectExercise(e.target.value)}
           options={[
             { value: "", label: "Select an exercise" },

@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type { LearningResource, NewLearningResourceInput } from "../../domain/types.js";
 import type { LearningResourceRepository } from "../../ports/learning-resource-repository.js";
@@ -28,39 +28,38 @@ function rowToResource(row: LearningResourceRow): LearningResource {
 }
 
 export class SqliteLearningResourceRepository implements LearningResourceRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly client: Client) {}
 
-  getById(id: string): LearningResource | undefined {
-    const row = this.db.prepare("SELECT * FROM learning_resources WHERE id = ?").get(id) as
-      | LearningResourceRow
-      | undefined;
+  async getById(id: string): Promise<LearningResource | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM learning_resources WHERE id = ?",
+      args: [id],
+    });
+    const row = res.rows[0] as unknown as LearningResourceRow | undefined;
     return row ? rowToResource(row) : undefined;
   }
 
-  getBySkillArea(skillAreaId: string): LearningResource[] {
-    return (
-      this.db
-        .prepare("SELECT * FROM learning_resources WHERE skill_area_id = ? ORDER BY title")
-        .all(skillAreaId) as LearningResourceRow[]
-    ).map(rowToResource);
+  async getBySkillArea(skillAreaId: string): Promise<LearningResource[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM learning_resources WHERE skill_area_id = ? ORDER BY title",
+      args: [skillAreaId],
+    });
+    const rows = res.rows as unknown as LearningResourceRow[];
+    return rows.map(rowToResource);
   }
 
-  getAll(): LearningResource[] {
-    return (
-      this.db
-        .prepare("SELECT * FROM learning_resources ORDER BY title")
-        .all() as LearningResourceRow[]
-    ).map(rowToResource);
+  async getAll(): Promise<LearningResource[]> {
+    const res = await this.client.execute("SELECT * FROM learning_resources ORDER BY title");
+    const rows = res.rows as unknown as LearningResourceRow[];
+    return rows.map(rowToResource);
   }
 
-  create(id: string, input: NewLearningResourceInput): LearningResource {
+  async create(id: string, input: NewLearningResourceInput): Promise<LearningResource> {
     const now = new Date().toISOString();
-    this.db
-      .prepare(
-        `INSERT INTO learning_resources (id, skill_area_id, title, type, total_units, unit, created_at, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      )
-      .run(
+    await this.client.execute({
+      sql: `INSERT INTO learning_resources (id, skill_area_id, title, type, total_units, unit, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+      args: [
         id,
         input.skillAreaId,
         input.title,
@@ -69,12 +68,16 @@ export class SqliteLearningResourceRepository implements LearningResourceReposit
         input.unit ?? null,
         now,
         now,
-      );
-    return this.getById(id) as LearningResource;
+      ],
+    });
+    return (await this.getById(id)) as LearningResource;
   }
 
-  update(id: string, patch: Partial<NewLearningResourceInput>): LearningResource | undefined {
-    const existing = this.getById(id);
+  async update(
+    id: string,
+    patch: Partial<NewLearningResourceInput>,
+  ): Promise<LearningResource | undefined> {
+    const existing = await this.getById(id);
     if (!existing) return undefined;
 
     const fields: string[] = [];
@@ -106,14 +109,18 @@ export class SqliteLearningResourceRepository implements LearningResourceReposit
     values.push(new Date().toISOString());
     values.push(id);
 
-    this.db
-      .prepare(`UPDATE learning_resources SET ${fields.join(", ")} WHERE id = ?`)
-      .run(...values);
-    return this.getById(id);
+    await this.client.execute({
+      sql: `UPDATE learning_resources SET ${fields.join(", ")} WHERE id = ?`,
+      args: values,
+    });
+    return await this.getById(id);
   }
 
-  delete(id: string): boolean {
-    const result = this.db.prepare("DELETE FROM learning_resources WHERE id = ?").run(id);
-    return result.changes > 0;
+  async delete(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM learning_resources WHERE id = ?",
+      args: [id],
+    });
+    return res.rowsAffected > 0;
   }
 }

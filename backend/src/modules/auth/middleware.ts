@@ -6,7 +6,6 @@ export interface AuthenticatedRequest extends Request {
     id: string;
     email: string;
     name: string;
-    pin?: string | null;
   };
   session?: {
     id: string;

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { request } from "../../lib/api.js";
 
 import { playNotificationSound } from "./sound-player.js";
 import { SOUND_PRESET_OPTIONS, type SoundPreset } from "./sound-presets.js";
@@ -9,11 +10,8 @@ export function SoundSettings() {
 
   const fetchSoundPreference = useCallback(async () => {
     try {
-      const response = await fetch("/api/settings/sound");
-      if (response.ok) {
-        const data = await response.json();
-        setSelectedSound(data.soundType || "default");
-      }
+      const data = await request<{ soundType?: SoundPreset }>("/api/settings/sound");
+      setSelectedSound(data.soundType || "default");
     } catch (error) {
       console.error("Error fetching sound preference:", error);
     } finally {
@@ -27,7 +25,7 @@ export function SoundSettings() {
 
   const saveSoundPreference = async (soundType: SoundPreset) => {
     try {
-      await fetch("/api/settings/sound", {
+      await request<void>("/api/settings/sound", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ soundType }),

@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type {
   NewNotificationInput,
@@ -9,69 +9,112 @@ import type {
 } from "../../domain/types.js";
 import type { NotificationRepository } from "../../ports/notification-repository.js";
 
+interface NotificationRow {
+  id: string;
+  task_id: string;
+  user_id: string;
+  reminder_time: string;
+  sound_type: string;
+  status: Notification["status"];
+  created_at: string;
+  updated_at: string;
+  taskTitle?: string;
+  taskDate?: string;
+  taskStartTime?: string;
+}
+
+function rowToNotification(row: NotificationRow): Notification {
+  return {
+    id: row.id,
+    taskId: row.task_id,
+    userId: row.user_id,
+    reminderTime: row.reminder_time,
+    soundType: row.sound_type,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+function rowToNotificationWithTask(row: NotificationRow): NotificationWithTask {
+  return {
+    ...rowToNotification(row),
+    taskTitle: row.taskTitle,
+    taskDate: row.taskDate,
+    taskStartTime: row.taskStartTime,
+  };
+}
+
 export class SqliteNotificationRepository implements NotificationRepository {
-  constructor(private db: Database.Database) {}
+  constructor(private client: Client) {}
 
-  findById(id: string): Notification | null {
-    const row = this.db.prepare("SELECT * FROM notifications WHERE id = ?").get(id) as
-      | Notification
-      | undefined;
-    return row || null;
+  async findById(id: string): Promise<Notification | null> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM notifications WHERE id = ?",
+      args: [id],
+    });
+    const row = res.rows[0] as unknown as NotificationRow | undefined;
+    return row ? rowToNotification(row) : null;
   }
 
-  findByUserId(userId: string): NotificationWithTask[] {
-    const rows = this.db
-      .prepare(`
-      SELECT
-        n.*,
-        t.title as taskTitle,
-        t.date as taskDate,
-        t.start_time as taskStartTime
-      FROM notifications n
-      JOIN tasks t ON n.task_id = t.id
-      WHERE n.user_id = ?
-      ORDER BY n.reminder_time ASC
-    `)
-      .all(userId) as NotificationWithTask[];
-    return rows;
+  async findByUserId(userId: string): Promise<NotificationWithTask[]> {
+    const res = await this.client.execute({
+      sql: `
+        SELECT
+          n.*,
+          t.title as taskTitle,
+          t.date as taskDate,
+          t.start_time as taskStartTime
+        FROM notifications n
+        JOIN tasks t ON n.task_id = t.id
+        WHERE (n.user_id = ? OR n.user_id = '')
+        ORDER BY n.reminder_time ASC
+      `,
+      args: [userId],
+    });
+    const rows = res.rows as unknown as NotificationRow[];
+    return rows.map(rowToNotificationWithTask);
   }
 
-  findByTaskId(taskId: string): Notification[] {
-    const rows = this.db
-      .prepare("SELECT * FROM notifications WHERE task_id = ?")
-      .all(taskId) as Notification[];
-    return rows;
+  async findByTaskId(taskId: string): Promise<Notification[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM notifications WHERE task_id = ?",
+      args: [taskId],
+    });
+    const rows = res.rows as unknown as NotificationRow[];
+    return rows.map(rowToNotification);
   }
 
-  findPendingNotifications(): NotificationWithTask[] {
+  async findPendingNotifications(): Promise<NotificationWithTask[]> {
     const now = new Date().toISOString();
-    const rows = this.db
-      .prepare(`
-      SELECT
-        n.*,
-        t.title as taskTitle,
-        t.date as taskDate,
-        t.start_time as taskStartTime
-      FROM notifications n
-      JOIN tasks t ON n.task_id = t.id
-      WHERE n.status = 'scheduled'
-        AND n.reminder_time <= ?
-      ORDER BY n.reminder_time ASC
-    `)
-      .all(now) as NotificationWithTask[];
-    return rows;
+    const res = await this.client.execute({
+      sql: `
+        SELECT
+          n.*,
+          t.title as taskTitle,
+          t.date as taskDate,
+          t.start_time as taskStartTime
+        FROM notifications n
+        JOIN tasks t ON n.task_id = t.id
+        WHERE n.status = 'scheduled'
+          AND n.reminder_time <= ?
+        ORDER BY n.reminder_time ASC
+      `,
+      args: [now],
+    });
+    const rows = res.rows as unknown as NotificationRow[];
+    return rows.map(rowToNotificationWithTask);
   }
 
-  getUnreadCount(userId: string): number {
-    const result = this.db
-      .prepare(
-        "SELECT COUNT(*) as count FROM notifications WHERE user_id = ? AND status = 'scheduled'",
-      )
-      .get(userId) as { count: number } | undefined;
-    return result?.count ?? 0;
+  async getUnreadCount(userId: string): Promise<number> {
+    const res = await this.client.execute({
+      sql: "SELECT COUNT(*) as count FROM notifications WHERE (user_id = ? OR user_id = '') AND status = 'scheduled'",
+      args: [userId],
+    });
+    return Number(res.rows[0]?.count ?? 0);
   }
 
-  create(input: NewNotificationInput): Notification {
+  async create(input: NewNotificationInput): Promise<Notification> {
     const id = randomUUID();
     const now = new Date().toISOString();
 
@@ -86,12 +129,12 @@ export class SqliteNotificationRepository implements NotificationRepository {
       updatedAt: now,
     };
 
-    this.db
-      .prepare(`
-      INSERT INTO notifications (id, task_id, user_id, reminder_time, sound_type, status, created_at, updated_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    `)
-      .run(
+    await this.client.execute({
+      sql: `
+        INSERT INTO notifications (id, task_id, user_id, reminder_time, sound_type, status, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `,
+      args: [
         notification.id,
         notification.taskId,
         notification.userId,
@@ -100,18 +143,19 @@ export class SqliteNotificationRepository implements NotificationRepository {
         notification.status,
         notification.createdAt,
         notification.updatedAt,
-      );
+      ],
+    });
 
     return notification;
   }
 
-  update(id: string, input: UpdateNotificationInput): Notification | null {
-    const existing = this.findById(id);
+  async update(id: string, input: UpdateNotificationInput): Promise<Notification | null> {
+    const existing = await this.findById(id);
     if (!existing) return null;
 
     const now = new Date().toISOString();
     const updates: string[] = [];
-    const values: (string | undefined)[] = [];
+    const values: (string | null)[] = [];
 
     if (input.reminderTime !== undefined) {
       updates.push("reminder_time = ?");
@@ -132,22 +176,27 @@ export class SqliteNotificationRepository implements NotificationRepository {
     values.push(now);
     values.push(id);
 
-    this.db
-      .prepare(`
-      UPDATE notifications SET ${updates.join(", ")} WHERE id = ?
-    `)
-      .run(...values);
+    await this.client.execute({
+      sql: `UPDATE notifications SET ${updates.join(", ")} WHERE id = ?`,
+      args: values,
+    });
 
-    return this.findById(id);
+    return await this.findById(id);
   }
 
-  delete(id: string): boolean {
-    const result = this.db.prepare("DELETE FROM notifications WHERE id = ?").run(id);
-    return result.changes > 0;
+  async delete(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM notifications WHERE id = ?",
+      args: [id],
+    });
+    return res.rowsAffected > 0;
   }
 
-  deleteByTaskId(taskId: string): boolean {
-    const result = this.db.prepare("DELETE FROM notifications WHERE task_id = ?").run(taskId);
-    return result.changes > 0;
+  async deleteByTaskId(taskId: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM notifications WHERE task_id = ?",
+      args: [taskId],
+    });
+    return res.rowsAffected > 0;
   }
 }

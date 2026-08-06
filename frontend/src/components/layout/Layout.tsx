@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { Outlet } from "react-router-dom";
 import { NotificationToast } from "../../modules/notifications/NotificationToast.js";
-import { useNotificationSSE } from "../../modules/notifications/useNotificationSSE.js";
 import { ToastProvider } from "../Toast.js";
 import Dock from "./Sidebar.js";
 
@@ -12,16 +11,6 @@ export default function Layout() {
     reminderTime: string;
     soundType: string;
   } | null>(null);
-
-  useNotificationSSE({
-    onNotification: (n) =>
-      setNotification({
-        id: n.id,
-        taskTitle: n.taskTitle,
-        reminderTime: n.reminderTime,
-        soundType: n.soundType,
-      }),
-  });
 
   return (
     <ToastProvider>

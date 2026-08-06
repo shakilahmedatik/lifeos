@@ -6,13 +6,13 @@ import type {
 } from "../domain/types.js";
 
 export interface NotificationRepository {
-  findById(id: string): Notification | null;
-  findByUserId(userId: string): NotificationWithTask[];
-  findByTaskId(taskId: string): Notification[];
-  findPendingNotifications(): NotificationWithTask[];
-  getUnreadCount(userId: string): number;
-  create(input: NewNotificationInput): Notification;
-  update(id: string, input: UpdateNotificationInput): Notification | null;
-  delete(id: string): boolean;
-  deleteByTaskId(taskId: string): boolean;
+  findById(id: string): Promise<Notification | null>;
+  findByUserId(userId: string): Promise<NotificationWithTask[]>;
+  findByTaskId(taskId: string): Promise<Notification[]>;
+  findPendingNotifications(): Promise<NotificationWithTask[]>;
+  getUnreadCount(userId: string): Promise<number>;
+  create(input: NewNotificationInput): Promise<Notification>;
+  update(id: string, input: UpdateNotificationInput): Promise<Notification | null>;
+  delete(id: string): Promise<boolean>;
+  deleteByTaskId(taskId: string): Promise<boolean>;
 }

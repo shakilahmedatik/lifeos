@@ -10,11 +10,11 @@ CREATE TABLE IF NOT EXISTS tasks (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL DEFAULT '',
   title TEXT NOT NULL,
-  category TEXT NOT NULL CHECK (category IN ('routine', 'must_do', 'work', 'personal', 'flex')),
+  category TEXT NOT NULL CHECK (category IN ('routine', 'must_do', 'work', 'workout', 'learning', 'habit', 'personal', 'general', 'flex')),
   date TEXT NOT NULL,
   start_time TEXT NOT NULL,
   end_time TEXT NOT NULL,
-  status TEXT NOT NULL DEFAULT 'todo' CHECK (status IN ('todo', 'in_progress', 'done', 'missed', 'cancelled')),
+  status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('todo', 'planned', 'in_progress', 'done', 'missed', 'cancelled', 'skipped')),
   notes TEXT,
   reminder_minutes_before INTEGER,
   reminder_sound INTEGER NOT NULL DEFAULT 1,
@@ -33,15 +33,17 @@ CREATE TABLE IF NOT EXISTS habits (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL,
-  frequency TEXT NOT NULL CHECK (frequency IN ('daily', 'weekly')),
+  frequency TEXT DEFAULT 'daily',
   target_days_per_week INTEGER,
   type TEXT NOT NULL DEFAULT 'boolean' CHECK (type IN ('water', 'walking', 'prayer', 'timed', 'boolean')),
+  category TEXT NOT NULL DEFAULT 'general',
   config TEXT NOT NULL DEFAULT '{"type":"boolean"}',
   icon TEXT,
   color TEXT,
   archived INTEGER NOT NULL DEFAULT 0,
   sort_order INTEGER NOT NULL DEFAULT 0,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_habits_user_id ON habits(user_id);
 CREATE INDEX IF NOT EXISTS idx_habits_archived ON habits(archived);
@@ -82,9 +84,11 @@ CREATE INDEX IF NOT EXISTS idx_notifications_task_id ON notifications(task_id);
 CREATE TABLE IF NOT EXISTS exercises (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL UNIQUE,
-  category TEXT NOT NULL CHECK (category IN ('chest', 'back', 'legs', 'shoulders', 'arms', 'core', 'cardio')),
+  category TEXT NOT NULL CHECK (category IN ('chest', 'back', 'legs', 'shoulders', 'arms', 'biceps', 'triceps', 'core', 'cardio', 'general')),
   equipment TEXT NOT NULL CHECK (equipment IN ('barbell', 'dumbbell', 'cable', 'machine', 'bodyweight', 'cardio_machine', 'other')),
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  video_url TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS workouts (
@@ -92,6 +96,8 @@ CREATE TABLE IF NOT EXISTS workouts (
   user_id TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL,
   description TEXT,
+  scheduled_day TEXT,
+  scheduled_time TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
@@ -119,29 +125,32 @@ CREATE TABLE IF NOT EXISTS workout_sessions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL DEFAULT '',
   workout_id TEXT NOT NULL,
-  date TEXT NOT NULL,
-  duration_minutes INTEGER,
+  started_at TEXT NOT NULL DEFAULT (datetime('now')),
+  completed_at TEXT,
+  duration_seconds INTEGER,
   notes TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (workout_id) REFERENCES workouts(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_workout_sessions_user_id ON workout_sessions(user_id);
 CREATE INDEX IF NOT EXISTS idx_workout_sessions_workout_id ON workout_sessions(workout_id);
-CREATE INDEX IF NOT EXISTS idx_workout_sessions_date ON workout_sessions(date);
+CREATE INDEX IF NOT EXISTS idx_workout_sessions_started_at ON workout_sessions(started_at);
 
-CREATE TABLE IF NOT EXISTS workout_session_exercises (
+CREATE TABLE IF NOT EXISTS exercise_logs (
   id TEXT PRIMARY KEY,
   session_id TEXT NOT NULL,
   exercise_id TEXT NOT NULL,
-  sets_completed INTEGER NOT NULL DEFAULT 0,
-  reps_completed INTEGER NOT NULL DEFAULT 0,
-  weight_used REAL,
-  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  set_number INTEGER NOT NULL,
+  actual_reps INTEGER NOT NULL,
+  actual_weight REAL,
+  completed_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (session_id) REFERENCES workout_sessions(id) ON DELETE CASCADE,
   FOREIGN KEY (exercise_id) REFERENCES exercises(id) ON DELETE CASCADE
 );
+CREATE INDEX IF NOT EXISTS idx_exercise_logs_session_id ON exercise_logs(session_id);
+CREATE INDEX IF NOT EXISTS idx_exercise_logs_exercise_id ON exercise_logs(exercise_id);
 
--- Finance (Accounts & Transactions)
+-- Finance (Accounts, Categories & Transactions)
 CREATE TABLE IF NOT EXISTS accounts (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL DEFAULT '',
@@ -155,36 +164,52 @@ CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_accounts_type ON accounts(type);
 CREATE INDEX IF NOT EXISTS idx_accounts_archived ON accounts(archived);
 
+CREATE TABLE IF NOT EXISTS categories (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL CHECK (kind IN ('income', 'expense')),
+  archived INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_categories_kind ON categories(kind);
+CREATE INDEX IF NOT EXISTS idx_categories_archived ON categories(archived);
+
 CREATE TABLE IF NOT EXISTS transactions (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL DEFAULT '',
   account_id TEXT NOT NULL,
-  type TEXT NOT NULL CHECK (type IN ('income', 'expense', 'transfer')),
-  amount REAL NOT NULL,
-  category TEXT NOT NULL,
-  note TEXT,
+  category_id TEXT NOT NULL,
   date TEXT NOT NULL,
-  target_account_id TEXT,
+  amount_minor INTEGER NOT NULL,
+  currency TEXT NOT NULL DEFAULT 'BDT',
+  note TEXT,
+  transfer_pair_id TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
   FOREIGN KEY (account_id) REFERENCES accounts(id) ON DELETE CASCADE,
-  FOREIGN KEY (target_account_id) REFERENCES accounts(id) ON DELETE SET NULL
+  FOREIGN KEY (category_id) REFERENCES categories(id) ON DELETE RESTRICT
 );
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON transactions(account_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON transactions(category_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
 
 -- News (Feeds & Articles)
 CREATE TABLE IF NOT EXISTS rss_feeds (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL DEFAULT '',
-  name TEXT NOT NULL,
+  name TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL DEFAULT '',
   url TEXT NOT NULL UNIQUE,
-  category TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'general',
   icon_url TEXT,
   enabled INTEGER NOT NULL DEFAULT 1,
+  status TEXT NOT NULL DEFAULT 'active',
   last_fetched_at TEXT,
-  created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  last_fetch_error TEXT,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_rss_feeds_user_id ON rss_feeds(user_id);
 
@@ -210,7 +235,7 @@ CREATE TABLE IF NOT EXISTS skill_areas (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL,
-  category TEXT NOT NULL,
+  category TEXT NOT NULL DEFAULT 'general',
   color TEXT,
   icon TEXT,
   target_hours REAL NOT NULL DEFAULT 100,
@@ -220,19 +245,32 @@ CREATE TABLE IF NOT EXISTS skill_areas (
 );
 CREATE INDEX IF NOT EXISTS idx_skill_areas_user_id ON skill_areas(user_id);
 
+CREATE TABLE IF NOT EXISTS learning_resources (
+  id TEXT PRIMARY KEY,
+  skill_area_id TEXT NOT NULL REFERENCES skill_areas(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('course', 'book', 'project', 'article')),
+  total_units REAL,
+  unit TEXT CHECK (unit IN ('chapters', 'videos', 'hours')),
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_learning_resources_skill_area ON learning_resources(skill_area_id);
+
 CREATE TABLE IF NOT EXISTS learning_logs (
   id TEXT PRIMARY KEY,
   user_id TEXT NOT NULL DEFAULT '',
-  skill_area_id TEXT NOT NULL,
+  resource_id TEXT NOT NULL,
   date TEXT NOT NULL,
-  duration_minutes INTEGER NOT NULL,
+  minutes_spent INTEGER NOT NULL DEFAULT 0,
+  units_completed REAL,
   notes TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
   updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-  FOREIGN KEY (skill_area_id) REFERENCES skill_areas(id) ON DELETE CASCADE
+  FOREIGN KEY (resource_id) REFERENCES learning_resources(id) ON DELETE CASCADE
 );
 CREATE INDEX IF NOT EXISTS idx_learning_logs_user_id ON learning_logs(user_id);
-CREATE INDEX IF NOT EXISTS idx_learning_logs_skill_area_id ON learning_logs(skill_area_id);
+CREATE INDEX IF NOT EXISTS idx_learning_logs_resource_id ON learning_logs(resource_id);
 CREATE INDEX IF NOT EXISTS idx_learning_logs_date ON learning_logs(date);
 
 -- Settings & Archive

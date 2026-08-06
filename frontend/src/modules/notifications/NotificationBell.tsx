@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { api } from "../../lib/api.js";
 
 interface NotificationBellProps {
   onClick: () => void;
@@ -9,11 +10,8 @@ export function NotificationBell({ onClick }: NotificationBellProps) {
 
   const fetchUnreadCount = useCallback(async () => {
     try {
-      const response = await fetch("/api/notifications/unread-count");
-      if (response.ok) {
-        const data = await response.json();
-        setUnreadCount(data.count);
-      }
+      const data = await api.getUnreadCount();
+      setUnreadCount(data.count);
     } catch (error) {
       console.error("Error fetching unread count:", error);
     }

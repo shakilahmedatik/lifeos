@@ -1,6 +1,22 @@
-export type TaskCategory = "work" | "workout" | "learning" | "habit" | "personal" | "general";
+export type TaskCategory =
+  | "routine"
+  | "must_do"
+  | "work"
+  | "workout"
+  | "learning"
+  | "habit"
+  | "personal"
+  | "general"
+  | "flex";
 
-export type TaskStatus = "planned" | "in_progress" | "done" | "skipped";
+export type TaskStatus =
+  | "todo"
+  | "planned"
+  | "in_progress"
+  | "done"
+  | "missed"
+  | "cancelled"
+  | "skipped";
 
 export type TaskRecurrence = "none" | "daily" | "weekdays" | "weekly";
 

@@ -207,7 +207,7 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
     if (!editCategory || !newName.trim()) return;
     setSubmitting(true);
     try {
-      await apiUpdateCategory(editCategory.id, { name: newName.trim() });
+      await apiUpdateCategory(editCategory.id, { name: newName.trim(), kind: newKind });
       toast.success("Category updated");
       setShowEditModal(false);
       setEditCategory(null);
@@ -378,6 +378,15 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             required
+          />
+          <Select
+            label="Category Type"
+            value={newKind}
+            onChange={(e) => setNewKind(e.target.value as typeof newKind)}
+            options={[
+              { value: "expense", label: "Expense" },
+              { value: "income", label: "Income" },
+            ]}
           />
           <div className="flex justify-end gap-2 pt-2">
             <Button

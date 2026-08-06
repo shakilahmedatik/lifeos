@@ -1,11 +1,8 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 import { createHealthRouter, type SchedulerStatus } from "./api/router.js";
 
-export function initHealthModule(
-  db: Database.Database,
-  getSchedulerStatus?: () => SchedulerStatus[],
-) {
+export function initHealthModule(client: Client, getSchedulerStatus?: () => SchedulerStatus[]) {
   return {
-    router: createHealthRouter(db, getSchedulerStatus),
+    router: createHealthRouter(client, getSchedulerStatus),
   };
 }

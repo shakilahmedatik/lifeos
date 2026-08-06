@@ -1,4 +1,4 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type { Account, NewAccountInput } from "../../domain/types.js";
 import type { AccountRepository } from "../../ports/account-repository.js";
@@ -17,50 +17,51 @@ function rowToAccount(row: AccountRow): Account {
     id: row.id,
     name: row.name,
     type: row.type,
-    archived: row.archived === 1,
+    archived: Boolean(row.archived),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
 }
 
 export class SqliteAccountRepository implements AccountRepository {
-  constructor(private readonly db: Database.Database) {}
+  constructor(private readonly client: Client) {}
 
-  getById(id: string): Account | undefined {
-    const row = this.db.prepare("SELECT * FROM accounts WHERE id = ?").get(id) as
-      | AccountRow
-      | undefined;
+  async getById(id: string): Promise<Account | undefined> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM accounts WHERE id = ?",
+      args: [id],
+    });
+    const row = res.rows[0] as unknown as AccountRow | undefined;
     return row ? rowToAccount(row) : undefined;
   }
 
-  getAll(): Account[] {
-    const rows = this.db
-      .prepare("SELECT * FROM accounts ORDER BY created_at DESC")
-      .all() as AccountRow[];
+  async getAll(): Promise<Account[]> {
+    const res = await this.client.execute("SELECT * FROM accounts ORDER BY created_at DESC");
+    const rows = res.rows as unknown as AccountRow[];
     return rows.map(rowToAccount);
   }
 
-  getActive(): Account[] {
-    const rows = this.db
-      .prepare("SELECT * FROM accounts WHERE archived = 0 ORDER BY name")
-      .all() as AccountRow[];
+  async getActive(): Promise<Account[]> {
+    const res = await this.client.execute(
+      "SELECT * FROM accounts WHERE archived = 0 ORDER BY name",
+    );
+    const rows = res.rows as unknown as AccountRow[];
     return rows.map(rowToAccount);
   }
 
-  create(id: string, input: NewAccountInput): Account {
+  async create(id: string, input: NewAccountInput): Promise<Account> {
     const now = new Date().toISOString();
-    this.db
-      .prepare(
-        `INSERT INTO accounts (id, name, type, archived, created_at, updated_at)
-         VALUES (?, ?, ?, 0, ?, ?)`,
-      )
-      .run(id, input.name, input.type, now, now);
+    await this.client.execute({
+      sql: `INSERT INTO accounts (id, name, type, archived, created_at, updated_at)
+            VALUES (?, ?, ?, 0, ?, ?)`,
+      args: [id, input.name, input.type, now, now],
+    });
 
-    return this.getById(id) as Account;
+    return (await this.getById(id)) as Account;
   }
 
-  update(id: string, patch: Partial<NewAccountInput>): Account | undefined {
-    const existing = this.getById(id);
+  async update(id: string, patch: Partial<NewAccountInput>): Promise<Account | undefined> {
+    const existing = await this.getById(id);
     if (!existing) return undefined;
 
     const fields: string[] = [];
@@ -81,27 +82,35 @@ export class SqliteAccountRepository implements AccountRepository {
     values.push(new Date().toISOString());
     values.push(id);
 
-    this.db.prepare(`UPDATE accounts SET ${fields.join(", ")} WHERE id = ?`).run(...values);
+    await this.client.execute({
+      sql: `UPDATE accounts SET ${fields.join(", ")} WHERE id = ?`,
+      args: values,
+    });
 
-    return this.getById(id);
+    return await this.getById(id);
   }
 
-  archive(id: string): boolean {
-    const result = this.db
-      .prepare("UPDATE accounts SET archived = 1, updated_at = ? WHERE id = ?")
-      .run(new Date().toISOString(), id);
-    return result.changes > 0;
+  async archive(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "UPDATE accounts SET archived = 1, updated_at = ? WHERE id = ?",
+      args: [new Date().toISOString(), id],
+    });
+    return res.rowsAffected > 0;
   }
 
-  unarchive(id: string): boolean {
-    const result = this.db
-      .prepare("UPDATE accounts SET archived = 0, updated_at = ? WHERE id = ?")
-      .run(new Date().toISOString(), id);
-    return result.changes > 0;
+  async unarchive(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "UPDATE accounts SET archived = 0, updated_at = ? WHERE id = ?",
+      args: [new Date().toISOString(), id],
+    });
+    return res.rowsAffected > 0;
   }
 
-  delete(id: string): boolean {
-    const result = this.db.prepare("DELETE FROM accounts WHERE id = ?").run(id);
-    return result.changes > 0;
+  async delete(id: string): Promise<boolean> {
+    const res = await this.client.execute({
+      sql: "DELETE FROM accounts WHERE id = ?",
+      args: [id],
+    });
+    return res.rowsAffected > 0;
   }
 }

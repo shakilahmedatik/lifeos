@@ -1,1 +1,5 @@
-export default ["backend", "frontend", "packages/contracts"];
+export default [
+  "backend/vitest.config.ts",
+  "frontend/vitest.config.ts",
+  "packages/contracts/vitest.config.ts",
+];

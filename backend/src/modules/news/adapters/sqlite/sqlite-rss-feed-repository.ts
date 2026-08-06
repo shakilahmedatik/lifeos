@@ -1,46 +1,50 @@
-import type Database from "better-sqlite3";
+import type { Client } from "@libsql/client";
 
 import type { NewRssFeedInput, RssFeed } from "../../domain/types.js";
 import type { RssFeedRepository } from "../../ports/repositories.js";
 
-export function createSqliteRssFeedRepository(db: Database.Database): RssFeedRepository {
+export function createSqliteRssFeedRepository(client: Client): RssFeedRepository {
   return {
-    getById(id: string): RssFeed | undefined {
-      const row = db.prepare("SELECT * FROM rss_feeds WHERE id = ?").get(id) as
-        | Record<string, unknown>
-        | undefined;
+    async getById(id: string): Promise<RssFeed | undefined> {
+      const res = await client.execute({
+        sql: "SELECT * FROM rss_feeds WHERE id = ?",
+        args: [id],
+      });
+      const row = res.rows[0] as unknown as Record<string, unknown> | undefined;
       if (!row) return undefined;
       return mapRowToRssFeed(row);
     },
 
-    getAll(): RssFeed[] {
-      const rows = db.prepare("SELECT * FROM rss_feeds ORDER BY created_at DESC").all() as Record<
-        string,
-        unknown
-      >[];
+    async getAll(): Promise<RssFeed[]> {
+      const res = await client.execute("SELECT * FROM rss_feeds ORDER BY created_at DESC");
+      const rows = res.rows as unknown as Record<string, unknown>[];
       return rows.map(mapRowToRssFeed);
     },
 
-    getActive(): RssFeed[] {
-      const rows = db
-        .prepare("SELECT * FROM rss_feeds WHERE status = 'active' ORDER BY created_at DESC")
-        .all() as Record<string, unknown>[];
+    async getActive(): Promise<RssFeed[]> {
+      const res = await client.execute(
+        "SELECT * FROM rss_feeds WHERE status = 'active' ORDER BY created_at DESC",
+      );
+      const rows = res.rows as unknown as Record<string, unknown>[];
       return rows.map(mapRowToRssFeed);
     },
 
-    getByUrl(url: string): RssFeed | undefined {
-      const row = db.prepare("SELECT * FROM rss_feeds WHERE url = ?").get(url) as
-        | Record<string, unknown>
-        | undefined;
+    async getByUrl(url: string): Promise<RssFeed | undefined> {
+      const res = await client.execute({
+        sql: "SELECT * FROM rss_feeds WHERE url = ?",
+        args: [url],
+      });
+      const row = res.rows[0] as unknown as Record<string, unknown> | undefined;
       if (!row) return undefined;
       return mapRowToRssFeed(row);
     },
 
-    create(id: string, input: NewRssFeedInput): RssFeed {
+    async create(id: string, input: NewRssFeedInput): Promise<RssFeed> {
       const now = new Date().toISOString();
-      db.prepare(
-        "INSERT INTO rss_feeds (id, title, url, status, created_at, updated_at) VALUES (?, ?, ?, 'active', ?, ?)",
-      ).run(id, input.title, input.url, now, now);
+      await client.execute({
+        sql: "INSERT INTO rss_feeds (id, title, url, status, created_at, updated_at) VALUES (?, ?, ?, 'active', ?, ?)",
+        args: [id, input.title, input.url, now, now],
+      });
 
       return {
         id,
@@ -52,12 +56,12 @@ export function createSqliteRssFeedRepository(db: Database.Database): RssFeedRep
       };
     },
 
-    update(id: string, patch: Partial<NewRssFeedInput>): RssFeed | undefined {
-      const existing = this.getById(id);
+    async update(id: string, patch: Partial<NewRssFeedInput>): Promise<RssFeed | undefined> {
+      const existing = await this.getById(id);
       if (!existing) return undefined;
 
       const updates: string[] = [];
-      const values: unknown[] = [];
+      const values: (string | number | null)[] = [];
 
       if (patch.title !== undefined) {
         updates.push("title = ?");
@@ -74,36 +78,42 @@ export function createSqliteRssFeedRepository(db: Database.Database): RssFeedRep
       values.push(new Date().toISOString());
       values.push(id);
 
-      db.prepare(`UPDATE rss_feeds SET ${updates.join(", ")} WHERE id = ?`).run(...values);
+      await client.execute({
+        sql: `UPDATE rss_feeds SET ${updates.join(", ")} WHERE id = ?`,
+        args: values,
+      });
 
-      return this.getById(id);
+      return await this.getById(id);
     },
 
-    updateStatus(id: string, status: "active" | "inactive"): RssFeed | undefined {
+    async updateStatus(id: string, status: "active" | "inactive"): Promise<RssFeed | undefined> {
       const now = new Date().toISOString();
-      db.prepare("UPDATE rss_feeds SET status = ?, updated_at = ? WHERE id = ?").run(
-        status,
-        now,
-        id,
-      );
-      return this.getById(id);
+      await client.execute({
+        sql: "UPDATE rss_feeds SET status = ?, updated_at = ? WHERE id = ?",
+        args: [status, now, id],
+      });
+      return await this.getById(id);
     },
 
-    updateFetchStatus(
+    async updateFetchStatus(
       id: string,
       lastFetchedAt: string,
       lastFetchError?: string,
-    ): RssFeed | undefined {
+    ): Promise<RssFeed | undefined> {
       const now = new Date().toISOString();
-      db.prepare(
-        "UPDATE rss_feeds SET last_fetched_at = ?, last_fetch_error = ?, updated_at = ? WHERE id = ?",
-      ).run(lastFetchedAt, lastFetchError || null, now, id);
-      return this.getById(id);
+      await client.execute({
+        sql: "UPDATE rss_feeds SET last_fetched_at = ?, last_fetch_error = ?, updated_at = ? WHERE id = ?",
+        args: [lastFetchedAt, lastFetchError || null, now, id],
+      });
+      return await this.getById(id);
     },
 
-    delete(id: string): boolean {
-      const result = db.prepare("DELETE FROM rss_feeds WHERE id = ?").run(id);
-      return result.changes > 0;
+    async delete(id: string): Promise<boolean> {
+      const res = await client.execute({
+        sql: "DELETE FROM rss_feeds WHERE id = ?",
+        args: [id],
+      });
+      return res.rowsAffected > 0;
     },
   };
 }

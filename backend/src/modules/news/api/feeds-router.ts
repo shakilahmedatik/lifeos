@@ -11,13 +11,13 @@ export function createFeedsRouter(
   const router = Router();
   const feedService = createFeedService(feedRepository);
 
-  router.get("/", (_req, res) => {
-    const feeds = feedService.getAllFeeds();
+  router.get("/", async (_req, res) => {
+    const feeds = await feedService.getAllFeeds();
     res.json(feeds);
   });
 
-  router.get("/:id", (req, res) => {
-    const feed = feedService.getFeedById(req.params.id);
+  router.get("/:id", async (req, res) => {
+    const feed = await feedService.getFeedById(req.params.id);
     if (!feed) {
       res.status(404).json({ error: "Feed not found" });
       return;
@@ -25,14 +25,14 @@ export function createFeedsRouter(
     res.json(feed);
   });
 
-  router.post("/", (req, res) => {
+  router.post("/", async (req, res) => {
     const { title, url } = req.body;
     if (!url) {
       res.status(400).json({ error: "URL is required" });
       return;
     }
 
-    const result = feedService.createFeed({ title: title || url, url });
+    const result = await feedService.createFeed({ title: title || url, url });
     if (!result.success) {
       res.status(400).json({ error: result.error });
       return;
@@ -41,9 +41,9 @@ export function createFeedsRouter(
     res.status(201).json(result.feed);
   });
 
-  router.patch("/:id", (req, res) => {
+  router.patch("/:id", async (req, res) => {
     const { title, url } = req.body;
-    const result = feedService.updateFeed(req.params.id, { title, url });
+    const result = await feedService.updateFeed(req.params.id, { title, url });
 
     if (!result.success) {
       res.status(400).json({ error: result.error });
@@ -53,8 +53,8 @@ export function createFeedsRouter(
     res.json(result.feed);
   });
 
-  router.delete("/:id", (req, res) => {
-    const result = feedService.deleteFeed(req.params.id);
+  router.delete("/:id", async (req, res) => {
+    const result = await feedService.deleteFeed(req.params.id);
     if (!result.success) {
       res.status(400).json({ error: result.error });
       return;
@@ -63,8 +63,8 @@ export function createFeedsRouter(
     res.status(204).send();
   });
 
-  router.patch("/:id/toggle", (req, res) => {
-    const result = feedService.toggleFeedStatus(req.params.id);
+  router.patch("/:id/toggle", async (req, res) => {
+    const result = await feedService.toggleFeedStatus(req.params.id);
     if (!result.success) {
       res.status(400).json({ error: result.error });
       return;

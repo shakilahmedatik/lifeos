@@ -54,7 +54,7 @@ export function useDashboard() {
 
   const handleHabitUnlog = async (logId: string) => {
     try {
-      await fetch(`/api/habits/log/${logId}`, { method: "DELETE" });
+      await api.unlogHabitByLogId(logId);
       await fetchSummary();
     } catch {
       toast.error("Failed to undo habit log");

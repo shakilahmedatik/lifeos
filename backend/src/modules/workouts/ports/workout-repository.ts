@@ -7,21 +7,24 @@ import type {
 } from "../domain/types.js";
 
 export interface WorkoutRepository {
-  getById(id: string): Workout | undefined;
-  getAll(): Workout[];
-  getByScheduledDay(day: string): Workout[];
-  create(id: string, input: NewWorkoutInput): Workout;
-  update(id: string, patch: Partial<NewWorkoutInput>): Workout | undefined;
-  delete(id: string): boolean;
-  getWithExercises(id: string): WorkoutWithExercises | undefined;
+  getById(id: string): Promise<Workout | undefined>;
+  getAll(): Promise<Workout[]>;
+  getByScheduledDay(day: string): Promise<Workout[]>;
+  create(id: string, input: NewWorkoutInput): Promise<Workout>;
+  update(id: string, patch: Partial<NewWorkoutInput>): Promise<Workout | undefined>;
+  delete(id: string): Promise<boolean>;
+  getWithExercises(id: string): Promise<WorkoutWithExercises | undefined>;
   addExercise(
     workoutId: string,
     exerciseId: string,
     input: NewWorkoutExerciseInput,
-  ): WorkoutExercise;
-  updateExercise(id: string, patch: Partial<NewWorkoutExerciseInput>): WorkoutExercise | undefined;
-  removeExercise(id: string): boolean;
-  getExerciseById(id: string): WorkoutExercise | undefined;
-  getExercisesByWorkoutId(workoutId: string): WorkoutExercise[];
-  reorderExercises(workoutId: string, exerciseIds: string[]): void;
+  ): Promise<WorkoutExercise>;
+  updateExercise(
+    id: string,
+    patch: Partial<NewWorkoutExerciseInput>,
+  ): Promise<WorkoutExercise | undefined>;
+  removeExercise(id: string): Promise<boolean>;
+  getExerciseById(id: string): Promise<WorkoutExercise | undefined>;
+  getExercisesByWorkoutId(workoutId: string): Promise<WorkoutExercise[]>;
+  reorderExercises(workoutId: string, exerciseIds: string[]): Promise<void>;
 }

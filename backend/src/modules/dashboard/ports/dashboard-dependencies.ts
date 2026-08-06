@@ -11,12 +11,12 @@ import type { WorkoutSessionRepository } from "../../workouts/ports/workout-sess
 
 export interface DashboardDependencies {
   taskRepo: {
-    getByDate(date: string, userId?: string): Task[];
+    getByDate(date: string, userId?: string): Promise<Task[]>;
   };
   habitLogService?: HabitLogService;
   habitStatsService?: HabitStatsService;
   habitRepo?: {
-    getAll(includeArchived: boolean, userId?: string): HabitDefinition[];
+    getAll(includeArchived: boolean, userId?: string): Promise<HabitDefinition[]>;
   };
   reminderService?: ReminderService;
   workoutSessionRepo?: WorkoutSessionRepository;

@@ -12,8 +12,8 @@ export class TransactionService {
     private readonly categoryRepo: CategoryRepository,
   ) {}
 
-  createTransaction(input: NewTransactionInput): Transaction {
-    const account = this.accountRepo.getById(input.accountId);
+  async createTransaction(input: NewTransactionInput): Promise<Transaction> {
+    const account = await this.accountRepo.getById(input.accountId);
     if (!account) {
       throw new Error("Account not found");
     }
@@ -21,7 +21,7 @@ export class TransactionService {
       throw new Error("Cannot create transaction for archived account");
     }
 
-    const category = this.categoryRepo.getById(input.categoryId);
+    const category = await this.categoryRepo.getById(input.categoryId);
     if (!category) {
       throw new Error("Category not found");
     }
@@ -34,24 +34,27 @@ export class TransactionService {
     }
 
     const id = randomUUID();
-    return this.transactionRepo.create(id, input);
+    return await this.transactionRepo.create(id, input);
   }
 
-  listTransactionsByDateRange(startDate: string, endDate: string): Transaction[] {
-    return this.transactionRepo.getByDateRange(startDate, endDate);
+  async listTransactionsByDateRange(startDate: string, endDate: string): Promise<Transaction[]> {
+    return await this.transactionRepo.getByDateRange(startDate, endDate);
   }
 
-  listTransactionsByAccount(accountId: string): Transaction[] {
-    return this.transactionRepo.getByAccountId(accountId);
+  async listTransactionsByAccount(accountId: string): Promise<Transaction[]> {
+    return await this.transactionRepo.getByAccountId(accountId);
   }
 
-  getTransaction(id: string): Transaction | undefined {
-    return this.transactionRepo.getById(id);
+  async getTransaction(id: string): Promise<Transaction | undefined> {
+    return await this.transactionRepo.getById(id);
   }
 
-  updateTransaction(id: string, patch: Partial<NewTransactionInput>): Transaction | undefined {
+  async updateTransaction(
+    id: string,
+    patch: Partial<NewTransactionInput>,
+  ): Promise<Transaction | undefined> {
     if (patch.accountId !== undefined) {
-      const account = this.accountRepo.getById(patch.accountId);
+      const account = await this.accountRepo.getById(patch.accountId);
       if (!account) {
         throw new Error("Account not found");
       }
@@ -61,7 +64,7 @@ export class TransactionService {
     }
 
     if (patch.categoryId !== undefined) {
-      const category = this.categoryRepo.getById(patch.categoryId);
+      const category = await this.categoryRepo.getById(patch.categoryId);
       if (!category) {
         throw new Error("Category not found");
       }
@@ -74,37 +77,50 @@ export class TransactionService {
       throw new Error("Amount must be positive");
     }
 
-    return this.transactionRepo.update(id, patch);
+    return await this.transactionRepo.update(id, patch);
   }
 
-  deleteTransaction(id: string): boolean {
-    const target = this.transactionRepo.getById(id);
-    if (!target) return false;
+  async listTransactionsByAccountAndDateRange(
+    accountId: string,
+    startDate: string,
+    endDate: string,
+  ): Promise<Transaction[]> {
+    return await this.transactionRepo.getByAccountAndDateRange(accountId, startDate, endDate);
+  }
 
-    if (target.transferPairId) {
-      const allTxs = this.transactionRepo.getByDateRange("1900-01-01", "2100-01-01");
-      const paired = allTxs.filter((t) => t.transferPairId === target.transferPairId);
-      for (const p of paired) {
-        this.transactionRepo.delete(p.id);
-      }
-      return true;
+  async deleteTransaction(id: string): Promise<boolean> {
+    return await this.transactionRepo.delete(id);
+  }
+
+  private async ensureCategoryExists(
+    id: string,
+    name: string,
+    kind: "income" | "expense",
+  ): Promise<string> {
+    const existing = await this.categoryRepo.getById(id);
+    if (existing) return existing.id;
+
+    const activeKindCats = await this.categoryRepo.getByKind(kind);
+    if (activeKindCats.length > 0) {
+      return activeKindCats[0].id;
     }
 
-    return this.transactionRepo.delete(id);
+    const created = await this.categoryRepo.create(id, { name, kind });
+    return created.id;
   }
 
-  createTransfer(
+  async createTransfer(
     fromAccountId: string,
     toAccountId: string,
     amountMinor: number,
     date: string,
     note?: string,
-  ): { from: Transaction; to: Transaction } {
-    const fromAccount = this.accountRepo.getById(fromAccountId);
+  ): Promise<{ from: Transaction; to: Transaction }> {
+    const fromAccount = await this.accountRepo.getById(fromAccountId);
     if (!fromAccount) {
       throw new Error("Source account not found");
     }
-    const toAccount = this.accountRepo.getById(toAccountId);
+    const toAccount = await this.accountRepo.getById(toAccountId);
     if (!toAccount) {
       throw new Error("Destination account not found");
     }
@@ -113,20 +129,35 @@ export class TransactionService {
       throw new Error("Cannot transfer to the same account");
     }
 
+    if (amountMinor <= 0) {
+      throw new Error("Amount must be positive");
+    }
+
+    const expenseCatId = await this.ensureCategoryExists(
+      "cat-expense-other",
+      "Transfer Out",
+      "expense",
+    );
+    const incomeCatId = await this.ensureCategoryExists(
+      "cat-income-other",
+      "Transfer In",
+      "income",
+    );
+
     const transferPairId = randomUUID();
 
-    const fromTransaction = this.transactionRepo.create(randomUUID(), {
+    const fromTransaction = await this.transactionRepo.create(randomUUID(), {
       accountId: fromAccountId,
-      categoryId: "cat-expense-other",
+      categoryId: expenseCatId,
       date,
       amountMinor,
       note: note ? `Transfer to ${toAccount.name}: ${note}` : `Transfer to ${toAccount.name}`,
       transferPairId,
     });
 
-    const toTransaction = this.transactionRepo.create(randomUUID(), {
+    const toTransaction = await this.transactionRepo.create(randomUUID(), {
       accountId: toAccountId,
-      categoryId: "cat-income-other",
+      categoryId: incomeCatId,
       date,
       amountMinor,
       note: note

@@ -19,16 +19,16 @@ function createMockSessionRepo(): WorkoutSessionRepository & {
   return {
     sessions,
     logs,
-    getById(id: string) {
+    async getById(id: string) {
       return sessions.get(id);
     },
-    getAll() {
+    async getAll() {
       return Array.from(sessions.values());
     },
-    getByWorkoutId(workoutId: string) {
+    async getByWorkoutId(workoutId: string) {
       return Array.from(sessions.values()).filter((s) => s.workoutId === workoutId);
     },
-    create(id: string, workoutId: string) {
+    async create(id: string, workoutId: string) {
       const now = new Date().toISOString();
       const session: WorkoutSession = {
         id,
@@ -38,7 +38,7 @@ function createMockSessionRepo(): WorkoutSessionRepository & {
       sessions.set(id, session);
       return session;
     },
-    complete(id: string, durationSeconds: number, notes?: string) {
+    async complete(id: string, durationSeconds: number, notes?: string) {
       const existing = sessions.get(id);
       if (!existing) return undefined;
       const updated: WorkoutSession = {
@@ -50,16 +50,16 @@ function createMockSessionRepo(): WorkoutSessionRepository & {
       sessions.set(id, updated);
       return updated;
     },
-    delete(id: string) {
+    async delete(id: string) {
       return sessions.delete(id);
     },
-    getWithLogs(id: string) {
+    async getWithLogs(id: string) {
       const session = sessions.get(id);
       if (!session) return undefined;
       const sessionLogs = Array.from(logs.values()).filter((l) => l.sessionId === id);
       return { ...session, logs: sessionLogs } as WorkoutSessionWithLogs;
     },
-    addLog(sessionId: string, input: NewExerciseLogInput) {
+    async addLog(sessionId: string, input: NewExerciseLogInput) {
       const id = crypto.randomUUID();
       const now = new Date().toISOString();
       const log: ExerciseLog = {
@@ -74,21 +74,21 @@ function createMockSessionRepo(): WorkoutSessionRepository & {
       logs.set(id, log);
       return log;
     },
-    getLogsBySessionId(sessionId: string) {
+    async getLogsBySessionId(sessionId: string) {
       return Array.from(logs.values()).filter((l) => l.sessionId === sessionId);
     },
-    getRecentSessions(limit: number) {
+    async getRecentSessions(limit: number) {
       return Array.from(sessions.values())
         .sort((a, b) => new Date(b.startedAt).getTime() - new Date(a.startedAt).getTime())
         .slice(0, limit);
     },
-    getTotalSessions() {
+    async getTotalSessions() {
       return sessions.size;
     },
-    getTotalDuration() {
+    async getTotalDuration() {
       return Array.from(sessions.values()).reduce((acc, s) => acc + (s.durationSeconds || 0), 0);
     },
-    getExerciseProgress() {
+    async getExerciseProgress() {
       return [];
     },
   };
@@ -103,55 +103,55 @@ describe("WorkoutSessionService", () => {
     service = new WorkoutSessionService(repo);
   });
 
-  it("starts a session", () => {
-    const session = service.startSession("workout-1");
+  it("starts a session", async () => {
+    const session = await service.startSession("workout-1");
     expect(session.workoutId).toBe("workout-1");
     expect(session.startedAt).toBeDefined();
     expect(repo.sessions.size).toBe(1);
   });
 
-  it("completes a session", () => {
-    const session = service.startSession("workout-1");
-    const completed = service.completeSession(session.id, 3600, "Great workout!");
+  it("completes a session", async () => {
+    const session = await service.startSession("workout-1");
+    const completed = await service.completeSession(session.id, 3600, "Great workout!");
     expect(completed?.completedAt).toBeDefined();
     expect(completed?.durationSeconds).toBe(3600);
     expect(completed?.notes).toBe("Great workout!");
   });
 
-  it("gets a session by id", () => {
-    const session = service.startSession("workout-1");
-    const found = service.getSession(session.id);
+  it("gets a session by id", async () => {
+    const session = await service.startSession("workout-1");
+    const found = await service.getSession(session.id);
     expect(found?.workoutId).toBe("workout-1");
   });
 
-  it("gets session with logs", () => {
-    const session = service.startSession("workout-1");
-    service.addExerciseLog(session.id, {
+  it("gets session with logs", async () => {
+    const session = await service.startSession("workout-1");
+    await service.addExerciseLog(session.id, {
       exerciseId: "ex-1",
       setNumber: 1,
       actualReps: 10,
     });
-    const found = service.getSessionWithLogs(session.id);
+    const found = await service.getSessionWithLogs(session.id);
     expect(found?.logs).toHaveLength(1);
   });
 
-  it("lists all sessions", () => {
-    service.startSession("workout-1");
-    service.startSession("workout-2");
-    expect(service.listSessions()).toHaveLength(2);
+  it("lists all sessions", async () => {
+    await service.startSession("workout-1");
+    await service.startSession("workout-2");
+    expect(await service.listSessions()).toHaveLength(2);
   });
 
-  it("gets sessions by workout id", () => {
-    service.startSession("workout-1");
-    service.startSession("workout-1");
-    service.startSession("workout-2");
-    const sessions = service.getSessionsByWorkoutId("workout-1");
+  it("gets sessions by workout id", async () => {
+    await service.startSession("workout-1");
+    await service.startSession("workout-1");
+    await service.startSession("workout-2");
+    const sessions = await service.getSessionsByWorkoutId("workout-1");
     expect(sessions).toHaveLength(2);
   });
 
-  it("adds exercise log", () => {
-    const session = service.startSession("workout-1");
-    const log = service.addExerciseLog(session.id, {
+  it("adds exercise log", async () => {
+    const session = await service.startSession("workout-1");
+    const log = await service.addExerciseLog(session.id, {
       exerciseId: "ex-1",
       setNumber: 1,
       actualReps: 10,
@@ -162,25 +162,25 @@ describe("WorkoutSessionService", () => {
     expect(log.actualWeight).toBe(50);
   });
 
-  it("gets session logs", () => {
-    const session = service.startSession("workout-1");
-    service.addExerciseLog(session.id, { exerciseId: "ex-1", setNumber: 1, actualReps: 10 });
-    service.addExerciseLog(session.id, { exerciseId: "ex-1", setNumber: 2, actualReps: 8 });
-    const logs = service.getSessionLogs(session.id);
+  it("gets session logs", async () => {
+    const session = await service.startSession("workout-1");
+    await service.addExerciseLog(session.id, { exerciseId: "ex-1", setNumber: 1, actualReps: 10 });
+    await service.addExerciseLog(session.id, { exerciseId: "ex-1", setNumber: 2, actualReps: 8 });
+    const logs = await service.getSessionLogs(session.id);
     expect(logs).toHaveLength(2);
   });
 
-  it("deletes a session", () => {
-    const session = service.startSession("workout-1");
-    expect(service.deleteSession(session.id)).toBe(true);
+  it("deletes a session", async () => {
+    const session = await service.startSession("workout-1");
+    expect(await service.deleteSession(session.id)).toBe(true);
     expect(repo.sessions.size).toBe(0);
   });
 
-  it("gets recent sessions", () => {
-    service.startSession("workout-1");
-    service.startSession("workout-2");
-    service.startSession("workout-3");
-    const recent = service.getRecentSessions(2);
+  it("gets recent sessions", async () => {
+    await service.startSession("workout-1");
+    await service.startSession("workout-2");
+    await service.startSession("workout-3");
+    const recent = await service.getRecentSessions(2);
     expect(recent).toHaveLength(2);
   });
 });

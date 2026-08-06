@@ -17,32 +17,35 @@ export class LearningLogService {
     private readonly skillAreaRepo: SkillAreaRepository,
   ) {}
 
-  log(input: NewLearningLogInput): LearningLog {
+  async log(input: NewLearningLogInput): Promise<LearningLog> {
     const id = randomUUID();
-    return this.logRepo.create(id, input);
+    return await this.logRepo.create(id, input);
   }
 
-  getByResourceId(resourceId: string): LearningLog[] {
-    return this.logRepo.getByResourceId(resourceId);
+  async getByResourceId(resourceId: string): Promise<LearningLog[]> {
+    return await this.logRepo.getByResourceId(resourceId);
   }
 
-  getByDateRange(startDate: string, endDate: string): LearningLog[] {
-    return this.logRepo.getByDateRange(startDate, endDate);
+  async getByDateRange(startDate: string, endDate: string): Promise<LearningLog[]> {
+    return await this.logRepo.getByDateRange(startDate, endDate);
   }
 
-  updateLog(id: string, patch: Partial<NewLearningLogInput>): LearningLog | undefined {
-    return this.logRepo.update(id, patch);
+  async updateLog(
+    id: string,
+    patch: Partial<NewLearningLogInput>,
+  ): Promise<LearningLog | undefined> {
+    return await this.logRepo.update(id, patch);
   }
 
-  delete(id: string): boolean {
-    return this.logRepo.delete(id);
+  async delete(id: string): Promise<boolean> {
+    return await this.logRepo.delete(id);
   }
 
-  getResourceProgress(resourceId: string): ResourceWithProgress | undefined {
-    const resource = this.resourceRepo.getById(resourceId);
+  async getResourceProgress(resourceId: string): Promise<ResourceWithProgress | undefined> {
+    const resource = await this.resourceRepo.getById(resourceId);
     if (!resource) return undefined;
-    const skillArea = this.skillAreaRepo.getById(resource.skillAreaId);
-    const logs = this.logRepo.getByResourceId(resourceId);
+    const skillArea = await this.skillAreaRepo.getById(resource.skillAreaId);
+    const logs = await this.logRepo.getByResourceId(resourceId);
     const totalMinutes = logs.reduce((s, l) => s + l.minutesSpent, 0);
     const totalUnits = logs.reduce((s, l) => s + (l.unitsCompleted ?? 0), 0);
     const pct =
@@ -58,12 +61,12 @@ export class LearningLogService {
     };
   }
 
-  getSkillAreaSummary(skillAreaId: string): SkillAreaSummary | undefined {
-    const area = this.skillAreaRepo.getById(skillAreaId);
+  async getSkillAreaSummary(skillAreaId: string): Promise<SkillAreaSummary | undefined> {
+    const area = await this.skillAreaRepo.getById(skillAreaId);
     if (!area) return undefined;
-    const resources = this.resourceRepo.getBySkillArea(skillAreaId);
+    const resources = await this.resourceRepo.getBySkillArea(skillAreaId);
     const resourceIds = resources.map((r) => r.id);
-    const allLogs = this.logRepo.getByResourceIds(resourceIds);
+    const allLogs = await this.logRepo.getByResourceIds(resourceIds);
     const totalMinutes = allLogs.reduce((s, l) => s + l.minutesSpent, 0);
     return {
       skillArea: area,

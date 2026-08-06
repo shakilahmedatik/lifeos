@@ -12,55 +12,55 @@ import type { WorkoutRepository } from "../ports/workout-repository.js";
 export class WorkoutService {
   constructor(private readonly workoutRepo: WorkoutRepository) {}
 
-  createWorkout(input: NewWorkoutInput): Workout {
+  async createWorkout(input: NewWorkoutInput): Promise<Workout> {
     const id = randomUUID();
-    return this.workoutRepo.create(id, input);
+    return await this.workoutRepo.create(id, input);
   }
 
-  listWorkouts(): Workout[] {
-    return this.workoutRepo.getAll();
+  async listWorkouts(): Promise<Workout[]> {
+    return await this.workoutRepo.getAll();
   }
 
-  getWorkout(id: string): Workout | undefined {
-    return this.workoutRepo.getById(id);
+  async getWorkout(id: string): Promise<Workout | undefined> {
+    return await this.workoutRepo.getById(id);
   }
 
-  getWorkoutWithExercises(id: string): WorkoutWithExercises | undefined {
-    return this.workoutRepo.getWithExercises(id);
+  async getWorkoutWithExercises(id: string): Promise<WorkoutWithExercises | undefined> {
+    return await this.workoutRepo.getWithExercises(id);
   }
 
-  updateWorkout(id: string, patch: Partial<NewWorkoutInput>): Workout | undefined {
-    return this.workoutRepo.update(id, patch);
+  async updateWorkout(id: string, patch: Partial<NewWorkoutInput>): Promise<Workout | undefined> {
+    return await this.workoutRepo.update(id, patch);
   }
 
-  deleteWorkout(id: string): boolean {
-    return this.workoutRepo.delete(id);
+  async deleteWorkout(id: string): Promise<boolean> {
+    return await this.workoutRepo.delete(id);
   }
 
-  addExerciseToWorkout(
+  async addExerciseToWorkout(
     workoutId: string,
     exerciseId: string,
     input: NewWorkoutExerciseInput,
-  ): WorkoutExercise {
-    return this.workoutRepo.addExercise(workoutId, exerciseId, input);
+  ): Promise<WorkoutExercise> {
+    return await this.workoutRepo.addExercise(workoutId, exerciseId, input);
   }
 
-  updateWorkoutExercise(
+  async updateWorkoutExercise(
     id: string,
     patch: Partial<NewWorkoutExerciseInput>,
-  ): WorkoutExercise | undefined {
-    return this.workoutRepo.updateExercise(id, patch);
+  ): Promise<WorkoutExercise | undefined> {
+    return await this.workoutRepo.updateExercise(id, patch);
   }
 
-  removeExerciseFromWorkout(id: string): boolean {
-    return this.workoutRepo.removeExercise(id);
+  async removeExerciseFromWorkout(id: string): Promise<boolean> {
+    return await this.workoutRepo.removeExercise(id);
   }
 
-  getWorkoutsByDay(day: string): Workout[] {
-    return this.workoutRepo.getByScheduledDay(day);
+  async getWorkoutsByDay(day: string): Promise<Workout[]> {
+    return await this.workoutRepo.getByScheduledDay(day);
   }
 
-  reorderExercises(workoutId: string, exerciseIds: string[]): void {
-    this.workoutRepo.reorderExercises(workoutId, exerciseIds);
+  async reorderExercises(workoutId: string, exerciseIds: string[]): Promise<void> {
+    await this.workoutRepo.reorderExercises(workoutId, exerciseIds);
   }
 }

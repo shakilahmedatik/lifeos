@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
+  NewExerciseInputSchema,
   NewNotificationInputSchema,
   NewTransactionInputSchema,
   TransferInputSchema,
@@ -193,5 +194,25 @@ describe("NewNotificationInputSchema", () => {
       taskId: "task-1",
     });
     expect(result.success).toBe(false);
+  });
+});
+
+describe("NewExerciseInputSchema", () => {
+  it("accepts exercise with empty string videoUrl", () => {
+    const result = NewExerciseInputSchema.safeParse({
+      name: "Bicep Curls",
+      muscleGroup: "biceps",
+      equipment: "dumbbell",
+      videoUrl: "",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts exercise with valid url videoUrl", () => {
+    const result = NewExerciseInputSchema.safeParse({
+      name: "Bicep Curls",
+      videoUrl: "https://example.com/demo.mp4",
+    });
+    expect(result.success).toBe(true);
   });
 });
