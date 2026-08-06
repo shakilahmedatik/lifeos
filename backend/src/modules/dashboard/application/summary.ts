@@ -177,10 +177,10 @@ export async function getDashboardSummary(
     const dayOfWeekIndex = (nowUtc.getUTCDay() + 6) % 7;
     const monday = new Date(nowUtc);
     monday.setUTCDate(nowUtc.getUTCDate() - dayOfWeekIndex);
-    const _mondayStr = monday.toISOString().split("T")[0];
+    const mondayStr = monday.toISOString().split("T")[0];
 
     for (const area of areas) {
-      const summary = await deps.learningLogService.getSkillAreaSummary(area.id);
+      const summary = await deps.learningLogService.getSkillAreaSummary(area.id, mondayStr, today);
       const hoursThisWeek = summary ? Math.round((summary.totalMinutesSpent / 60) * 10) / 10 : 0;
       const goal = area.weeklyGoalHours || 5;
       const pct = Math.min(100, Math.round((hoursThisWeek / goal) * 100));

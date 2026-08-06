@@ -43,7 +43,7 @@ export function useHabits() {
 
   const toggleHabit = useCallback(async (habitId: string, date: string, logged: boolean) => {
     if (logged) {
-      await habitApi.removeLog(habitId);
+      await habitApi.removeLogByDate(habitId, date);
     } else {
       await habitApi.addLog(habitId, { date, value: 1 });
     }

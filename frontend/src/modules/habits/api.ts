@@ -67,6 +67,10 @@ export const habitApi = {
     return request<void>(`${BASE}/log/${logId}`, { method: "DELETE" });
   },
 
+  removeLogByDate: async (habitId: string, date: string): Promise<void> => {
+    return request<void>(`${BASE}/${habitId}/log/${date}`, { method: "DELETE" });
+  },
+
   getLogs: async (habitId: string, date: string): Promise<HabitLogEntry[]> => {
     return request<HabitLogEntry[]>(`${BASE}/${habitId}/logs?date=${date}`);
   },

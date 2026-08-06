@@ -2,6 +2,7 @@ import { Edit, Trash2 } from "lucide-react";
 import Button from "../../../components/ui/Button.js";
 import Card from "../../../components/ui/Card.js";
 import type { LearningLog, LearningResource } from "../types.js";
+import { formatLocalDate } from "../utils/date-utils.js";
 
 interface SessionCardProps {
   log: LearningLog;
@@ -12,7 +13,7 @@ interface SessionCardProps {
 
 export default function SessionCard({ log, resource, onEdit, onDelete }: SessionCardProps) {
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString("en-US", {
+    return formatLocalDate(dateStr, {
       month: "short",
       day: "numeric",
       year: "numeric",

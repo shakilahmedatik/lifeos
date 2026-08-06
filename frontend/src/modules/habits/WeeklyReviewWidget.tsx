@@ -35,7 +35,9 @@ export default function WeeklyReviewWidget({ summary, loading }: WeeklyReviewWid
         {summary.dailyBreakdown.map((day) => (
           <div key={day.date} className="text-center">
             <div className="text-[10px] text-gray-500 mb-1">
-              {new Date(day.date).toLocaleDateString("en-US", { weekday: "short" })}
+              {new Date(`${day.date}T00:00:00`).toLocaleDateString("en-US", {
+                weekday: "short",
+              })}
             </div>
             <div
               className={`h-7 rounded-lg transition-colors ${

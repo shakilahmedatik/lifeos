@@ -51,18 +51,10 @@ export class SqliteSkillAreaRepository implements SkillAreaRepository {
   async create(id: string, input: NewSkillAreaInput): Promise<SkillArea> {
     const now = new Date().toISOString();
     const weeklyGoalHours = input.weeklyGoalHours ?? 5;
-    const category = (input as { category?: string }).category;
-    if (category) {
-      await this.client.execute({
-        sql: "INSERT INTO skill_areas (id, name, category, weekly_goal_hours, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?)",
-        args: [id, input.name, category, weeklyGoalHours, now, now],
-      });
-    } else {
-      await this.client.execute({
-        sql: "INSERT INTO skill_areas (id, name, weekly_goal_hours, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
-        args: [id, input.name, weeklyGoalHours, now, now],
-      });
-    }
+    await this.client.execute({
+      sql: "INSERT INTO skill_areas (id, name, weekly_goal_hours, created_at, updated_at) VALUES (?, ?, ?, ?, ?)",
+      args: [id, input.name, weeklyGoalHours, now, now],
+    });
     return (await this.getById(id)) as SkillArea;
   }
 

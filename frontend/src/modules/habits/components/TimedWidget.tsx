@@ -1,18 +1,20 @@
 import type { HabitDailyProgress } from "@lifeos/contracts";
-import { Plus } from "lucide-react";
+import { Plus, RotateCcw } from "lucide-react";
 import Button from "../../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../../components/ui/Card.js";
 
 interface TimedWidgetProps {
   progress: HabitDailyProgress;
   onLog: (value: number) => void;
+  onUnlog?: (logId: string) => void;
 }
 
-export function TimedWidget({ progress, onLog }: TimedWidgetProps) {
+export function TimedWidget({ progress, onLog, onUnlog }: TimedWidgetProps) {
   const presets = [15, 30, 60];
   const currentValue = progress.currentValue || 0;
   const targetValue = progress.targetValue || 30;
   const percentage = Math.min(100, Math.max(0, Math.round((currentValue / targetValue) * 100)));
+  const lastLog = progress.logs && progress.logs.length > 0 ? progress.logs[progress.logs.length - 1] : null;
 
   return (
     <Card className="bg-gray-900/60 border border-gray-800 hover:border-gray-700/80 transition-all">
@@ -47,6 +49,17 @@ export function TimedWidget({ progress, onLog }: TimedWidgetProps) {
               {p}m
             </Button>
           ))}
+          {lastLog && onUnlog && (
+            <Button
+              size="sm"
+              variant="secondary"
+              title="Undo last log"
+              className="bg-gray-800/60 hover:bg-red-900/40 text-gray-400 hover:text-red-300 border-gray-700/60 py-1"
+              onClick={() => onUnlog(lastLog.id)}
+            >
+              <RotateCcw size={12} />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

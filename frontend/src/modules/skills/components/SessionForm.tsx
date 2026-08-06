@@ -1,7 +1,6 @@
 import { useState } from "react";
 import Button from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
-import Modal from "../../../components/ui/Modal.js";
 import { Select } from "../../../components/ui/Select.js";
 import type { LearningLog, LearningResource, NewLearningLogInput } from "../types.js";
 
@@ -49,63 +48,61 @@ export default function SessionForm({
       : resources.map((r) => ({ value: r.id, label: r.title }));
 
   return (
-    <Modal open={true} onClose={onCancel} title={log ? "Edit Session" : "Log Session"}>
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="grid grid-cols-2 gap-4">
-          <Input
-            label="Date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-            required
-          />
-          <Input
-            label="Minutes"
-            type="number"
-            min="1"
-            value={minutesSpent}
-            onChange={(e) => setMinutesSpent(e.target.value)}
-            required
-          />
-        </div>
-        <Select
-          label="Learning Resource"
-          value={resourceId}
-          onChange={(e) => setResourceId(e.target.value)}
-          options={resourceOptions}
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <Input
+          label="Date"
+          type="date"
+          value={date}
+          onChange={(e) => setDate(e.target.value)}
           required
         />
         <Input
-          label="Units Completed"
+          label="Minutes"
           type="number"
-          min="0"
-          step="0.5"
-          value={unitsCompleted}
-          onChange={(e) => setUnitsCompleted(e.target.value)}
-          placeholder="Optional"
+          min="1"
+          value={minutesSpent}
+          onChange={(e) => setMinutesSpent(e.target.value)}
+          required
         />
-        <div>
-          <label htmlFor="log-notes" className="block text-sm font-medium text-secondary mb-1">
-            Notes
-          </label>
-          <textarea
-            id="log-notes"
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="w-full bg-input/40 border border-border text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 placeholder-muted resize-none transition-colors"
-            rows={2}
-            placeholder="Optional notes"
-          />
-        </div>
-        <div className="flex justify-end gap-2 pt-2">
-          <Button type="button" variant="ghost" onClick={onCancel}>
-            Cancel
-          </Button>
-          <Button type="submit" variant="primary">
-            {log ? "Update" : "Log Session"}
-          </Button>
-        </div>
-      </form>
-    </Modal>
+      </div>
+      <Select
+        label="Learning Resource"
+        value={resourceId}
+        onChange={(e) => setResourceId(e.target.value)}
+        options={resourceOptions}
+        required
+      />
+      <Input
+        label="Units Completed"
+        type="number"
+        min="0"
+        step="0.5"
+        value={unitsCompleted}
+        onChange={(e) => setUnitsCompleted(e.target.value)}
+        placeholder="Optional"
+      />
+      <div>
+        <label htmlFor="log-notes" className="block text-sm font-medium text-secondary mb-1">
+          Notes
+        </label>
+        <textarea
+          id="log-notes"
+          value={notes}
+          onChange={(e) => setNotes(e.target.value)}
+          className="w-full bg-input/40 border border-border text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50 placeholder-muted resize-none transition-colors"
+          rows={2}
+          placeholder="Optional notes"
+        />
+      </div>
+      <div className="flex justify-end gap-2 pt-2">
+        <Button type="button" variant="ghost" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary">
+          {log ? "Update" : "Log Session"}
+        </Button>
+      </div>
+    </form>
   );
 }

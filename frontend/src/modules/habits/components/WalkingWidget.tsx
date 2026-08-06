@@ -1,5 +1,5 @@
 import type { HabitDailyProgress, WalkingHabitConfig } from "@lifeos/contracts";
-import { Check, Edit3, Plus } from "lucide-react";
+import { Check, Edit3, Plus, RotateCcw } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import Button from "../../../components/ui/Button.js";
@@ -8,9 +8,10 @@ import Card, { CardContent, CardHeader, CardTitle } from "../../../components/ui
 interface WalkingWidgetProps {
   progress: HabitDailyProgress;
   onLog: (value: number) => void;
+  onUnlog?: (logId: string) => void;
 }
 
-export function WalkingWidget({ progress, onLog }: WalkingWidgetProps) {
+export function WalkingWidget({ progress, onLog, onUnlog }: WalkingWidgetProps) {
   const config = progress.habit?.config as WalkingHabitConfig;
   const unit = config?.unit || "steps";
   const isKm = unit === "km";
@@ -32,6 +33,8 @@ export function WalkingWidget({ progress, onLog }: WalkingWidgetProps) {
       setShowCustomInput(false);
     }
   };
+
+  const lastLog = progress.logs && progress.logs.length > 0 ? progress.logs[progress.logs.length - 1] : null;
 
   return (
     <Card className="bg-gray-900/60 border border-gray-800 hover:border-gray-700/80 transition-all">
@@ -76,6 +79,17 @@ export function WalkingWidget({ progress, onLog }: WalkingWidgetProps) {
             >
               <Edit3 size={12} />
             </Button>
+            {lastLog && onUnlog && (
+              <Button
+                size="sm"
+                variant="secondary"
+                title="Undo last log"
+                className="bg-gray-800/60 hover:bg-red-900/40 text-gray-400 hover:text-red-300 border-gray-700/60 py-1"
+                onClick={() => onUnlog(lastLog.id)}
+              >
+                <RotateCcw size={12} />
+              </Button>
+            )}
           </div>
 
           {showCustomInput && (

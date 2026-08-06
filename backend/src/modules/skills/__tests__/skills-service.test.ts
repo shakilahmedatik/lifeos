@@ -112,8 +112,13 @@ function createMockLearningLogRepo(): LearningLogRepository & {
     async getByDateRange(startDate: string, endDate: string) {
       return Array.from(logs.values()).filter((l) => l.date >= startDate && l.date <= endDate);
     },
-    async getByResourceIds(resourceIds: string[]) {
-      return Array.from(logs.values()).filter((l) => resourceIds.includes(l.resourceId));
+    async getByResourceIds(resourceIds: string[], startDate?: string, endDate?: string) {
+      return Array.from(logs.values()).filter(
+        (l) =>
+          resourceIds.includes(l.resourceId) &&
+          (!startDate || l.date >= startDate) &&
+          (!endDate || l.date <= endDate),
+      );
     },
     async create(id: string, input: NewLearningLogInput) {
       const now = new Date().toISOString();
@@ -459,6 +464,22 @@ describe("LearningLogService", () => {
     expect(summary.totalMinutesSpent).toBe(135);
     expect(summary.totalSessions).toBe(3);
     expect(summary.skillArea.name).toBe("Programming");
+  });
+
+  it("filters skill area summary by date range", async () => {
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
+    const resource = await resourceRepo.create("res-1", {
+      skillAreaId: area.id,
+      title: "Course 1",
+      type: "course",
+    });
+    await service.log({ resourceId: resource.id, date: "2025-01-10", minutesSpent: 60 });
+    await service.log({ resourceId: resource.id, date: "2025-01-15", minutesSpent: 30 });
+    await service.log({ resourceId: resource.id, date: "2025-01-20", minutesSpent: 90 });
+
+    const summary = await service.getSkillAreaSummary(area.id, "2025-01-12", "2025-01-18");
+    expect(summary?.totalMinutesSpent).toBe(30);
+    expect(summary?.totalSessions).toBe(1);
   });
 
   it("returns undefined for non-existent skill area summary", async () => {

@@ -176,7 +176,7 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
           <CardContent className="p-4">
             <div className="grid grid-cols-7 gap-2">
               {weeklySummary.dailyBreakdown.map((day) => {
-                const dateObj = new Date(day.date);
+                const dateObj = new Date(`${day.date}T00:00:00`);
                 const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
                 return (
                   <div key={day.date} className="text-center space-y-1.5">

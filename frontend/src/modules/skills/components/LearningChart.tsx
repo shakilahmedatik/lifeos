@@ -1,5 +1,6 @@
 import { SimpleBarChart } from "../../../components/ui/charts/SimpleBarChart.js";
 import type { LearningLog } from "../types.js";
+import { formatLocalDate } from "../utils/date-utils.js";
 
 interface LearningChartProps {
   logs: LearningLog[];
@@ -16,8 +17,7 @@ export function LearningChart({ logs }: LearningChartProps) {
   }
 
   logs.forEach((log) => {
-    const d = new Date(log.date);
-    const key = d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+    const key = formatLocalDate(log.date, { month: "short", day: "numeric" });
     if (dataMap.has(key)) {
       dataMap.set(key, (dataMap.get(key) ?? 0) + log.minutesSpent);
     }

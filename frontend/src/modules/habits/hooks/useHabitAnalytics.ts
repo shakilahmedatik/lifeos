@@ -7,7 +7,11 @@ export function useHabitAnalytics(habitId: string, period: "week" | "month" = "w
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (!habitId) return;
+    if (!habitId) {
+      setData(null);
+      setLoading(false);
+      return;
+    }
     setLoading(true);
     habitApi
       .getAnalytics(habitId, period)

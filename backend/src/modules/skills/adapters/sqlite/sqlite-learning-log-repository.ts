@@ -48,13 +48,27 @@ export class SqliteLearningLogRepository implements LearningLogRepository {
     return rows.map(rowToLog);
   }
 
-  async getByResourceIds(resourceIds: string[]): Promise<LearningLog[]> {
+  async getByResourceIds(
+    resourceIds: string[],
+    startDate?: string,
+    endDate?: string,
+  ): Promise<LearningLog[]> {
     if (resourceIds.length === 0) return [];
     const placeholders = resourceIds.map(() => "?").join(",");
-    const res = await this.client.execute({
-      sql: `SELECT * FROM learning_logs WHERE resource_id IN (${placeholders}) ORDER BY date`,
-      args: resourceIds,
-    });
+    const args: (string | number)[] = [...resourceIds];
+    let sql = `SELECT * FROM learning_logs WHERE resource_id IN (${placeholders})`;
+
+    if (startDate) {
+      sql += " AND date >= ?";
+      args.push(startDate);
+    }
+    if (endDate) {
+      sql += " AND date <= ?";
+      args.push(endDate);
+    }
+    sql += " ORDER BY date";
+
+    const res = await this.client.execute({ sql, args });
     const rows = res.rows as unknown as LearningLogRow[];
     return rows.map(rowToLog);
   }

@@ -176,5 +176,37 @@ describe("Habit Module Services Integration", () => {
     expect(due[0].todayValue).toBe(1000);
     expect(due[0].todayTarget).toBe(3000);
     expect(due[0].todayProgress).toBeCloseTo(0.333, 2);
+    expect(due[0].logs).toHaveLength(1);
+    expect(due[0].logs[0].id).toBe(log1.id);
+  });
+
+  it("handles custom prayer counts in progress calculations", async () => {
+    const customPrayer = await habitService.createHabit({
+      name: "Custom Salah",
+      type: "prayer",
+      category: "mindfulness",
+      config: {
+        type: "prayer",
+        prayers: [
+          { name: "Fajr", time: "05:00" },
+          { name: "Dhuhr", time: "13:00" },
+          { name: "Asr", time: "16:30" },
+          { name: "Isha", time: "20:30" },
+        ],
+      },
+    });
+
+    await habitLogService.logHabit({
+      habitId: customPrayer.id,
+      date: "2026-08-04",
+      value: 1,
+      meta: "Fajr",
+    });
+
+    const due = await habitLogService.getTodayDueHabits("2026-08-04");
+    const found = due.find((h) => h.id === customPrayer.id);
+    expect(found).toBeDefined();
+    expect(found?.todayTarget).toBe(4);
+    expect(found?.todayProgress).toBe(0.25);
   });
 });

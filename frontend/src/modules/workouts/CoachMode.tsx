@@ -191,7 +191,7 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
     }
   }, [sessionId, startTime, taskId, onComplete]);
 
-  const [isSubmittingSet, setIsSubmittingSet] = useState(false);
+  const [, setIsSubmittingSet] = useState(false);
   const isSubmittingSetRef = useRef(false);
 
   const handleCompleteSet = useCallback(async () => {

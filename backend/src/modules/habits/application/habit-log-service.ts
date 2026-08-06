@@ -57,7 +57,12 @@ export class HabitLogService {
       } else if (habit.type === "timed" && "dailyGoalMinutes" in habit.config) {
         todayTarget = habit.config.dailyGoalMinutes;
       } else if (habit.type === "prayer") {
-        todayTarget = 5;
+        todayTarget =
+          "prayers" in habit.config &&
+          Array.isArray(habit.config.prayers) &&
+          habit.config.prayers.length > 0
+            ? habit.config.prayers.length
+            : 5;
       }
 
       const cStreak = currentStreak(habit, logs, today);
@@ -71,6 +76,7 @@ export class HabitLogService {
         todayProgress: progress,
         todayValue,
         todayTarget,
+        logs: habitTodayLogs,
       });
     }
 

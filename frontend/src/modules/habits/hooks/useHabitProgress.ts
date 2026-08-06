@@ -1,4 +1,9 @@
-import type { HabitDailyProgress, PrayerHabitConfig, WaterHabitConfig } from "@lifeos/contracts";
+import {
+  getClientDateString,
+  type HabitDailyProgress,
+  type PrayerHabitConfig,
+  type WaterHabitConfig,
+} from "@lifeos/contracts";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { habitApi } from "../api.js";
 
@@ -38,7 +43,7 @@ export function useHabitProgress() {
 
       const now = new Date();
       const currentHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const todayStr = now.toISOString().split("T")[0];
+      const todayStr = getClientDateString();
 
       for (const prog of progresses) {
         const habit = prog.habit;
@@ -97,7 +102,7 @@ export function useHabitProgress() {
   }, [progresses]);
 
   const addLog = async (habitId: string, value: number, meta?: string) => {
-    const date = new Date().toISOString().split("T")[0];
+    const date = getClientDateString();
     await habitApi.addLog(habitId, { date, value, meta });
     await fetchProgress();
   };

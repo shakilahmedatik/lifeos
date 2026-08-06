@@ -16,8 +16,15 @@ export function getDailyProgress(habit: HabitDefinition, logs: HabitLogEntry[]):
         return Math.min(totalValue / habit.config.dailyGoal, 1);
       }
       return 0;
-    case "prayer":
-      return Math.min(logs.length / 5, 1);
+    case "prayer": {
+      const prayerCount =
+        "prayers" in habit.config &&
+        Array.isArray(habit.config.prayers) &&
+        habit.config.prayers.length > 0
+          ? habit.config.prayers.length
+          : 5;
+      return Math.min(logs.length / prayerCount, 1);
+    }
     case "timed":
       if ("dailyGoalMinutes" in habit.config) {
         return Math.min(totalValue / habit.config.dailyGoalMinutes, 1);

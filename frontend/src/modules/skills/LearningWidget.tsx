@@ -6,6 +6,7 @@ import { StatCard } from "../../components/ui/StatCard.js";
 import { useLearningLogs } from "./hooks/useLearningLogs.js";
 import { useLearningResources } from "./hooks/useLearningResources.js";
 import { useSkillAreas } from "./hooks/useSkillCategories.js";
+import { formatLocalDate } from "./utils/date-utils.js";
 
 interface LearningWidgetProps {
   onViewAll: () => void;
@@ -107,7 +108,7 @@ export default function LearningWidget({ onViewAll }: LearningWidgetProps) {
                     )}
                   </div>
                   <span className="text-muted">
-                    {new Date(log.date).toLocaleDateString("en-US", {
+                    {formatLocalDate(log.date, {
                       month: "short",
                       day: "numeric",
                     })}

@@ -1,4 +1,4 @@
-import type { HabitDailyProgress } from "@lifeos/contracts";
+import { getClientDateString, type HabitDailyProgress } from "@lifeos/contracts";
 import { ArrowRight, CheckCheck } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Card, { CardHeader, CardTitle } from "../../components/ui/Card.js";
@@ -55,7 +55,7 @@ export function DashboardHabitsSection({
 
           const normalized: HabitDailyProgress = {
             habit: habit,
-            date: prog.date || new Date().toISOString().split("T")[0],
+            date: prog.date || getClientDateString(),
             currentValue: prog.currentValue ?? 0,
             targetValue: prog.targetValue ?? 1,
             progress: prog.progress ?? 0,
@@ -86,9 +86,23 @@ export function DashboardHabitsSection({
                 />
               );
             case "walking":
-              return <WalkingWidget key={habit.id} progress={normalized} onLog={handleLog} />;
+              return (
+                <WalkingWidget
+                  key={habit.id}
+                  progress={normalized}
+                  onLog={handleLog}
+                  onUnlog={onUnlog}
+                />
+              );
             case "timed":
-              return <TimedWidget key={habit.id} progress={normalized} onLog={handleLog} />;
+              return (
+                <TimedWidget
+                  key={habit.id}
+                  progress={normalized}
+                  onLog={handleLog}
+                  onUnlog={onUnlog}
+                />
+              );
             case "boolean":
               return (
                 <BooleanWidget

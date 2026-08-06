@@ -20,6 +20,10 @@ const BackupImportSchema = z.object({
   logs: z.array(NewLearningLogInputSchema),
 });
 
+const ProgressBatchSchema = z.object({
+  resourceIds: z.array(z.string().min(1)).min(1, "resourceIds array cannot be empty"),
+});
+
 export function createSkillsRouter(
   skillAreaService: SkillAreaService,
   resourceService: LearningResourceService,
@@ -120,12 +124,8 @@ export function createSkillsRouter(
     res.json(progress);
   });
 
-  router.post("/resources/progress-batch", async (req, res) => {
-    const { resourceIds }: { resourceIds: string[] } = req.body;
-    if (!Array.isArray(resourceIds) || resourceIds.length === 0) {
-      res.status(400).json({ error: "resourceIds array is required" });
-      return;
-    }
+  router.post("/resources/progress-batch", validateBody(ProgressBatchSchema), async (req, res) => {
+    const { resourceIds } = req.body;
     const MAX_BATCH = 100;
     const sliced = resourceIds.slice(0, MAX_BATCH);
     const progressArray: (import("@lifeos/contracts").ResourceWithProgress | undefined)[] = [];

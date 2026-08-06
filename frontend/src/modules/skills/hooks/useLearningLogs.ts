@@ -34,20 +34,41 @@ export function useLearningLogs(resourceId?: string) {
   }, [loadLogs]);
 
   const addLog = useCallback(async (input: NewLearningLogInput) => {
-    const newLog = await api.logLearningSession(input);
-    setLogs((prev) => [newLog, ...prev]);
-    return newLog;
+    try {
+      setError(null);
+      const newLog = await api.logLearningSession(input);
+      setLogs((prev) => [newLog, ...prev]);
+      return newLog;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to log session";
+      setError(msg);
+      throw err;
+    }
   }, []);
 
   const editLog = useCallback(async (id: string, patch: UpdateLearningLogInput) => {
-    const updated = await api.updateLearningLog(id, patch);
-    setLogs((prev) => prev.map((l) => (l.id === id ? updated : l)));
-    return updated;
+    try {
+      setError(null);
+      const updated = await api.updateLearningLog(id, patch);
+      setLogs((prev) => prev.map((l) => (l.id === id ? updated : l)));
+      return updated;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update log";
+      setError(msg);
+      throw err;
+    }
   }, []);
 
   const removeLog = useCallback(async (id: string) => {
-    await api.deleteLearningLog(id);
-    setLogs((prev) => prev.filter((l) => l.id !== id));
+    try {
+      setError(null);
+      await api.deleteLearningLog(id);
+      setLogs((prev) => prev.filter((l) => l.id !== id));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to delete log";
+      setError(msg);
+      throw err;
+    }
   }, []);
 
   return {

@@ -1,15 +1,15 @@
 import type { HabitWithStreak } from "@lifeos/contracts";
-import { Check, ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Plus, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DashboardPanel } from "../components/DashboardPanel.js";
 
 interface HabitCarouselWidgetProps {
   habits: HabitWithStreak[];
   onLog: (habitId: string, value: number, meta?: string) => void;
-  onUnlog: (logId: string) => void;
+  onUnlog?: (logId: string) => void;
 }
 
-export function HabitCarouselWidget({ habits, onLog }: HabitCarouselWidgetProps) {
+export function HabitCarouselWidget({ habits, onLog, onUnlog }: HabitCarouselWidgetProps) {
   const [index, setIndex] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -18,7 +18,7 @@ export function HabitCarouselWidget({ habits, onLog }: HabitCarouselWidgetProps)
     if (habits.length > 1) {
       timerRef.current = setInterval(() => {
         setIndex((i) => (i + 1) % habits.length);
-      }, 4000);
+      }, 30000);
     }
   }, [habits.length]);
 
@@ -48,6 +48,11 @@ export function HabitCarouselWidget({ habits, onLog }: HabitCarouselWidgetProps)
   const habit = habits[index % habits.length];
   const pct = Math.min(100, Math.round((habit.todayProgress || 0) * 100));
 
+  const val = habit.todayValue ?? 0;
+  const tgt = habit.todayTarget ?? 1;
+  const habitLogs = (habit as unknown as { logs?: Array<{ id: string }> }).logs || [];
+  const lastLog = habitLogs.length > 0 ? habitLogs[habitLogs.length - 1] : null;
+
   return (
     <DashboardPanel title="Habit Log" subtitle="streaks">
       <div className="flex flex-col items-center justify-between h-full min-h-42.5">
@@ -75,13 +80,13 @@ export function HabitCarouselWidget({ habits, onLog }: HabitCarouselWidgetProps)
             <div className="text-center my-0.5">
               <div className="font-mono text-xs font-semibold text-accent">
                 {habit.type === "water"
-                  ? `${habit.todayValue} / ${habit.todayTarget} ml`
+                  ? `${val} / ${tgt} ml`
                   : habit.type === "walking"
-                    ? `${habit.todayValue} / ${habit.todayTarget} ${"unit" in habit.config ? habit.config.unit : "steps"}`
+                    ? `${val} / ${tgt} ${"unit" in habit.config ? habit.config.unit : "steps"}`
                     : habit.type === "timed"
-                      ? `${habit.todayValue} / ${habit.todayTarget} min`
+                      ? `${val} / ${tgt} min`
                       : habit.type === "prayer"
-                        ? `${habit.todayValue} / 5 prayers`
+                        ? `${val} / ${tgt} prayers`
                         : habit.loggedToday
                           ? "Completed ✓"
                           : "Not completed"}
@@ -161,6 +166,17 @@ export function HabitCarouselWidget({ habits, onLog }: HabitCarouselWidgetProps)
                   className="flex items-center gap-1 text-xs font-mono bg-emerald-950/60 hover:bg-emerald-900/80 text-emerald-300 border border-emerald-800/50 px-2.5 py-0.5 rounded-lg transition-all"
                 >
                   <Plus size={11} /> Log Prayer (+1)
+                </button>
+              )}
+
+              {lastLog && onUnlog && (
+                <button
+                  type="button"
+                  onClick={() => onUnlog(lastLog.id)}
+                  title="Undo last log"
+                  className="flex items-center justify-center text-xs text-gray-400 hover:text-red-300 bg-gray-800/60 hover:bg-red-950/60 border border-gray-700/60 p-1 rounded-lg transition-all"
+                >
+                  <RotateCcw size={12} />
                 </button>
               )}
             </div>

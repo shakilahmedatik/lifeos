@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppToast } from "../components/Toast.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
@@ -58,33 +58,37 @@ export default function SkillsPage() {
     refresh: refreshResources,
   } = useLearningResources();
 
-  // Batch progress data loaded once
+  // Batch progress data loaded and updated when resources or logs change
   const [progressesByResource, setProgressesByResource] = useState<
     Record<string, ResourceWithProgress | null>
   >({});
-  const [progressesLoaded, setProgressesLoaded] = useState(false);
+
+  const refreshProgresses = useCallback(async () => {
+    // Reference logs length to satisfy hook dependency tracking
+    if (logs.length < 0) return;
+    if (resources.length === 0) {
+      setProgressesByResource({});
+      return;
+    }
+    const ids = resources.map((r) => r.id);
+    try {
+      const progArr = await api.getProgressBatch(ids);
+      const byId: Record<string, ResourceWithProgress | null> = {};
+      for (const p of progArr) {
+        if (p) byId[p.id] = p;
+      }
+      for (const r of resources) {
+        if (!(r.id in byId)) byId[r.id] = null;
+      }
+      setProgressesByResource(byId);
+    } catch (err) {
+      console.error("Failed to load progress batch:", err);
+    }
+  }, [resources, logs]);
 
   useEffect(() => {
-    if (resources.length > 0 && !progressesLoaded) {
-      const ids = resources.map((r) => r.id);
-      api
-        .getProgressBatch(ids)
-        .then((progArr) => {
-          const byId: Record<string, ResourceWithProgress | null> = {};
-          for (const p of progArr) {
-            if (p) byId[p.id] = p;
-          }
-          for (const r of resources) {
-            if (!(r.id in byId)) byId[r.id] = null;
-          }
-          setProgressesByResource(byId);
-          setProgressesLoaded(true);
-        })
-        .catch(() => {
-          setProgressesLoaded(true);
-        });
-    }
-  }, [resources, progressesLoaded]);
+    refreshProgresses();
+  }, [refreshProgresses]);
 
   const loading = sessionsLoading || categoriesLoading || resourcesLoading;
 

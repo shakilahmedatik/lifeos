@@ -63,7 +63,12 @@ export class HabitStatsService {
     } else if (habit.type === "timed" && "dailyGoalMinutes" in habit.config) {
       target = habit.config.dailyGoalMinutes;
     } else if (habit.type === "prayer") {
-      target = 5;
+      target =
+        "prayers" in habit.config &&
+        Array.isArray(habit.config.prayers) &&
+        habit.config.prayers.length > 0
+          ? habit.config.prayers.length
+          : 5;
     }
 
     const totalDays = period === "week" ? 7 : 30;

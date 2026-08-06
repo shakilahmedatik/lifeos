@@ -30,20 +30,41 @@ export function useLearningResources() {
   }, [loadResources]);
 
   const addResource = useCallback(async (input: NewLearningResourceInput) => {
-    const newResource = await api.createLearningResource(input);
-    setResources((prev) => [...prev, newResource]);
-    return newResource;
+    try {
+      setError(null);
+      const newResource = await api.createLearningResource(input);
+      setResources((prev) => [...prev, newResource]);
+      return newResource;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to create resource";
+      setError(msg);
+      throw err;
+    }
   }, []);
 
   const editResource = useCallback(async (id: string, patch: UpdateLearningResourceInput) => {
-    const updated = await api.updateLearningResource(id, patch);
-    setResources((prev) => prev.map((r) => (r.id === id ? updated : r)));
-    return updated;
+    try {
+      setError(null);
+      const updated = await api.updateLearningResource(id, patch);
+      setResources((prev) => prev.map((r) => (r.id === id ? updated : r)));
+      return updated;
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to update resource";
+      setError(msg);
+      throw err;
+    }
   }, []);
 
   const removeResource = useCallback(async (id: string) => {
-    await api.deleteLearningResource(id);
-    setResources((prev) => prev.filter((r) => r.id !== id));
+    try {
+      setError(null);
+      await api.deleteLearningResource(id);
+      setResources((prev) => prev.filter((r) => r.id !== id));
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Failed to delete resource";
+      setError(msg);
+      throw err;
+    }
   }, []);
 
   const getProgress = useCallback(async (id: string): Promise<ResourceWithProgress | null> => {

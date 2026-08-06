@@ -61,18 +61,22 @@ export class LearningLogService {
     };
   }
 
-  async getSkillAreaSummary(skillAreaId: string): Promise<SkillAreaSummary | undefined> {
+  async getSkillAreaSummary(
+    skillAreaId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<SkillAreaSummary | undefined> {
     const area = await this.skillAreaRepo.getById(skillAreaId);
     if (!area) return undefined;
     const resources = await this.resourceRepo.getBySkillArea(skillAreaId);
     const resourceIds = resources.map((r) => r.id);
-    const allLogs = await this.logRepo.getByResourceIds(resourceIds);
-    const totalMinutes = allLogs.reduce((s, l) => s + l.minutesSpent, 0);
+    const logs = await this.logRepo.getByResourceIds(resourceIds, startDate, endDate);
+    const totalMinutes = logs.reduce((s, l) => s + l.minutesSpent, 0);
     return {
       skillArea: area,
       totalResources: resources.length,
       totalMinutesSpent: totalMinutes,
-      totalSessions: allLogs.length,
+      totalSessions: logs.length,
     };
   }
 }
