@@ -42,6 +42,21 @@ export async function toggleFeedStatus(id: string): Promise<RssFeed> {
   return request<RssFeed>(`${API_BASE}/feeds/${id}/toggle`, { method: "PATCH" });
 }
 
+export async function refreshFeed(id: string): Promise<{ newArticles: number }> {
+  return request<{ newArticles: number }>(`${API_BASE}/feeds/${id}/refresh`, { method: "POST" });
+}
+
+export async function refreshAllFeeds(): Promise<{
+  success: boolean;
+  totalFeeds: number;
+  newArticles: number;
+}> {
+  return request<{ success: boolean; totalFeeds: number; newArticles: number }>(
+    `${API_BASE}/feeds/refresh-all`,
+    { method: "POST" },
+  );
+}
+
 // Article API
 export async function fetchArticles(params?: {
   feedId?: string;

@@ -50,6 +50,7 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
     },
 
     async runFetchCycleIfNeeded(): Promise<void> {
+      if (!_active) return;
       const now = Date.now();
       const intervalMs = fetchIntervalMinutes * 60 * 1000;
       if (running || (lastRunTimestamp > 0 && now - lastRunTimestamp < intervalMs)) {
@@ -59,7 +60,7 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
     },
 
     async runFetchCycle(): Promise<void> {
-      if (running) return;
+      if (!_active || running) return;
       running = true;
       try {
         logger.info("Running news fetch cycle");

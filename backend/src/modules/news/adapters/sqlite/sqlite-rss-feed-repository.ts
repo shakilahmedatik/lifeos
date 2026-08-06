@@ -109,6 +109,10 @@ export function createSqliteRssFeedRepository(client: Client): RssFeedRepository
     },
 
     async delete(id: string): Promise<boolean> {
+      await client.execute({
+        sql: "DELETE FROM news_articles WHERE feed_id = ?",
+        args: [id],
+      });
       const res = await client.execute({
         sql: "DELETE FROM rss_feeds WHERE id = ?",
         args: [id],

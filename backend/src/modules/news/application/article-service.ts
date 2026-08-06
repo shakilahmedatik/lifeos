@@ -18,8 +18,13 @@ export function createArticleService(
       return await articleRepository.getRecent(limit);
     },
 
-    async searchArticles(query: string, limit = 20, offset = 0): Promise<NewsArticle[]> {
-      return await articleRepository.search(query, limit, offset);
+    async searchArticles(
+      query: string,
+      feedId?: string,
+      limit = 20,
+      offset = 0,
+    ): Promise<NewsArticle[]> {
+      return await articleRepository.search(query, feedId, limit, offset);
     },
 
     async getArticleById(id: string): Promise<NewsArticle | undefined> {

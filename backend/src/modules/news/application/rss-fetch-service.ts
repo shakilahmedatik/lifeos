@@ -35,17 +35,23 @@ export function createRssFetchService(
         let newArticleCount = 0;
 
         for (const item of parsed.items) {
-          if (!item.link || !item.title) continue;
+          const rawLink = item.link?.trim();
+          const rawTitle = item.title?.trim();
+          if (!rawLink || !rawTitle) continue;
 
-          const existingArticle = await articleRepository.getByUrlAndFeedId(item.link, feedId);
+          const existingArticle = await articleRepository.getByUrlAndFeedId(rawLink, feedId);
           if (existingArticle) continue;
+
+          const rawSummary = item.contentSnippet || item.content || undefined;
+          const cleanSummary = sanitizeSummary(rawSummary);
+          const publishedAt = parseValidDate(item.pubDate || item.isoDate);
 
           await articleRepository.create({
             feedId,
-            title: item.title,
-            url: item.link,
-            summary: item.contentSnippet || item.content || undefined,
-            publishedAt: item.pubDate || item.isoDate || undefined,
+            title: rawTitle,
+            url: rawLink,
+            summary: cleanSummary,
+            publishedAt,
             fetchedAt: new Date().toISOString(),
             isRead: false,
           });
@@ -85,3 +91,17 @@ export function createRssFetchService(
     },
   };
 }
+
+function sanitizeSummary(str?: string): string | undefined {
+  if (!str) return undefined;
+  const clean = str.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  return clean.length > 0 ? clean : undefined;
+}
+
+function parseValidDate(dateStr?: string): string | undefined {
+  if (!dateStr) return undefined;
+  const timestamp = Date.parse(dateStr);
+  if (Number.isNaN(timestamp)) return undefined;
+  return new Date(timestamp).toISOString();
+}
+

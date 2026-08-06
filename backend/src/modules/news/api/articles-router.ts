@@ -12,14 +12,24 @@ export function createArticlesRouter(
 
   router.get("/", async (req, res) => {
     const { feedId, search, limit, offset } = req.query;
-    const limitNum = limit ? Number.parseInt(limit as string, 10) : 20;
-    const offsetNum = offset ? Number.parseInt(offset as string, 10) : 0;
+    const parsedLimit = Number.parseInt(limit as string, 10);
+    const parsedOffset = Number.parseInt(offset as string, 10);
+    const limitNum = Number.isNaN(parsedLimit) ? 20 : Math.max(1, Math.min(100, parsedLimit));
+    const offsetNum = Number.isNaN(parsedOffset) ? 0 : Math.max(0, parsedOffset);
+
+    const targetFeedId = typeof feedId === "string" && feedId.trim() ? feedId.trim() : undefined;
+    const targetSearch = typeof search === "string" && search.trim() ? search.trim() : undefined;
 
     let articles: Awaited<ReturnType<typeof articleService.getArticles>>;
-    if (search) {
-      articles = await articleService.searchArticles(search as string, limitNum, offsetNum);
-    } else if (feedId) {
-      articles = await articleService.getArticlesByFeedId(feedId as string, limitNum, offsetNum);
+    if (targetSearch) {
+      articles = await articleService.searchArticles(
+        targetSearch,
+        targetFeedId,
+        limitNum,
+        offsetNum,
+      );
+    } else if (targetFeedId) {
+      articles = await articleService.getArticlesByFeedId(targetFeedId, limitNum, offsetNum);
     } else {
       articles = await articleService.getArticles(limitNum, offsetNum);
     }

@@ -42,11 +42,31 @@ export function createSqliteNewsArticleRepository(client: Client): NewsArticleRe
       return rows.map(mapRowToNewsArticle);
     },
 
-    async search(query: string, limit = 20, offset = 0): Promise<NewsArticle[]> {
-      const res = await client.execute({
-        sql: "SELECT * FROM news_articles WHERE title LIKE ? OR summary LIKE ? ORDER BY published_at DESC LIMIT ? OFFSET ?",
-        args: [`%${query}%`, `%${query}%`, limit, offset],
-      });
+    async search(
+      query: string,
+      feedId?: string,
+      limit = 20,
+      offset = 0,
+    ): Promise<NewsArticle[]> {
+      const sanitizedQuery = query.replace(/[%_]/g, "\\$&").trim();
+      if (!sanitizedQuery) {
+        if (feedId) return this.getByFeedId(feedId, limit, offset);
+        return this.getAll(limit, offset);
+      }
+
+      let sql =
+        "SELECT * FROM news_articles WHERE (title LIKE ? ESCAPE '\\' OR summary LIKE ? ESCAPE '\\')";
+      const args: (string | number)[] = [`%${sanitizedQuery}%`, `%${sanitizedQuery}%`];
+
+      if (feedId) {
+        sql += " AND feed_id = ?";
+        args.push(feedId);
+      }
+
+      sql += " ORDER BY published_at DESC LIMIT ? OFFSET ?";
+      args.push(limit, offset);
+
+      const res = await client.execute({ sql, args });
       const rows = res.rows as unknown as Record<string, unknown>[];
       return rows.map(mapRowToNewsArticle);
     },

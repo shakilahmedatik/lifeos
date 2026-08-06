@@ -21,7 +21,7 @@ export interface NewsArticleRepository {
   getAll(limit?: number, offset?: number): Promise<NewsArticle[]>;
   getByFeedId(feedId: string, limit?: number, offset?: number): Promise<NewsArticle[]>;
   getRecent(limit: number): Promise<NewsArticle[]>;
-  search(query: string, limit?: number, offset?: number): Promise<NewsArticle[]>;
+  search(query: string, feedId?: string, limit?: number, offset?: number): Promise<NewsArticle[]>;
   getByUrlAndFeedId(url: string, feedId: string): Promise<NewsArticle | undefined>;
   create(article: Omit<NewsArticle, "id"> & { id?: string }): Promise<NewsArticle>;
   markAsRead(id: string): Promise<NewsArticle | undefined>;
