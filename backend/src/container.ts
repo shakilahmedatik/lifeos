@@ -80,7 +80,6 @@ export async function createContainer(config: AppConfig): Promise<Container> {
 
   const health = initHealthModule(db, getSchedulerStatus);
 
-
   const startBackgroundJobs = () => {
     news.newsScheduler.start();
     notifications.notificationScheduler.start();

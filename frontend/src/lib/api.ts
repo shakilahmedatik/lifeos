@@ -28,12 +28,12 @@ import type {
   WeeklySummary,
 } from "@lifeos/contracts";
 
-const API_BASE_URL = import.meta.env.DEV ? "" : (import.meta.env.VITE_API_URL || "");
+const API_BASE_URL = import.meta.env.DEV ? "" : import.meta.env.VITE_API_URL || "";
 
 export async function request<T>(url: string, options?: RequestInit): Promise<T> {
   let token =
     typeof localStorage !== "undefined" ? localStorage.getItem("lifeos_session_token") : null;
-  
+
   if (token) {
     try {
       token = JSON.parse(token);

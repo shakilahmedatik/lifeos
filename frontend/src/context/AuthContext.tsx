@@ -35,7 +35,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (token && token !== "session-token") {
           headers.Authorization = `Bearer ${token}`;
         }
-        const API_BASE_URL = import.meta.env.DEV ? "" : (import.meta.env.VITE_API_URL || "");
+        const API_BASE_URL = import.meta.env.DEV ? "" : import.meta.env.VITE_API_URL || "";
         const res = await fetch(`${API_BASE_URL}/api/auth/get-session`, {
           headers,
           credentials: "include",
@@ -91,7 +91,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   const logout = () => {
-    const API_BASE_URL = import.meta.env.DEV ? "" : (import.meta.env.VITE_API_URL || "");
+    const API_BASE_URL = import.meta.env.DEV ? "" : import.meta.env.VITE_API_URL || "";
     fetch(`${API_BASE_URL}/api/auth/sign-out`, {
       method: "POST",
       credentials: "include",

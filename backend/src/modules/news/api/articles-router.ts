@@ -1,9 +1,8 @@
 import { Router } from "express";
 
 import { createArticleService } from "../application/article-service.js";
-import type { NewsArticleRepository, RssFeedRepository } from "../ports/repositories.js";
-
 import type { createNewsScheduler } from "../application/news-scheduler.js";
+import type { NewsArticleRepository, RssFeedRepository } from "../ports/repositories.js";
 
 export function createArticlesRouter(
   articleRepository: NewsArticleRepository,
