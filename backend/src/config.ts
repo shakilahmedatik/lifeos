@@ -8,6 +8,7 @@ export interface AppConfig {
   databaseUrl?: string;
   tursoDatabaseToken?: string;
   betterAuthSecret?: string;
+  baseURL?: string;
   allowedOrigins: string[];
 }
 
@@ -27,6 +28,7 @@ export function loadConfig(): AppConfig {
     databaseUrl: process.env.DATABASE_URL,
     tursoDatabaseToken: process.env.TURSO_DATABASE_TOKEN,
     betterAuthSecret: process.env.BETTER_AUTH_SECRET,
+    baseURL: process.env.BETTER_AUTH_URL,
     allowedOrigins,
   };
 }

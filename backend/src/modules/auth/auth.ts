@@ -22,6 +22,7 @@ export function createAuth(client: Client, config: AppConfig): AuthInstance {
       db: kysely,
       type: "sqlite",
     },
+    baseURL: config.baseURL,
     secret: config.betterAuthSecret,
     emailAndPassword: {
       enabled: true,
