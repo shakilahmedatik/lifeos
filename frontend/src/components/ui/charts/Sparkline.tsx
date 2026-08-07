@@ -35,7 +35,7 @@ export function Sparkline({
 
   if (data.length === 0) {
     return (
-      <svg width={width} height={height} className={className}>
+      <svg viewBox={`0 0 ${width} ${height}`} className={className} preserveAspectRatio="none">
         <line
           x1={2}
           y1={height / 2}
@@ -52,7 +52,7 @@ export function Sparkline({
   const pathD = coords.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
 
   return (
-    <svg width={width} height={height} className={className}>
+    <svg viewBox={`0 0 ${width} ${height}`} className={className} preserveAspectRatio="none">
       <path
         d={pathD}
         fill="none"

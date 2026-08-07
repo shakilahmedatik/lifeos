@@ -71,7 +71,7 @@ export function DonutChart({
   let cumulativeAngle = -90;
 
   const segments = data.map((d, i) => {
-    const angle = (d.value / total) * 360;
+    const angle = (d.value / total) * 359.999;
     const startAngle = cumulativeAngle;
     const endAngle = cumulativeAngle + angle;
     cumulativeAngle = endAngle;

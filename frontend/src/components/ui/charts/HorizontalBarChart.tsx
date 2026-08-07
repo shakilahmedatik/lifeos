@@ -17,8 +17,8 @@ const DEFAULT_COLORS = [
   "var(--color-success)",
   "var(--color-danger)",
   "var(--color-warning)",
-  "#8b5cf6",
-  "#06b6d4",
+  "var(--color-primary)",
+  "var(--color-secondary)",
 ];
 
 export function HorizontalBarChart({

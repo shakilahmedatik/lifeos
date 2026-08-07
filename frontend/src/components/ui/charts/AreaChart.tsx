@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useRef, useState } from "react";
+import { useCallback, useId, useMemo, useRef, useState } from "react";
 import { ChartTooltip } from "./ChartTooltip.js";
 import type { TooltipData } from "./types.js";
 
@@ -15,7 +15,7 @@ interface AreaChartProps {
   className?: string;
 }
 
-const PADDING = { top: 10, right: 10, bottom: 24, left: 10 };
+const DEFAULT_PADDING = { top: 10, right: 10, bottom: 24, left: 10 };
 
 export function AreaChart({
   data,
@@ -32,6 +32,7 @@ export function AreaChart({
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const PADDING = { ...DEFAULT_PADDING, left: showYAxis ? 40 : DEFAULT_PADDING.left };
 
   const maxValue = Math.max(...data.map((d) => d.value), 1);
   const minValue = 0;
@@ -102,7 +103,8 @@ export function AreaChart({
   const chartHeight = height - PADDING.top - PADDING.bottom;
   const gridLines = 4;
   const gridStep = chartHeight / gridLines;
-  const gradientId = `area-gradient-${color.replace(/[^a-z0-9]/gi, "")}`;
+  const instanceId = useId();
+  const gradientId = `area-gradient-${instanceId.replace(/[^a-z0-9]/gi, "")}`;
 
   return (
     <div className={`relative ${className}`} style={{ height }}>

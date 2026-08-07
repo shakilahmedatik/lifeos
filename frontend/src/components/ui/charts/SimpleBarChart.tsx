@@ -20,11 +20,11 @@ const DEFAULT_COLORS = [
   "var(--color-success)",
   "var(--color-danger)",
   "var(--color-warning)",
-  "#8b5cf6",
-  "#06b6d4",
+  "var(--color-primary)",
+  "var(--color-secondary)",
 ];
 
-const PADDING = { top: 10, right: 10, bottom: 24, left: 10 };
+const DEFAULT_PADDING = { top: 10, right: 10, bottom: 24, left: 10 };
 
 export function SimpleBarChart({
   data,
@@ -40,6 +40,7 @@ export function SimpleBarChart({
 }: SimpleBarChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
+  const PADDING = { ...DEFAULT_PADDING, left: showYAxis ? 40 : DEFAULT_PADDING.left };
 
   const maxValue = Math.max(...data.map((d) => d.value), 1);
 
