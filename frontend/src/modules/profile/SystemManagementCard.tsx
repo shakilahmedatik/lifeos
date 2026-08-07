@@ -1,11 +1,10 @@
 import { Activity, Database, Download, Server } from "lucide-react";
-import type React from "react";
-import { useEffect, useState } from "react";
+import { type FC, useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
 import { api } from "../../lib/api.js";
 
-export const SystemManagementCard: React.FC = () => {
+export const SystemManagementCard: FC = () => {
   const [healthStatus, setHealthStatus] = useState<string>("Checking...");
   const [downloading, setDownloading] = useState(false);
   const [downloadMsg, setDownloadMsg] = useState<string | null>(null);

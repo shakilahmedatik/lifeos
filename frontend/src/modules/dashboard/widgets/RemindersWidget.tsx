@@ -3,9 +3,9 @@ import { getClientDateString } from "@lifeos/contracts/date-utils";
 import { Bell, Calendar, CheckCircle2, Plus } from "lucide-react";
 import { useState } from "react";
 import Button from "../../../components/ui/Button.js";
+import { EmptyState } from "../../../components/ui/EmptyState.js";
 import Modal from "../../../components/ui/Modal.js";
 import { Select } from "../../../components/ui/Select.js";
-import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { DashboardPanel } from "../components/DashboardPanel.js";
 
 interface RemindersWidgetProps {

@@ -165,7 +165,7 @@ export function MonthlyView({ refreshTrigger }: MonthlyViewProps) {
             {balances.length === 0 ? (
               <EmptyState title="No accounts available" />
             ) : (
-              <div className="space-y-1.5 max-h-[200px] overflow-y-auto pr-1 scrollbar-thin">
+              <div className="space-y-1.5 max-h-50 overflow-y-auto pr-1 scrollbar-thin">
                 {balances.map((acc) => (
                   <div
                     key={acc.id}
@@ -241,7 +241,7 @@ export function MonthlyView({ refreshTrigger }: MonthlyViewProps) {
                 <div className="flex justify-center">
                   <DonutChart data={incomeDonutData} size={144} formatValue={(v) => formatBDT(v)} />
                 </div>
-                <div className="space-y-1 max-h-[90px] overflow-y-auto pr-1 scrollbar-thin">
+                <div className="space-y-1 max-h-22.5 overflow-y-auto pr-1 scrollbar-thin">
                   {incomeDonutData.map((item, index) => {
                     const percent =
                       totalEarned > 0 ? Math.round((item.value / totalEarned) * 100) : 0;
@@ -288,7 +288,7 @@ export function MonthlyView({ refreshTrigger }: MonthlyViewProps) {
                   formatValue={(v) => formatBDT(v)}
                   barHeight={18}
                 />
-                <div className="space-y-1 max-h-[90px] overflow-y-auto pr-1 scrollbar-thin">
+                <div className="space-y-1 max-h-22.5 overflow-y-auto pr-1 scrollbar-thin">
                   {expenseBarData.map((item, index) => {
                     const percent =
                       totalSpent > 0 ? Math.round((item.value / totalSpent) * 100) : 0;

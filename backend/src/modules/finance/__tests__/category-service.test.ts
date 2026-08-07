@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { CategoryService } from "../application/category-service.js";
-import type { Category, NewCategoryInput } from "../domain/types.js";
+import type { Category, NewCategoryInput, Transaction } from "../domain/types.js";
 import type { CategoryRepository } from "../ports/category-repository.js";
 
 import type { TransactionRepository } from "../ports/transaction-repository.js";
@@ -148,11 +148,16 @@ describe("CategoryService", () => {
 
   it("prevents deleting a category with existing transactions", async () => {
     const cat = await service.createCategory({ name: "Shopping", kind: "expense" });
+    const now = new Date().toISOString();
     transactionRepo.mockTransactions.set("tx-1", {
       id: "tx-1",
       accountId: "acc-1",
       categoryId: cat.id,
       amountMinor: 1000,
+      date: now,
+      currency: "BDT",
+      createdAt: now,
+      updatedAt: now,
     });
     await expect(service.deleteCategory(cat.id)).rejects.toThrow(
       "Cannot delete category with existing transactions. Archive the category instead.",

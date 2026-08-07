@@ -138,9 +138,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
   return (
     <Modal open={true} onClose={onClose} title="Edit Task" size="md">
       <div className="space-y-4">
-        {error && (
-          <ErrorBanner message={error} className="mb-4" />
-        )}
+        {error && <ErrorBanner message={error} className="mb-4" />}
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
@@ -357,9 +355,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                         onChange={() => handleToggleSubtask(st.id)}
                         className="rounded bg-card-hover border-border-subtle accent-blue-500"
                       />
-                      <span
-                        className={`truncate ${st.completed ? "line-through text-muted" : ""}`}
-                      >
+                      <span className={`truncate ${st.completed ? "line-through text-muted" : ""}`}>
                         {st.title}
                       </span>
                     </label>
@@ -426,7 +422,10 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                 </div>
 
                 <div>
-                  <label htmlFor="edit-reminder-sound" className="block text-xs text-secondary mb-1">
+                  <label
+                    htmlFor="edit-reminder-sound"
+                    className="block text-xs text-secondary mb-1"
+                  >
                     Sound
                   </label>
                   <select

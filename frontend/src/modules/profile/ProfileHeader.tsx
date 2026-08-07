@@ -25,7 +25,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user }) => {
       <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-start gap-6 text-center sm:text-left">
         {/* Avatar Ring */}
         <div className="relative group shrink-0">
-          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-300 p-0.5 shadow-lg shadow-amber-500/20">
+          <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl bg-linear-to-tr from-amber-500 to-amber-300 p-0.5 shadow-lg shadow-amber-500/20">
             <div className="w-full h-full bg-surface rounded-[14px] flex items-center justify-center text-amber-400 font-bold text-2xl sm:text-3xl tracking-wider">
               {initials || <UserIcon className="w-10 h-10 text-amber-400" />}
             </div>

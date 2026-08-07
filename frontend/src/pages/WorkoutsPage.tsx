@@ -194,7 +194,9 @@ export default function WorkoutsPage() {
                       </CardHeader>
                       <CardContent>
                         {w.description && (
-                          <p className="text-sm text-secondary mb-4 line-clamp-2">{w.description}</p>
+                          <p className="text-sm text-secondary mb-4 line-clamp-2">
+                            {w.description}
+                          </p>
                         )}
                         <div className="flex items-center gap-2">
                           <Badge variant="default" className="bg-card-solid">

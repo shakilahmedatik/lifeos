@@ -194,9 +194,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
           </Button>
         </div>
 
-        {formError && (
-          <ErrorBanner message={formError} />
-        )}
+        {formError && <ErrorBanner message={formError} />}
 
         <Input
           id="task-title"

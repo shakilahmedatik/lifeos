@@ -1,6 +1,6 @@
 import { useCallback, useState } from "react";
-import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
 import { RelativeTime } from "../../components/ui/RelativeTime.js";
+import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
 
 import type { NewsArticle } from "../news/api.ts";
 import { fetchTickerArticles } from "../news/api.ts";
@@ -27,8 +27,6 @@ export function NewsTicker() {
   const handleArticleClick = (article: NewsArticle) => {
     window.open(article.url, "_blank");
   };
-
-
 
   if (loading) {
     return (

@@ -1,5 +1,4 @@
-import type React from "react";
-import { createContext, useContext, useEffect, useState } from "react";
+import { createContext, type FC, type ReactNode, useContext, useEffect, useState } from "react";
 import { useLocalStorage } from "../lib/hooks/useLocalStorage.js";
 
 export interface UserSession {
@@ -19,8 +18,11 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken, removeToken] = useLocalStorage<string | null>("lifeos_session_token", null);
+export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
+  const [token, setToken, removeToken] = useLocalStorage<string | null>(
+    "lifeos_session_token",
+    null,
+  );
   const [user, setUser, removeUser] = useLocalStorage<UserSession | null>("lifeos_user", null);
 
   const [isLoadingSession, setIsLoadingSession] = useState<boolean>(true);
@@ -63,7 +65,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => {
       isMounted = false;
     };
-  }, [token]);
+  }, [token, removeToken, removeUser, setToken, setUser]);
 
   const login = (newToken: string, newUser: UserSession) => {
     setToken(newToken);

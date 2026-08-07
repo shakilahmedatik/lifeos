@@ -248,6 +248,7 @@ export interface HabitWithStreak extends HabitDefinition {
   todayProgress: number;
   todayValue: number;
   todayTarget: number;
+  logs?: HabitLogEntry[];
 }
 
 export interface HabitStats {

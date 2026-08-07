@@ -71,7 +71,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
           placeholder="Habit name"
         />
       </FormField>
-      
+
       <FormField label="Color Theme">
         <ColorPicker value={color} onChange={setColor} />
       </FormField>

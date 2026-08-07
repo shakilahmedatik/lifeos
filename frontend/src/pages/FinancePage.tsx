@@ -1,6 +1,7 @@
 import type { Transaction } from "@lifeos/contracts";
 import { Plus } from "lucide-react";
 import { useCallback, useState } from "react";
+import BackupPanel from "../components/ui/BackupPanel.js";
 import Button from "../components/ui/Button.js";
 import Modal from "../components/ui/Modal.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
@@ -13,7 +14,6 @@ import {
   TransactionList,
   useFinanceBackup,
 } from "../modules/finance/index.js";
-import BackupPanel from "../components/ui/BackupPanel.js";
 
 type Tab = "overview" | "transactions" | "accounts" | "categories" | "backup";
 
@@ -85,7 +85,7 @@ export default function FinancePage() {
         </TabsContent>
 
         <TabsContent value="backup" className="mt-6">
-          <BackupPanel 
+          <BackupPanel
             entityName="Finance"
             onExportCsv={exportCsv}
             onExportJson={exportJson}

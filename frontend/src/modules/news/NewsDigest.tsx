@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Play, Search } from "lucide-react";
 import { EmptyState } from "../../components/ui/EmptyState.js";
 import type { NewsArticle, RssFeed } from "./api.ts";
 import { fetchArticles, fetchFeeds, markArticleAsRead } from "./api.ts";
@@ -191,9 +190,7 @@ export function NewsDigest() {
               <div className="mb-1 flex items-center gap-2">
                 <h3 className="font-medium">{article.title}</h3>
                 {article.isRead && (
-                  <span className="rounded bg-gray-200 px-2 py-0.5 text-xs text-muted">
-                    Read
-                  </span>
+                  <span className="rounded bg-gray-200 px-2 py-0.5 text-xs text-muted">Read</span>
                 )}
               </div>
               {article.summary && (

@@ -1,7 +1,7 @@
 import { useState } from "react";
+import BackupPanel from "../components/ui/BackupPanel.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
-import BackupPanel from "../components/ui/BackupPanel.js";
 import { habitApi } from "../modules/habits/api.js";
 import { HabitBuilder } from "../modules/habits/components/HabitBuilder.js";
 import { HabitHistory } from "../modules/habits/components/HabitHistory.js";
@@ -70,14 +70,14 @@ export default function HabitsPage() {
         </TabsContent>
 
         <TabsContent value="backup">
-          <BackupPanel 
+          <BackupPanel
             entityName="Habits"
             onExportJson={() => habitApi.exportData()}
             onImportJson={async (data) => {
               await habitApi.importData(data);
               handleImportComplete();
               return { success: true, message: "Habits imported successfully" };
-            }} 
+            }}
           />
         </TabsContent>
       </Tabs>

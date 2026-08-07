@@ -6,8 +6,7 @@ import {
   Trash2 as TrashIcon,
   Video as VideoIcon,
 } from "lucide-react";
-import type React from "react";
-import { useState } from "react";
+import { type SubmitEvent, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
 import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
@@ -96,7 +95,7 @@ export function ExerciseLibrary() {
     setIsModalOpen(true);
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     try {
       if (editingExercise) {

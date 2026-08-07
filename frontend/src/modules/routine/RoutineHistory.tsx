@@ -6,7 +6,6 @@ import {
   Clock as ClockIcon,
   Filter as FilterIcon,
   RefreshCw as RefreshCwIcon,
-  Search as SearchIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
 import Badge from "../../components/ui/Badge.js";

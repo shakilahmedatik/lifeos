@@ -1,3 +1,4 @@
+import type { AccountType, CategoryKind } from "@lifeos/contracts";
 import {
   createAccount,
   createCategory,
@@ -6,6 +7,36 @@ import {
   fetchCategories,
   fetchTransactionsByDateRange,
 } from "../api.js";
+
+export interface FinanceBackupAccount {
+  id?: string;
+  name?: string;
+  type?: AccountType;
+}
+
+export interface FinanceBackupCategory {
+  id?: string;
+  name?: string;
+  kind?: CategoryKind;
+}
+
+export interface FinanceBackupTransaction {
+  id?: string;
+  accountId?: string;
+  categoryId?: string;
+  date?: string;
+  amountMinor?: number;
+  currency?: string;
+  note?: string;
+}
+
+export interface FinanceBackupData {
+  version?: string;
+  exportedAt?: string;
+  accounts?: FinanceBackupAccount[];
+  categories?: FinanceBackupCategory[];
+  transactions?: FinanceBackupTransaction[];
+}
 
 export function useFinanceBackup(onImportComplete?: () => void) {
   const exportCsv = async () => {
@@ -43,7 +74,7 @@ export function useFinanceBackup(onImportComplete?: () => void) {
     return [headers.join(","), ...rows].join("\n");
   };
 
-  const exportJson = async () => {
+  const exportJson = async (): Promise<FinanceBackupData> => {
     const now = new Date();
     const startDate = "1900-01-01";
     const endDate = "2100-01-01";
@@ -63,7 +94,7 @@ export function useFinanceBackup(onImportComplete?: () => void) {
     };
   };
 
-  const importJson = async (data: any) => {
+  const importJson = async (data: FinanceBackupData) => {
     if (!data || (!data.accounts && !data.categories && !data.transactions)) {
       return {
         success: false,
@@ -84,8 +115,9 @@ export function useFinanceBackup(onImportComplete?: () => void) {
     if (Array.isArray(data.accounts)) {
       for (const acc of data.accounts) {
         try {
+          if (!acc.name || !acc.type) continue;
           const matched = existingAccounts.find(
-            (ea) => ea.name === acc.name && ea.type === acc.type
+            (ea) => ea.name === acc.name && ea.type === acc.type,
           );
           if (matched) {
             if (acc.id) accountIdMap.set(acc.id, matched.id);
@@ -101,8 +133,9 @@ export function useFinanceBackup(onImportComplete?: () => void) {
     if (Array.isArray(data.categories)) {
       for (const cat of data.categories) {
         try {
+          if (!cat.name || !cat.kind) continue;
           const matched = existingCategories.find(
-            (ec) => ec.name === cat.name && ec.kind === cat.kind
+            (ec) => ec.name === cat.name && ec.kind === cat.kind,
           );
           if (matched) {
             if (cat.id) categoryIdMap.set(cat.id, matched.id);
@@ -118,6 +151,9 @@ export function useFinanceBackup(onImportComplete?: () => void) {
     if (Array.isArray(data.transactions)) {
       for (const tx of data.transactions) {
         try {
+          if (!tx.accountId || !tx.categoryId || !tx.date || typeof tx.amountMinor !== "number") {
+            continue;
+          }
           const targetAccId = accountIdMap.get(tx.accountId) ?? tx.accountId;
           const targetCatId = categoryIdMap.get(tx.categoryId) ?? tx.categoryId;
 

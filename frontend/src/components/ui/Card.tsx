@@ -1,6 +1,6 @@
-import type { ReactNode, KeyboardEvent } from "react";
-import { TiltCard } from "./TiltCard.js";
+import type { KeyboardEvent, ReactNode } from "react";
 import { cn } from "../../lib/utils.js";
+import { TiltCard } from "./TiltCard.js";
 
 interface CardProps {
   children: ReactNode;
@@ -51,7 +51,7 @@ export default function Card({
         hover && "hover:bg-card-hover transition-colors duration-200",
         accent && `border-l-4 ${accent}`,
         onClick && "cursor-pointer",
-        className
+        className,
       )}
       onClick={onClick}
       {...interactiveProps}
@@ -68,7 +68,7 @@ export default function Card({
             "bg-card border border-border rounded-xl h-full w-full",
             paddingStyles[padding],
             hover && "hover:bg-card-hover transition-colors duration-200",
-            accent && `border-l-4 ${accent}`
+            accent && `border-l-4 ${accent}`,
           )}
         >
           {children}

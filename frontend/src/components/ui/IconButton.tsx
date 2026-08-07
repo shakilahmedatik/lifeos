@@ -1,4 +1,4 @@
-import type { ReactNode, ButtonHTMLAttributes } from "react";
+import type { ButtonHTMLAttributes, ReactNode } from "react";
 import { cn } from "../../lib/utils.js";
 
 interface IconButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
@@ -15,7 +15,7 @@ export default function IconButton({
   ...props
 }: IconButtonProps) {
   const baseStyles = "inline-flex items-center justify-center rounded-lg transition-colors";
-  
+
   const variantStyles = {
     ghost: "text-muted hover:text-primary hover:bg-card-hover",
     solid: "bg-surface-elevated text-primary hover:bg-card-hover",

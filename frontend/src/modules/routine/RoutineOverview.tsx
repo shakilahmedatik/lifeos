@@ -51,7 +51,7 @@ export function RoutineOverview({
     <div className="space-y-6 animate-fade-in">
       {/* Metric Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-blue-900/30 to-gray-800/80 border-blue-500/20">
+        <Card className="bg-linear-to-br from-blue-900/30 to-gray-800/80 border-blue-500/20">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-blue-300">Completion Rate</p>
@@ -66,7 +66,7 @@ export function RoutineOverview({
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-emerald-900/30 to-gray-800/80 border-emerald-500/20">
+        <Card className="bg-linear-to-br from-emerald-900/30 to-gray-800/80 border-emerald-500/20">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-emerald-300">Today's Progress</p>
@@ -83,7 +83,7 @@ export function RoutineOverview({
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-900/30 to-gray-800/80 border-purple-500/20">
+        <Card className="bg-linear-to-br from-purple-900/30 to-gray-800/80 border-purple-500/20">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-purple-300">Scheduled Time</p>
@@ -96,7 +96,7 @@ export function RoutineOverview({
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-amber-900/30 to-gray-800/80 border-amber-500/20">
+        <Card className="bg-linear-to-br from-amber-900/30 to-gray-800/80 border-amber-500/20">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-amber-300">Task Status</p>
@@ -204,7 +204,7 @@ export function RoutineOverview({
                     </span>
                     <div className="w-full bg-card-hover rounded-t-md relative h-28 flex items-end overflow-hidden">
                       <div
-                        className="w-full bg-gradient-to-t from-emerald-600 to-blue-500 rounded-t-md transition-all duration-500"
+                        className="w-full bg-linear-to-t from-emerald-600 to-blue-500 rounded-t-md transition-all duration-500"
                         style={{ height: `${Math.max(rate, 5)}%` }}
                         title={`${day.date}: ${rate}% completed`}
                       />

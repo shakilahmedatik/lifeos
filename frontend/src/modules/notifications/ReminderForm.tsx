@@ -1,6 +1,4 @@
 import { useState } from "react";
-import { useAppToast } from "../../components/Toast.js";
-import Button from "../../components/ui/Button.js";
 import { ErrorBanner } from "../../components/ui/ErrorBanner.js";
 import { request } from "../../lib/api.js";
 
@@ -54,9 +52,7 @@ export function ReminderForm({ taskId, taskTitle, onSubmit, onCancel }: Reminder
   return (
     <div className="bg-card border border-border rounded-xl p-4 text-primary">
       <h3 className="font-semibold text-primary mb-3">Set Reminder for: {taskTitle}</h3>
-      {error && (
-        <ErrorBanner message={error} className="mb-3" />
-      )}
+      {error && <ErrorBanner message={error} className="mb-3" />}
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>
           <label htmlFor="reminder-time" className="block text-xs font-medium text-secondary mb-1">

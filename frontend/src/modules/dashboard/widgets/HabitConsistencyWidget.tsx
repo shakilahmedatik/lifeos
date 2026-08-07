@@ -1,8 +1,8 @@
 import type { DashboardHabitConsistency } from "@lifeos/contracts";
 import { Flame } from "lucide-react";
 import { Sparkline } from "../../../components/ui/charts/Sparkline.js";
-import { DashboardPanel } from "../components/DashboardPanel.js";
 import { EmptyState } from "../../../components/ui/EmptyState.js";
+import { DashboardPanel } from "../components/DashboardPanel.js";
 
 interface HabitConsistencyWidgetProps {
   habits: DashboardHabitConsistency[];

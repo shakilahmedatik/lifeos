@@ -50,8 +50,7 @@ export function WorkoutExerciseItem({
               {we.repsArray && we.repsArray.length > 0 ? (
                 <span>
                   <span className="font-medium text-primary">{we.sets}</span> sets &times;{" "}
-                  <span className="font-medium text-primary">[{we.repsArray.join(", ")}]</span>{" "}
-                  reps
+                  <span className="font-medium text-primary">[{we.repsArray.join(", ")}]</span> reps
                 </span>
               ) : (
                 <span>

@@ -1,4 +1,4 @@
-import { Dumbbell as DumbbellIcon, Play } from "lucide-react";
+import { Dumbbell as DumbbellIcon } from "lucide-react";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
 import { EmptyState } from "../../components/ui/EmptyState.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";

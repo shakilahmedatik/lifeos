@@ -4,21 +4,20 @@ import {
   Newspaper as NewspaperIcon,
   Plus as PlusIcon,
   RefreshCw as RefreshCwIcon,
-  Search as SearchIcon,
   Trash2 as TrashIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
+import PageSkeleton from "../components/PageSkeleton.js";
 import { useAppToast } from "../components/Toast.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { FilterPills } from "../components/ui/FilterPills.js";
-import { SearchInput } from "../components/ui/SearchInput.js";
-import PageSkeleton from "../components/PageSkeleton.js";
 import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
 import ModalFooter from "../components/ui/ModalFooter.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
+import { SearchInput } from "../components/ui/SearchInput.js";
 import * as newsApi from "../modules/news/api.js";
 
 export default function NewsPage() {
@@ -174,11 +173,15 @@ export default function NewsPage() {
         {feeds.length > 0 && (
           <FilterPills
             options={["All Feeds", ...feeds.map((f) => f.title)]}
-            active={filterFeedId ? feeds.find((f) => f.id === filterFeedId)?.title || "All Feeds" : "All Feeds"}
+            active={
+              filterFeedId
+                ? feeds.find((f) => f.id === filterFeedId)?.title || "All Feeds"
+                : "All Feeds"
+            }
             onChange={(val) => {
               if (val === "All Feeds") setFilterFeedId("");
               else {
-                const f = feeds.find(x => x.title === val);
+                const f = feeds.find((x) => x.title === val);
                 if (f) setFilterFeedId(f.id);
               }
             }}

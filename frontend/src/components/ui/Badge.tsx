@@ -48,8 +48,9 @@ export default function Badge({
     "inline-flex items-center font-medium rounded-full",
     variantStyles[variant],
     sizeStyles[size],
-    onClick && "cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent",
-    className
+    onClick &&
+      "cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent",
+    className,
   );
 
   if (onClick) {

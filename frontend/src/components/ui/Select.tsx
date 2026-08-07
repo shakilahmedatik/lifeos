@@ -1,4 +1,4 @@
-import { type SelectHTMLAttributes, useId, forwardRef } from "react";
+import { forwardRef, type SelectHTMLAttributes, useId } from "react";
 import { cn } from "../../lib/utils.js";
 import { FormField } from "./FormField.js";
 
@@ -21,7 +21,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     const selectId = id || generatedId;
 
     return (
-      <FormField label={label || ""} error={error} className={className}>
+      <FormField label={label || ""} htmlFor={selectId} error={error} className={className}>
         <select
           id={selectId}
           ref={ref}
@@ -29,7 +29,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             "w-full bg-input/40 border border-border rounded-lg px-3 py-2 text-sm text-primary",
             "focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50",
             "disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
-            error && "border-danger focus:border-danger focus:ring-danger/50"
+            error && "border-danger focus:border-danger focus:ring-danger/50",
           )}
           {...props}
         >
@@ -47,5 +47,5 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
         {helperText && !error && <p className="text-xs text-muted">{helperText}</p>}
       </FormField>
     );
-  }
+  },
 );

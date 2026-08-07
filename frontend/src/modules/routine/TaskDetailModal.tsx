@@ -156,9 +156,7 @@ export default function TaskDetailModal({
         {task.notes && (
           <div className="bg-card p-3.5 rounded-xl border border-border space-y-1">
             <h3 className="text-xs font-semibold text-secondary uppercase tracking-wider">Notes</h3>
-            <p className="text-xs text-primary whitespace-pre-wrap leading-relaxed">
-              {task.notes}
-            </p>
+            <p className="text-xs text-primary whitespace-pre-wrap leading-relaxed">{task.notes}</p>
           </div>
         )}
 

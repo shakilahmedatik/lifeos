@@ -1,7 +1,7 @@
 import type { Task } from "@lifeos/contracts";
 import { useState } from "react";
-import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
 import Card from "../../components/ui/Card.js";
+import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
 import TaskCategoryBadge, { CATEGORY_COLORS } from "./TaskCategoryBadge.js";
 import { computeDurationMins } from "./TaskList.js";
 
@@ -46,8 +46,8 @@ export default function TaskTimelineView({
       </div>
 
       {/* Scrollable Timeline Grid Container */}
-      <div className="relative h-[680px] overflow-y-auto bg-surface rounded-xl border border-border p-2 scrollbar-thin">
-        <div className="relative h-[1440px] w-full min-w-[500px]">
+      <div className="relative h-170 overflow-y-auto bg-surface rounded-xl border border-border p-2 scrollbar-thin">
+        <div className="relative h-360 w-full min-w-125">
           {/* Hour Grid Rows (60px per hour) */}
           {hours.map((hour) => {
             const topPx = hour * 60;

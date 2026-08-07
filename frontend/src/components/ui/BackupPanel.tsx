@@ -1,25 +1,25 @@
 import { Download, FileSpreadsheet, Upload } from "lucide-react";
 import type React from "react";
 import { useRef, useState } from "react";
+import Alert from "./Alert.js";
 import Button from "./Button.js";
 import Card from "./Card.js";
-import Alert from "./Alert.js";
 
-export interface BackupPanelProps {
+export interface BackupPanelProps<T = unknown> {
   entityName: string;
-  onExportJson: () => Promise<any>;
+  onExportJson: () => Promise<T>;
   onExportCsv?: () => Promise<string>;
-  onImportJson: (data: any) => Promise<{ success: boolean; message: string }>;
+  onImportJson: (data: T) => Promise<{ success: boolean; message: string }>;
   header?: React.ReactNode;
 }
 
-export default function BackupPanel({
+export default function BackupPanel<T = unknown>({
   entityName,
   onExportJson,
   onExportCsv,
   onImportJson,
   header,
-}: BackupPanelProps) {
+}: BackupPanelProps<T>) {
   const [exportingCsv, setExportingCsv] = useState(false);
   const [exportingJson, setExportingJson] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -50,7 +50,7 @@ export default function BackupPanel({
       downloadFile(
         csvStr,
         `${entityName.toLowerCase()}-transactions-${new Date().toISOString().split("T")[0]}.csv`,
-        "text/csv;charset=utf-8;"
+        "text/csv;charset=utf-8;",
       );
     } finally {
       setExportingCsv(false);
@@ -65,7 +65,7 @@ export default function BackupPanel({
       downloadFile(
         jsonStr,
         `lifeos-${entityName.toLowerCase()}-backup-${new Date().toISOString().split("T")[0]}.json`,
-        "application/json"
+        "application/json",
       );
     } finally {
       setExportingJson(false);
@@ -172,9 +172,7 @@ export default function BackupPanel({
         </Button>
       </Card>
 
-      {importResult && (
-        <Alert variant={importResult.type} message={importResult.message} />
-      )}
+      {importResult && <Alert variant={importResult.type} message={importResult.message} />}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import type { NotificationSoundType } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.js";
 import { useLocalStorage } from "../../lib/hooks/useLocalStorage.js";
@@ -8,7 +9,10 @@ const LOCAL_STORAGE_KEY = "lifeos_sound_preference";
 
 export function SoundSettings() {
   const [selectedSound, setSelectedSound] = useState<SoundPreset>("default");
-  const [cachedSound, setCachedSound] = useLocalStorage<SoundPreset | null>(LOCAL_STORAGE_KEY, null);
+  const [cachedSound, setCachedSound] = useLocalStorage<SoundPreset | null>(
+    LOCAL_STORAGE_KEY,
+    null,
+  );
   const [loading, setLoading] = useState(true);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
@@ -26,7 +30,7 @@ export function SoundSettings() {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [cachedSound, setCachedSound]);
 
   useEffect(() => {
     fetchSoundPreference();
@@ -36,7 +40,7 @@ export function SoundSettings() {
     setSelectedSound(soundType);
     setCachedSound(soundType);
     try {
-      await api.updateSoundSettings(soundType as any);
+      await api.updateSoundSettings(soundType as NotificationSoundType);
       setSavedMessage("Sound preference saved");
       setTimeout(() => setSavedMessage(null), 2500);
     } catch {

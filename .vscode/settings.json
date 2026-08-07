@@ -4,5 +4,8 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.biome": "always"
   },
-  "css.lint.unknownAtRules": "ignore"
+  "css.lint.unknownAtRules": "ignore",
+  "[typescriptreact]": {
+    "editor.defaultFormatter": "biomejs.biome"
+  }
 }

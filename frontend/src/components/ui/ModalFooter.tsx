@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
-import Button from "./Button.js";
 import { cn } from "../../lib/utils.js";
+import Button from "./Button.js";
 
 interface ModalFooterProps {
   onCancel?: () => void;

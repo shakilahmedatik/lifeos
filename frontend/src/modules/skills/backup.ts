@@ -60,22 +60,23 @@ export function validateBackup(data: unknown): data is LearningBackup {
   );
 }
 
-export async function importBackup(json: string): Promise<{ success: boolean; message: string }> {
+export async function importBackup(data: unknown): Promise<{ success: boolean; message: string }> {
   try {
-    const data = JSON.parse(json);
-    if (!validateBackup(data)) {
+    const backupData = typeof data === "string" ? JSON.parse(data) : data;
+    if (!validateBackup(backupData)) {
       return { success: false, message: "Invalid backup file format" };
     }
 
     const result = await api.importBackup({
-      areas: data.data.areas as import("@lifeos/contracts").NewSkillAreaInput[],
-      resources: data.data.resources as import("@lifeos/contracts").NewLearningResourceInput[],
-      logs: data.data.logs as import("@lifeos/contracts").NewLearningLogInput[],
+      areas: backupData.data.areas as import("@lifeos/contracts").NewSkillAreaInput[],
+      resources: backupData.data
+        .resources as import("@lifeos/contracts").NewLearningResourceInput[],
+      logs: backupData.data.logs as import("@lifeos/contracts").NewLearningLogInput[],
     });
 
     return {
       success: true,
-      message: `Imported ${result.areasCreated} areas, ${result.resourcesCreated} resources, ${result.logsCreated} logs from ${new Date(data.timestamp).toLocaleDateString()}`,
+      message: `Imported ${result.areasCreated} areas, ${result.resourcesCreated} resources, ${result.logsCreated} logs from ${new Date(backupData.timestamp).toLocaleDateString()}`,
     };
   } catch {
     return { success: false, message: "Failed to parse backup file" };

@@ -15,16 +15,14 @@ import {
   RefreshCw as RefreshCwIcon,
 } from "lucide-react";
 import { useCallback, useEffect, useState } from "react";
-import { useVisibilityPolling } from "../lib/useVisibilityPolling.js";
 import { useAppToast } from "../components/Toast.js";
 import Button from "../components/ui/Button.js";
-import { ErrorBanner } from "../components/ui/ErrorBanner.js";
-import IconButton from "../components/ui/IconButton.js";
 import { Input } from "../components/ui/Input.js";
 import ListSkeleton from "../components/ui/ListSkeleton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { api } from "../lib/api.js";
+import { useVisibilityPolling } from "../lib/useVisibilityPolling.js";
 import DeleteConfirmModal from "../modules/routine/DeleteConfirmModal.js";
 import { RoutineHistory } from "../modules/routine/RoutineHistory.js";
 import { RoutineOverview } from "../modules/routine/RoutineOverview.js";

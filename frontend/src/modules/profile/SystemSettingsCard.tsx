@@ -1,6 +1,6 @@
+import type { NotificationSoundType } from "@lifeos/contracts";
 import { Bell, Moon, Play, Settings as SettingsIcon, Sun, Volume2 } from "lucide-react";
-import type React from "react";
-import { useEffect, useState } from "react";
+import { type FC, useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
 import { api } from "../../lib/api.js";
@@ -11,9 +11,8 @@ import {
 } from "../notifications/browser-notifications.js";
 import { playNotificationSound } from "../notifications/sound-player.js";
 import type { SoundPreset } from "../notifications/sound-presets.js";
-import type { NotificationSoundType } from "@lifeos/contracts";
 
-export const SystemSettingsCard: React.FC = () => {
+export const SystemSettingsCard: FC = () => {
   const { theme, setTheme } = useTheme();
 
   const [soundPreset, setSoundPreset] = useState<SoundPreset>("default");
@@ -41,7 +40,7 @@ export const SystemSettingsCard: React.FC = () => {
       }
     };
     loadSettings();
-  }, []);
+  }, [setTheme]);
 
   const handleThemeChange = async (newTheme: "dark" | "light") => {
     setTheme(newTheme);
@@ -125,7 +124,7 @@ export const SystemSettingsCard: React.FC = () => {
 
         {/* Notification Sound Preferences */}
         <div className="space-y-2">
-          <label className="block text-xs font-semibold text-secondary flex items-center justify-between">
+          <label className="block text-xs font-semibold text-secondary items-center justify-between">
             <span className="flex items-center gap-1.5">
               <Volume2 className="w-4 h-4 text-amber-400" /> Default Task Sound Preset
             </span>

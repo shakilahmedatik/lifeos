@@ -1,7 +1,6 @@
 import type { HabitDailyProgress, WaterHabitConfig } from "@lifeos/contracts";
 import { Check, Edit3, Plus, RotateCcw } from "lucide-react";
-import type React from "react";
-import { useState } from "react";
+import { type SubmitEvent, useState } from "react";
 import Button from "../../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../../components/ui/Card.js";
 
@@ -21,7 +20,7 @@ export function WaterWidget({ progress, onLog, onUnlog }: WaterWidgetProps) {
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customMl, setCustomMl] = useState("");
 
-  const handleCustomSubmit = (e: React.FormEvent) => {
+  const handleCustomSubmit = (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     const val = Number(customMl);
     if (!Number.isNaN(val) && val > 0) {

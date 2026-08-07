@@ -1,11 +1,10 @@
 import { CheckCircle2, Mail, Save, User as UserIcon } from "lucide-react";
-import type React from "react";
-import { useState } from "react";
+import { type FC, type SubmitEvent, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
 import ErrorBanner from "../../components/ui/ErrorBanner.js";
-import { Input } from "../../components/ui/Input.js";
 import { FormField } from "../../components/ui/FormField.js";
+import { Input } from "../../components/ui/Input.js";
 import { type UserSession, useAuth } from "../../context/AuthContext.js";
 import { api } from "../../lib/api.js";
 
@@ -13,7 +12,7 @@ interface ProfileEditFormProps {
   user: UserSession;
 }
 
-export const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ user }) => {
+export const ProfileEditForm: FC<ProfileEditFormProps> = ({ user }) => {
   const { updateUser } = useAuth();
   const [name, setName] = useState(user.name || "");
   const [email, setEmail] = useState(user.email || "");
@@ -21,7 +20,7 @@ export const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ user }) => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setSuccess(null);

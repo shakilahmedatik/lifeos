@@ -83,9 +83,7 @@ export function WorkoutHistoryWithFilter({
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="relative">
-          <label className="block text-xs uppercase tracking-wider text-muted mb-1">
-            Search
-          </label>
+          <label className="block text-xs uppercase tracking-wider text-muted mb-1">Search</label>
           <div className="relative">
             <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
             <Input
@@ -98,9 +96,7 @@ export function WorkoutHistoryWithFilter({
           </div>
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wider text-muted mb-1">
-            Workout
-          </label>
+          <label className="block text-xs uppercase tracking-wider text-muted mb-1">Workout</label>
           <Select
             value={selectedWorkoutId}
             onChange={(e) => setSelectedWorkoutId(e.target.value)}
@@ -115,9 +111,7 @@ export function WorkoutHistoryWithFilter({
           <Input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wider text-muted mb-1">
-            Sort By
-          </label>
+          <label className="block text-xs uppercase tracking-wider text-muted mb-1">Sort By</label>
           <Select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as "date" | "duration")}

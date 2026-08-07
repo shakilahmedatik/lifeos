@@ -52,7 +52,7 @@ export function ScheduleWidget({ previous, now, next, onNavigate }: ScheduleWidg
             <div className="font-mono text-[9px] uppercase tracking-widest text-muted">
               Previous
             </div>
-            <div className="text-xs text-secondary line-through truncate max-w-[220px]">
+            <div className="text-xs text-secondary line-through truncate max-w-55">
               {previous ? previous.title : "No previous task"}
             </div>
           </div>
@@ -64,7 +64,7 @@ export function ScheduleWidget({ previous, now, next, onNavigate }: ScheduleWidg
         </div>
 
         {/* Now Card */}
-        <div className="rounded-lg border-l-3 border-accent border border-border bg-surface px-3 py-2 flex-1 flex flex-col justify-between shadow-inner">
+        <div className="rounded-lg border-l-3 border-accent border bg-surface px-3 py-2 flex-1 flex flex-col justify-between shadow-inner">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
@@ -143,7 +143,7 @@ export function ScheduleWidget({ previous, now, next, onNavigate }: ScheduleWidg
         <div className="rounded-lg border border-border bg-surface px-3 py-1.5 opacity-80 flex items-center justify-between shrink-0">
           <div>
             <div className="font-mono text-[9px] uppercase tracking-widest text-muted">Next</div>
-            <div className="text-xs font-medium text-primary truncate max-w-[220px]">
+            <div className="text-xs font-medium text-primary truncate max-w-55">
               {next ? next.title : "No upcoming tasks"}
             </div>
           </div>

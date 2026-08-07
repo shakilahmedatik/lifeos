@@ -14,7 +14,6 @@ import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
-import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
 import ModalFooter from "../components/ui/ModalFooter.js";
 import { PageHeader } from "../components/ui/PageHeader.js";

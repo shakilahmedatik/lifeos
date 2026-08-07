@@ -51,7 +51,7 @@ export function ToastContainer({ toasts }: { toasts: Toast[] }) {
                 ? "bg-success/15 border-success/30 text-success"
                 : toast.type === "warning"
                   ? "bg-warning/15 border-warning/30 text-warning"
-                  : "bg-card border-border text-primary"
+                  : "bg-card border-border text-primary",
           )}
         >
           {toast.message}

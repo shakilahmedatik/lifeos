@@ -1,12 +1,11 @@
 import { KeyRound, LogOut, ShieldAlert } from "lucide-react";
-import type React from "react";
-import { useState } from "react";
+import { type FC, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { useAuth } from "../../context/AuthContext.js";
 
-export const AccountSecurityCard: React.FC = () => {
+export const AccountSecurityCard: FC = () => {
   const { logout } = useAuth();
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
@@ -40,9 +39,7 @@ export const AccountSecurityCard: React.FC = () => {
               <p className="text-sm font-semibold text-red-400 flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4" /> Log Out of LifeOS
               </p>
-              <p className="text-xs text-muted">
-                Safely end your current session on this device
-              </p>
+              <p className="text-xs text-muted">Safely end your current session on this device</p>
             </div>
 
             <Button

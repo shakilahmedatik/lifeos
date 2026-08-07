@@ -1,11 +1,16 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppToast } from "../components/Toast.js";
+import BackupPanel from "../components/ui/BackupPanel.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { api } from "../lib/api.js";
-import BackupPanel from "../components/ui/BackupPanel.js";
-import { exportBackup, importBackup, shouldShowBackupReminder, markBackupCompleted } from "../modules/skills/backup.js";
+import {
+  exportBackup,
+  importBackup,
+  markBackupCompleted,
+  shouldShowBackupReminder,
+} from "../modules/skills/backup.js";
 import CategoriesTab from "../modules/skills/components/CategoriesTab.js";
 import CoursesTab from "../modules/skills/components/CoursesTab.js";
 import SessionsTab from "../modules/skills/components/SessionsTab.js";
@@ -216,7 +221,8 @@ export default function SkillsPage() {
                 shouldShowBackupReminder() ? (
                   <div className="p-4 bg-warning/20 border border-warning/30 rounded-xl">
                     <p className="text-sm text-warning">
-                      <strong>Backup reminder:</strong> Consider exporting your data to prevent loss.
+                      <strong>Backup reminder:</strong> Consider exporting your data to prevent
+                      loss.
                     </p>
                   </div>
                 ) : undefined

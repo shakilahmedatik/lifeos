@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { AccountService } from "../application/account-service.js";
-import type { Account, NewAccountInput } from "../domain/types.js";
+import type { Account, NewAccountInput, Transaction } from "../domain/types.js";
 import type { AccountRepository } from "../ports/account-repository.js";
 import type { TransactionRepository } from "../ports/transaction-repository.js";
 
@@ -150,11 +150,16 @@ describe("AccountService", () => {
 
   it("prevents deleting an account with existing transactions", async () => {
     const account = await service.createAccount({ name: "Bank", type: "bank" });
+    const now = new Date().toISOString();
     transactionRepo.mockTransactions.set("tx-1", {
       id: "tx-1",
       accountId: account.id,
       categoryId: "cat-1",
       amountMinor: 500,
+      date: now,
+      currency: "BDT",
+      createdAt: now,
+      updatedAt: now,
     });
     await expect(service.deleteAccount(account.id)).rejects.toThrow(
       "Cannot delete account with existing transactions. Archive the account instead.",

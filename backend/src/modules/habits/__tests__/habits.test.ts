@@ -177,7 +177,7 @@ describe("Habit Module Services Integration", () => {
     expect(due[0].todayTarget).toBe(3000);
     expect(due[0].todayProgress).toBeCloseTo(0.333, 2);
     expect(due[0].logs).toHaveLength(1);
-    expect(due[0].logs[0].id).toBe(log1.id);
+    expect(due[0]?.logs?.[0]?.id).toBe(log1.id);
   });
 
   it("handles custom prayer counts in progress calculations", async () => {

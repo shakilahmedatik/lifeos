@@ -104,7 +104,7 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
     <div className="space-y-6 animate-fade-in">
       {/* Top High-level Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="bg-gradient-to-br from-emerald-900/20 to-emerald-950/30 border-emerald-800/30">
+        <Card className="bg-linear-to-br from-emerald-900/20 to-emerald-950/30 border-emerald-800/30">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-emerald-400 uppercase tracking-wider">
@@ -118,7 +118,7 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-blue-900/20 to-blue-950/30 border-blue-800/30">
+        <Card className="bg-linear-to-br from-blue-900/20 to-blue-950/30 border-blue-800/30">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-blue-400 uppercase tracking-wider">
@@ -132,7 +132,7 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-orange-900/20 to-orange-950/30 border-orange-800/30">
+        <Card className="bg-linear-to-br from-orange-900/20 to-orange-950/30 border-orange-800/30">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-orange-400 uppercase tracking-wider">
@@ -148,13 +148,13 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
           </CardContent>
         </Card>
 
-        <Card className="bg-gradient-to-br from-purple-900/20 to-purple-950/30 border-purple-800/30">
+        <Card className="bg-linear-to-br from-purple-900/20 to-purple-950/30 border-purple-800/30">
           <CardContent className="p-4 flex items-center justify-between">
             <div>
               <p className="text-xs font-medium text-purple-400 uppercase tracking-wider">
                 Top Habit
               </p>
-              <p className="text-base font-semibold text-primary mt-1 truncate max-w-[120px]">
+              <p className="text-base font-semibold text-primary mt-1 truncate max-w-30">
                 {topHabit?.name || "N/A"}
               </p>
             </div>
@@ -184,7 +184,7 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
                     <div
                       className={`h-10 rounded-xl flex items-center justify-center font-bold text-xs transition-all ${
                         day.completions > 0
-                          ? "bg-emerald-500/20 border border-emerald-500/40 text-[var(--color-success)] shadow-sm shadow-emerald-500/20"
+                          ? "bg-emerald-500/20 border border-emerald-500/40 text-success shadow-sm shadow-emerald-500/20"
                           : "bg-surface-elevated border border-border text-muted"
                       }`}
                     >

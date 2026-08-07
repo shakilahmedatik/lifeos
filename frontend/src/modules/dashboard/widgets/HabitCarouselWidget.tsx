@@ -50,7 +50,7 @@ export function HabitCarouselWidget({ habits, onLog, onUnlog }: HabitCarouselWid
 
   const val = habit.todayValue ?? 0;
   const tgt = habit.todayTarget ?? 1;
-  const habitLogs = (habit as unknown as { logs?: Array<{ id: string }> }).logs || [];
+  const habitLogs = habit.logs || [];
   const lastLog = habitLogs.length > 0 ? habitLogs[habitLogs.length - 1] : null;
 
   return (

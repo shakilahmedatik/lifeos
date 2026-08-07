@@ -1,12 +1,12 @@
-import type React from "react";
+import type { FC, ReactNode } from "react";
 
 interface PageHeaderProps {
   title: string;
   description?: string;
-  actions?: React.ReactNode;
+  actions?: ReactNode;
 }
 
-export const PageHeader: React.FC<PageHeaderProps> = ({ title, description, actions }) => {
+export const PageHeader: FC<PageHeaderProps> = ({ title, description, actions }) => {
   return (
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
       <div>

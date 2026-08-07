@@ -1,6 +1,5 @@
 import type { NotificationWithTask } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
-import { Bell, BellOff, X } from "lucide-react";
 import { EmptyState } from "../../components/ui/EmptyState.js";
 import { ErrorBanner } from "../../components/ui/ErrorBanner.js";
 import { RelativeTime } from "../../components/ui/RelativeTime.js";

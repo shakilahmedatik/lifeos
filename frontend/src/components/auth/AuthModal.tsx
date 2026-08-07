@@ -1,20 +1,11 @@
-import {
-  ArrowRight,
-  Eye,
-  EyeOff,
-  Lock,
-  Mail,
-  Sparkles,
-  User as UserIcon,
-} from "lucide-react";
-import type React from "react";
-import { useState } from "react";
+import { ArrowRight, Eye, EyeOff, Lock, Mail, Sparkles, User as UserIcon } from "lucide-react";
+import { type FC, type SubmitEvent, useState } from "react";
 import { useAuth } from "../../context/AuthContext.js";
 import Button from "../ui/Button.js";
-import Input from "../ui/Input.js";
 import ErrorBanner from "../ui/ErrorBanner.js";
+import Input from "../ui/Input.js";
 
-export const AuthModal: React.FC = () => {
+export const AuthModal: FC = () => {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,7 +16,7 @@ export const AuthModal: React.FC = () => {
 
   const { login } = useAuth();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: SubmitEvent<HTMLFormElement>) => {
     e.preventDefault();
     setError(null);
     setLoading(true);

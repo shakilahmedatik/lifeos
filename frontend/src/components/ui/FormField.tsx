@@ -3,16 +3,17 @@ import { cn } from "../../lib/utils.js";
 
 interface FormFieldProps {
   label?: string;
+  htmlFor?: string;
   error?: string;
   children: ReactNode;
   className?: string;
 }
 
-export function FormField({ label, error, children, className }: FormFieldProps) {
+export function FormField({ label, htmlFor, error, children, className }: FormFieldProps) {
   return (
     <div className={cn("space-y-1", className)}>
       {label && (
-        <label className="block text-sm font-medium text-secondary mb-1">
+        <label htmlFor={htmlFor} className="block text-sm font-medium text-secondary mb-1">
           {label}
         </label>
       )}

@@ -1,6 +1,6 @@
 import type { DashboardSummary, NewReminderInput } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts/date-utils";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { useAppToast } from "../../../components/Toast.js";
 import { api } from "../../../lib/api.js";
 import { useVisibilityPolling } from "../../../lib/useVisibilityPolling.js";
@@ -11,7 +11,7 @@ export function useDashboard() {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const pausedRef = useRef(false);
+
   const toast = useAppToast();
 
   const fetchSummary = useCallback(async () => {

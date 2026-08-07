@@ -29,10 +29,14 @@ export function AreaChart({
   formatValue = (v) => v.toLocaleString(),
   className = "",
 }: AreaChartProps) {
+  const instanceId = useId();
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
-  const PADDING = { ...DEFAULT_PADDING, left: showYAxis ? 40 : DEFAULT_PADDING.left };
+  const PADDING = useMemo(
+    () => ({ ...DEFAULT_PADDING, left: showYAxis ? 40 : DEFAULT_PADDING.left }),
+    [showYAxis],
+  );
 
   const maxValue = Math.max(...data.map((d) => d.value), 1);
   const minValue = 0;
@@ -50,7 +54,7 @@ export function AreaChart({
       y: PADDING.top + chartHeight - ((d.value - minValue) / (maxValue - minValue)) * chartHeight,
       ...d,
     }));
-  }, [data, height, maxValue]);
+  }, [data, height, maxValue, PADDING]);
 
   const linePath = useMemo(() => {
     if (points.length === 0) return "";
@@ -64,7 +68,7 @@ export function AreaChart({
 
     const linePart = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
     return `${linePart} L ${points[points.length - 1].x} ${bottom} L ${points[0].x} ${bottom} Z`;
-  }, [points, height]);
+  }, [points, height, PADDING]);
 
   const handleMouseEnter = useCallback(
     (e: React.MouseEvent, i: number) => {
@@ -103,7 +107,6 @@ export function AreaChart({
   const chartHeight = height - PADDING.top - PADDING.bottom;
   const gridLines = 4;
   const gridStep = chartHeight / gridLines;
-  const instanceId = useId();
   const gradientId = `area-gradient-${instanceId.replace(/[^a-z0-9]/gi, "")}`;
 
   return (

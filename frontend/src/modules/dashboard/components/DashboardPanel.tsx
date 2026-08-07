@@ -1,11 +1,11 @@
-import type React from "react";
+import type { ReactNode } from "react";
 
 export interface DashboardPanelProps {
   title: string;
   subtitle?: string;
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
-  action?: React.ReactNode;
+  action?: ReactNode;
 }
 
 export function DashboardPanel({

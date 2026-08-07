@@ -91,8 +91,14 @@ function createMockTransactionRepo(
     async getByDateRange(_startDate: string, _endDate: string) {
       return Array.from(transactions.values());
     },
-    async getByAccountId(_accountId: string) {
-      return Array.from(transactions.values());
+    async getByAccountId(accountId: string) {
+      return Array.from(transactions.values()).filter((t) => t.accountId === accountId);
+    },
+    async getByAccountAndDateRange(accountId: string, _startDate: string, _endDate: string) {
+      return Array.from(transactions.values()).filter((t) => t.accountId === accountId);
+    },
+    async getByCategoryId(categoryId: string) {
+      return Array.from(transactions.values()).filter((t) => t.categoryId === categoryId);
     },
     async create(id: string, input) {
       const now = new Date().toISOString();

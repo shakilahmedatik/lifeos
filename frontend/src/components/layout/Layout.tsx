@@ -1,13 +1,13 @@
 import { useCallback, useState } from "react";
 import { Outlet } from "react-router-dom";
-import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
 import { api } from "../../lib/api.js";
+import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
 import { showBrowserNotification } from "../../modules/notifications/browser-notifications.js";
 import { NotificationToast } from "../../modules/notifications/NotificationToast.js";
 import { playNotificationSound } from "../../modules/notifications/sound-player.js";
 import type { SoundPreset } from "../../modules/notifications/sound-presets.js";
 import { ToastProvider } from "../Toast.js";
-import Dock from "./Sidebar.js";
+import Dock from "./Dock.js";
 
 export default function Layout() {
   const [notification, setNotification] = useState<{
