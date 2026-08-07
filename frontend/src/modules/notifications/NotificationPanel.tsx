@@ -2,6 +2,8 @@ import type { NotificationWithTask } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
 import { Bell, BellOff, X } from "lucide-react";
 import { EmptyState } from "../../components/ui/EmptyState.js";
+import { ErrorBanner } from "../../components/ui/ErrorBanner.js";
+import { RelativeTime } from "../../components/ui/RelativeTime.js";
 import { api } from "../../lib/api.js";
 
 type Notification = NotificationWithTask;
@@ -55,16 +57,7 @@ export function NotificationPanel() {
   if (error) {
     return (
       <div className="p-4">
-        <div className="bg-red-900/40 border border-red-800 text-red-300 px-4 py-3 rounded-xl text-sm flex items-center justify-between">
-          <span>{error}</span>
-          <button
-            type="button"
-            onClick={fetchNotifications}
-            className="ml-4 text-xs font-semibold underline text-red-300 hover:text-red-200"
-          >
-            Retry
-          </button>
-        </div>
+        <ErrorBanner message={error} onRetry={fetchNotifications} />
       </div>
     );
   }
@@ -84,7 +77,7 @@ export function NotificationPanel() {
               <div>
                 <p className="font-medium text-sm text-primary">{notification.taskTitle}</p>
                 <p className="text-xs text-secondary mt-0.5">
-                  Reminder: {new Date(notification.reminderTime).toLocaleString()}
+                  Reminder in: <RelativeTime date={notification.reminderTime} />
                 </p>
                 <p className="text-xs text-muted">Sound: {notification.soundType}</p>
               </div>

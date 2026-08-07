@@ -6,6 +6,8 @@ import type {
 } from "@lifeos/contracts";
 import { useState } from "react";
 import Button from "../../../components/ui/Button.js";
+import { ColorPicker } from "../../../components/ui/ColorPicker.js";
+import { FormField } from "../../../components/ui/FormField.js";
 import { Input } from "../../../components/ui/Input.js";
 import ModalFooter from "../../../components/ui/ModalFooter.js";
 import { Select } from "../../../components/ui/Select.js";
@@ -21,7 +23,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
   const [name, setName] = useState(initialData?.name || "");
   const [category, setCategory] = useState<HabitCategory>(initialData?.category || "general");
   const [icon, setIcon] = useState(initialData?.icon || "");
-  const [color, _setColor] = useState(initialData?.color || "#10B981");
+  const [color, setColor] = useState(initialData?.color || "#10B981");
   const [config, setConfig] = useState<Record<string, unknown>>(() => {
     if (initialData?.config) return initialData.config as unknown as Record<string, unknown>;
     switch (type) {
@@ -61,26 +63,28 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <label className="block text-sm font-medium text-secondary mb-1">Name</label>
+      <FormField label="Name">
         <Input
           required
           value={name}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setName(e.target.value)}
           placeholder="Habit name"
         />
-      </div>
+      </FormField>
+      
+      <FormField label="Color Theme">
+        <ColorPicker value={color} onChange={setColor} />
+      </FormField>
+
       <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-secondary mb-1">Icon (emoji)</label>
+        <FormField label="Icon (emoji)">
           <Input
             value={icon}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIcon(e.target.value)}
             placeholder="💧"
           />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-secondary mb-1">Category</label>
+        </FormField>
+        <FormField label="Category">
           <Select
             value={category}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -95,16 +99,13 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
               { value: "general", label: "General" },
             ]}
           />
-        </div>
+        </FormField>
       </div>
 
       {type === "water" && (
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-secondary mb-1">
-                Daily Goal (ml)
-              </label>
+            <FormField label="Daily Goal (ml)">
               <Input
                 type="number"
                 required
@@ -113,11 +114,8 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
                   setConfig({ ...config, dailyGoalMl: Number(e.target.value) })
                 }
               />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-secondary mb-1">
-                Reminder Every (mins)
-              </label>
+            </FormField>
+            <FormField label="Reminder Every (mins)">
               <Input
                 type="number"
                 value={(config.reminderIntervalMin as number) || 120}
@@ -126,12 +124,9 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
                 }
                 placeholder="120"
               />
-            </div>
+            </FormField>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-secondary mb-1">
-              Preset Amounts (comma separated, ml)
-            </label>
+          <FormField label="Preset Amounts (comma separated, ml)">
             <Input
               value={((config.sessionPresetsMl as number[]) || []).join(", ")}
               onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -146,14 +141,13 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
               }}
               placeholder="150, 250, 500"
             />
-          </div>
+          </FormField>
         </div>
       )}
 
       {type === "walking" && (
         <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-secondary mb-1">Daily Goal</label>
+          <FormField label="Daily Goal">
             <Input
               type="number"
               required
@@ -162,9 +156,8 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
                 setConfig({ ...config, dailyGoal: Number(e.target.value) })
               }
             />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-secondary mb-1">Unit</label>
+          </FormField>
+          <FormField label="Unit">
             <Select
               value={(config.unit as string) ?? "steps"}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -175,15 +168,12 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
                 { value: "km", label: "Km" },
               ]}
             />
-          </div>
+          </FormField>
         </div>
       )}
 
       {type === "timed" && (
-        <div>
-          <label className="block text-sm font-medium text-secondary mb-1">
-            Daily Goal (minutes)
-          </label>
+        <FormField label="Daily Goal (minutes)">
           <Input
             type="number"
             required
@@ -192,7 +182,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
               setConfig({ ...config, dailyGoalMinutes: Number(e.target.value) })
             }
           />
-        </div>
+        </FormField>
       )}
 
       {type === "prayer" && (

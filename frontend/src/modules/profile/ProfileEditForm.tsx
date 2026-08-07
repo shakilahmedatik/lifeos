@@ -5,6 +5,7 @@ import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
 import ErrorBanner from "../../components/ui/ErrorBanner.js";
 import { Input } from "../../components/ui/Input.js";
+import { FormField } from "../../components/ui/FormField.js";
 import { type UserSession, useAuth } from "../../context/AuthContext.js";
 import { api } from "../../lib/api.js";
 
@@ -62,8 +63,7 @@ export const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ user }) => {
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-secondary">Full Name</label>
+          <FormField label="Full Name">
             <Input
               type="text"
               required
@@ -72,10 +72,9 @@ export const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ user }) => {
               placeholder="Your Full Name"
               className="bg-surface/60 border-border text-primary placeholder-muted focus:border-amber-500"
             />
-          </div>
+          </FormField>
 
-          <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-secondary">Email Address</label>
+          <FormField label="Email Address">
             <div className="relative">
               <Input
                 type="email"
@@ -87,7 +86,7 @@ export const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ user }) => {
               />
               <Mail className="absolute right-3 top-3 h-4 w-4 text-slate-500 pointer-events-none" />
             </div>
-          </div>
+          </FormField>
 
           <div className="pt-2 flex justify-end">
             <Button

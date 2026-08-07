@@ -14,6 +14,7 @@ import Button from "../../components/ui/Button.js";
 import Card from "../../components/ui/Card.js";
 import { EmptyState } from "../../components/ui/EmptyState.js";
 import { Input } from "../../components/ui/Input.js";
+import { SearchInput } from "../../components/ui/SearchInput.js";
 import { Select } from "../../components/ui/Select.js";
 import { api } from "../../lib/api.js";
 import TaskCategoryBadge from "./TaskCategoryBadge.js";
@@ -111,13 +112,11 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {/* Search Input */}
             <div className="relative flex-1">
-              <SearchIcon size={16} className="absolute left-3 top-2.5 text-secondary" />
-              <input
-                type="text"
+              <SearchInput
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={setSearchQuery}
                 placeholder="Search history by task title or notes..."
-                className="w-full bg-card-solid/80 border border-border-subtle/70 text-primary rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-blue-500/60"
+                className="w-full bg-card-solid/80 border border-border-subtle/70 text-primary rounded-xl py-2 text-sm focus:outline-none focus:border-blue-500/60"
               />
             </div>
 
@@ -133,54 +132,48 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-border">
             {/* Preset Date Selector */}
-            <div>
-              <label className="block text-xs font-medium text-secondary mb-1">Timeframe</label>
-              <Select
-                value={rangePreset}
-                onChange={(e) => handleRangePresetChange(e.target.value as DateRangePreset)}
-                options={[
-                  { value: "7days", label: "Last 7 Days" },
-                  { value: "30days", label: "Last 30 Days" },
-                  { value: "thisMonth", label: "This Month" },
-                  { value: "all", label: "All Time" },
-                  { value: "custom", label: "Custom Range" },
-                ]}
-              />
-            </div>
+            <Select
+              label="Timeframe"
+              value={rangePreset}
+              onChange={(e) => handleRangePresetChange(e.target.value as DateRangePreset)}
+              options={[
+                { value: "7days", label: "Last 7 Days" },
+                { value: "30days", label: "Last 30 Days" },
+                { value: "thisMonth", label: "This Month" },
+                { value: "all", label: "All Time" },
+                { value: "custom", label: "Custom Range" },
+              ]}
+            />
 
             {/* Category Filter */}
-            <div>
-              <label className="block text-xs font-medium text-secondary mb-1">Category</label>
-              <Select
-                value={categoryFilter}
-                onChange={(e) => setCategoryFilter(e.target.value as TaskCategory | "all")}
-                options={[
-                  { value: "all", label: "All Categories" },
-                  { value: "general", label: "General" },
-                  { value: "work", label: "Work" },
-                  { value: "workout", label: "Workout" },
-                  { value: "learning", label: "Learning" },
-                  { value: "habit", label: "Habit" },
-                  { value: "personal", label: "Personal" },
-                ]}
-              />
-            </div>
+            <Select
+              label="Category"
+              value={categoryFilter}
+              onChange={(e) => setCategoryFilter(e.target.value as TaskCategory | "all")}
+              options={[
+                { value: "all", label: "All Categories" },
+                { value: "general", label: "General" },
+                { value: "work", label: "Work" },
+                { value: "workout", label: "Workout" },
+                { value: "learning", label: "Learning" },
+                { value: "habit", label: "Habit" },
+                { value: "personal", label: "Personal" },
+              ]}
+            />
 
             {/* Status Filter */}
-            <div>
-              <label className="block text-xs font-medium text-secondary mb-1">Status</label>
-              <Select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "all")}
-                options={[
-                  { value: "all", label: "All Statuses" },
-                  { value: "done", label: "Done" },
-                  { value: "planned", label: "Planned" },
-                  { value: "in_progress", label: "In Progress" },
-                  { value: "skipped", label: "Skipped" },
-                ]}
-              />
-            </div>
+            <Select
+              label="Status"
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "all")}
+              options={[
+                { value: "all", label: "All Statuses" },
+                { value: "done", label: "Done" },
+                { value: "planned", label: "Planned" },
+                { value: "in_progress", label: "In Progress" },
+                { value: "skipped", label: "Skipped" },
+              ]}
+            />
 
             {/* Date Inputs if Custom */}
             {rangePreset === "custom" && (

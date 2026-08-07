@@ -12,6 +12,9 @@ import { useAppToast } from "../components/Toast.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
+import { FilterPills } from "../components/ui/FilterPills.js";
+import { SearchInput } from "../components/ui/SearchInput.js";
+import PageSkeleton from "../components/PageSkeleton.js";
 import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
 import ModalFooter from "../components/ui/ModalFooter.js";
@@ -169,54 +172,30 @@ export default function NewsPage() {
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {feeds.length > 0 && (
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilterFeedId("")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                !filterFeedId
-                  ? "bg-blue-600/20 text-blue-400 border border-blue-500/20"
-                  : "bg-card text-secondary border border-border hover:text-primary"
-              }`}
-            >
-              All Feeds
-            </button>
-            {feeds.map((f) => (
-              <button
-                key={f.id}
-                onClick={() => setFilterFeedId(f.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
-                  filterFeedId === f.id
-                    ? "bg-blue-600/20 text-blue-400 border border-blue-500/20"
-                    : "bg-card text-secondary border border-border hover:text-primary"
-                }`}
-              >
-                {f.title}
-              </button>
-            ))}
-          </div>
+          <FilterPills
+            options={["All Feeds", ...feeds.map((f) => f.title)]}
+            active={filterFeedId ? feeds.find((f) => f.id === filterFeedId)?.title || "All Feeds" : "All Feeds"}
+            onChange={(val) => {
+              if (val === "All Feeds") setFilterFeedId("");
+              else {
+                const f = feeds.find(x => x.title === val);
+                if (f) setFilterFeedId(f.id);
+              }
+            }}
+          />
         )}
 
         <div className="relative min-w-50">
-          <SearchIcon
-            size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
-          />
-          <input
-            type="text"
+          <SearchInput
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={setSearchQuery}
             placeholder="Search articles..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-card border border-border rounded-lg text-primary placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
           />
         </div>
       </div>
 
       {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-20 bg-card rounded-xl animate-pulse" />
-          ))}
-        </div>
+        <PageSkeleton />
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
           <div className="lg:col-span-2 space-y-2">

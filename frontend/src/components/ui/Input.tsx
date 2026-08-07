@@ -1,5 +1,6 @@
 import { type InputHTMLAttributes, type ReactNode, useId, forwardRef } from "react";
 import { cn } from "../../lib/utils.js";
+import { FormField } from "./FormField.js";
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   label?: string;
@@ -14,12 +15,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
   const inputId = id || generatedId;
 
   return (
-    <div className="space-y-1">
-      {label && (
-        <label htmlFor={inputId} className="block text-sm font-medium text-secondary">
-          {label}
-        </label>
-      )}
+    <FormField label={label || ""} error={error} className={className}>
       <div className="relative">
         {leftIcon && (
           <span className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-muted">
@@ -35,14 +31,12 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             "disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
             leftIcon && "pl-9",
             error && "border-danger focus:border-danger focus:ring-danger/50",
-            className
           )}
           {...props}
         />
       </div>
-      {error && <p className="text-xs text-danger">{error}</p>}
       {helperText && !error && <p className="text-xs text-muted">{helperText}</p>}
-    </div>
+    </FormField>
   );
 });
 

@@ -1,4 +1,7 @@
 import { useState } from "react";
+import { useAppToast } from "../../components/Toast.js";
+import Button from "../../components/ui/Button.js";
+import { ErrorBanner } from "../../components/ui/ErrorBanner.js";
 import { request } from "../../lib/api.js";
 
 import { SOUND_PRESET_OPTIONS, type SoundPreset } from "./sound-presets.js";
@@ -52,9 +55,7 @@ export function ReminderForm({ taskId, taskTitle, onSubmit, onCancel }: Reminder
     <div className="bg-card border border-border rounded-xl p-4 text-primary">
       <h3 className="font-semibold text-primary mb-3">Set Reminder for: {taskTitle}</h3>
       {error && (
-        <div className="bg-red-900/40 border border-red-800 text-red-300 px-3 py-2 rounded-lg text-xs mb-3">
-          {error}
-        </div>
+        <ErrorBanner message={error} className="mb-3" />
       )}
       <form onSubmit={handleSubmit} className="space-y-3">
         <div>

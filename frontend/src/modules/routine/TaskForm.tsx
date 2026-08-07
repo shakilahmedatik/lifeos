@@ -10,6 +10,7 @@ import { Plus as PlusIcon, X as XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card from "../../components/ui/Card.js";
+import { ErrorBanner } from "../../components/ui/ErrorBanner.js";
 import { Input } from "../../components/ui/Input.js";
 import ModalFooter from "../../components/ui/ModalFooter.js";
 import { Select } from "../../components/ui/Select.js";
@@ -194,9 +195,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
         </div>
 
         {formError && (
-          <div className="p-3 bg-red-900/40 border border-red-800 rounded-lg text-xs text-red-300">
-            {formError}
-          </div>
+          <ErrorBanner message={formError} />
         )}
 
         <Input

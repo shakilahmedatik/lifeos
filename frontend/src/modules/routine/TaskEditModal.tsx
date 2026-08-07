@@ -2,6 +2,7 @@ import type { Task, TaskCategory, TaskRecurrence, TaskSubtask } from "@lifeos/co
 import { Plus as PlusIcon, X as XIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
+import { ErrorBanner } from "../../components/ui/ErrorBanner.js";
 import { Input } from "../../components/ui/Input.js";
 import Modal from "../../components/ui/Modal.js";
 import ModalFooter from "../../components/ui/ModalFooter.js";
@@ -138,9 +139,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
     <Modal open={true} onClose={onClose} title="Edit Task" size="md">
       <div className="space-y-4">
         {error && (
-          <div className="mb-4 p-3 bg-red-900/40 border border-red-800 rounded-lg text-xs text-red-300">
-            {error}
-          </div>
+          <ErrorBanner message={error} className="mb-4" />
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
