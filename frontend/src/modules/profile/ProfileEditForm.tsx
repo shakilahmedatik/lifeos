@@ -43,9 +43,9 @@ export const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ user }) => {
   const hasChanges = name !== user.name || email !== user.email;
 
   return (
-    <Card className="bg-surface/60 border-slate-800 p-6 shadow-lg">
+    <Card className="bg-surface/60 border-border p-6 shadow-lg">
       <CardHeader className="mb-4">
-        <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+        <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2">
           <UserIcon className="w-5 h-5 text-amber-400" />
           Personal Details
         </CardTitle>
@@ -63,19 +63,19 @@ export const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ user }) => {
           )}
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-300">Full Name</label>
+            <label className="block text-xs font-semibold text-secondary">Full Name</label>
             <Input
               type="text"
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Your Full Name"
-              className="bg-surface/60 border-slate-800 text-slate-100 placeholder-slate-600 focus:border-amber-500"
+              className="bg-surface/60 border-border text-primary placeholder-muted focus:border-amber-500"
             />
           </div>
 
           <div className="space-y-1.5">
-            <label className="block text-xs font-semibold text-slate-300">Email Address</label>
+            <label className="block text-xs font-semibold text-secondary">Email Address</label>
             <div className="relative">
               <Input
                 type="email"
@@ -83,7 +83,7 @@ export const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ user }) => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="name@example.com"
-                className="bg-surface/60 border-slate-800 text-slate-100 placeholder-slate-600 focus:border-amber-500 pr-10"
+                className="bg-surface/60 border-border text-primary placeholder-muted focus:border-amber-500 pr-10"
               />
               <Mail className="absolute right-3 top-3 h-4 w-4 text-slate-500 pointer-events-none" />
             </div>

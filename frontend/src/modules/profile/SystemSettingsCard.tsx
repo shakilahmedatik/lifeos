@@ -85,7 +85,7 @@ export const SystemSettingsCard: React.FC = () => {
   return (
     <Card className="bg-surface/60 border-slate-800 p-6 shadow-lg">
       <CardHeader className="mb-4">
-        <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+        <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2">
           <SettingsIcon className="w-5 h-5 text-amber-400" />
           Systemwide Settings
         </CardTitle>
@@ -145,7 +145,7 @@ export const SystemSettingsCard: React.FC = () => {
           <select
             value={soundPreset}
             onChange={(e) => handleSoundChange(e.target.value as SoundPreset)}
-            className="w-full bg-surface/60 border border-slate-800 rounded-xl px-3.5 py-2.5 text-sm text-slate-100 focus:outline-none focus:border-amber-500 transition-colors"
+            className="w-full bg-surface/60 border border-border rounded-xl px-3.5 py-2.5 text-sm text-primary focus:outline-none focus:border-amber-500 transition-colors"
           >
             <option value="default">Default Tone</option>
             <option value="chime">Subtle Chime</option>

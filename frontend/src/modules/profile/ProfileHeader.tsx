@@ -18,7 +18,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user }) => {
     : user.email.slice(0, 2).toUpperCase();
 
   return (
-    <Card className="relative overflow-hidden bg-gradient-to-r from-slate-900 via-slate-800/90 to-amber-950/40 border-slate-800/80 p-6 sm:p-8 shadow-xl">
+    <Card className="relative overflow-hidden bg-surface-elevated border-border p-6 sm:p-8 shadow-xl">
       {/* Background Accent Glow */}
       <div className="absolute -top-24 -right-24 w-64 h-64 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
@@ -41,7 +41,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user }) => {
         {/* User Information */}
         <div className="flex-1 min-w-0 space-y-2">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
-            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-white truncate">
+            <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-primary truncate">
               {user.name || "LifeOS User"}
             </h2>
             <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-400 self-center sm:self-auto">

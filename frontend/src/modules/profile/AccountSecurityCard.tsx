@@ -18,7 +18,7 @@ export const AccountSecurityCard: React.FC = () => {
     <>
       <Card className="bg-surface/60 border-slate-800 p-6 shadow-lg">
         <CardHeader className="mb-4">
-          <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+          <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-amber-400" />
             Security & Session
           </CardTitle>
@@ -27,7 +27,7 @@ export const AccountSecurityCard: React.FC = () => {
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between p-4 bg-surface/50 rounded-xl border border-slate-800">
             <div>
-              <p className="text-sm font-semibold text-white">Active Session</p>
+              <p className="text-sm font-semibold text-primary">Active Session</p>
               <p className="text-xs text-slate-400">Authenticated on this browser device</p>
             </div>
             <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">

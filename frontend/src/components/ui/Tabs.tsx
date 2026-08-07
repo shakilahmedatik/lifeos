@@ -124,7 +124,6 @@ export function TabsTrigger({
     <div className="relative">
       {active ? (
         <span
-          style={{ borderRadius: variant === "pill" ? 9999 : 8 }}
           className={cn(
             "absolute inset-0 bg-accent shadow-sm shadow-accent/20",
             radius,
@@ -140,7 +139,7 @@ export function TabsTrigger({
         className={cn(
           "relative z-10 inline-flex items-center justify-center whitespace-nowrap bg-transparent px-3.5 py-1.5 text-sm font-medium outline-none",
           "transition-colors",
-          active ? "text-surface" : "text-muted hover:text-primary",
+          active ? "text-slate-950" : "text-muted hover:text-primary",
           radius,
           className,
         )}

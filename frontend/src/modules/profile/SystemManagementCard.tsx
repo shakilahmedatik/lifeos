@@ -52,7 +52,7 @@ export const SystemManagementCard: React.FC = () => {
   return (
     <Card className="bg-surface/60 border-slate-800 p-6 shadow-lg">
       <CardHeader className="mb-4">
-        <CardTitle className="text-lg font-semibold text-white flex items-center gap-2">
+        <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2">
           <Database className="w-5 h-5 text-amber-400" />
           System Health & Backup
         </CardTitle>

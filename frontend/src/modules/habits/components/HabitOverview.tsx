@@ -184,7 +184,7 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
                     <div
                       className={`h-10 rounded-xl flex items-center justify-center font-bold text-xs transition-all ${
                         day.completions > 0
-                          ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
+                          ? "bg-emerald-500/20 border border-emerald-500/40 text-[var(--color-success)] shadow-sm shadow-emerald-500/20"
                           : "bg-surface-elevated border border-border text-muted"
                       }`}
                     >

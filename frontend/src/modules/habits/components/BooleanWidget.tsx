@@ -17,7 +17,7 @@ export function BooleanWidget({ progress, onLog, onUnlog }: BooleanWidgetProps) 
     <Card
       className={`cursor-pointer transition-all duration-300 border ${
         isCompleted
-          ? "bg-surface border-emerald-500/40 shadow-[0_0_15px_rgba(16,185,129,0.1)]"
+          ? "bg-surface border-emerald-500/40 shadow-sm shadow-emerald-500/20"
           : "bg-surface border-border hover:border-border-subtle"
       }`}
       onClick={() => {

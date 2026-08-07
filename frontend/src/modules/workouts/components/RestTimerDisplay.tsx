@@ -48,8 +48,8 @@ export function RestTimerDisplay({
       <div
         className={`text-center mb-8 p-6 md:p-8 rounded-2xl border transition-all duration-700 ease-in-out shadow-xl min-h-95 flex flex-col items-center justify-between ${
           timer.isResting
-            ? "bg-linear-to-b from-amber-950/40 via-gray-900/70 to-gray-900/90 border-amber-500/30 shadow-[0_0_35px_rgba(245,158,11,0.15)]"
-            : "bg-linear-to-b from-emerald-950/40 via-gray-900/70 to-gray-900/90 border-emerald-500/30 shadow-[0_0_35px_rgba(16,185,129,0.15)]"
+            ? "bg-linear-to-b from-amber-500/10 to-surface-elevated border-amber-500/30 shadow-lg shadow-amber-500/10"
+            : "bg-linear-to-b from-emerald-500/10 to-surface-elevated border-emerald-500/30 shadow-lg shadow-emerald-500/10"
         }`}
       >
         <div className="h-9 w-36 flex items-center justify-center rounded-full bg-surface/60 border border-border transition-all duration-700 shadow-inner">
