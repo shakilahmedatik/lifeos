@@ -17,6 +17,8 @@ import type {
   NewReminderInput,
   NewTransactionInput,
   Notification,
+  NotificationSoundType,
+  NotificationWithTask,
   Reminder,
   Task,
   Transaction,
@@ -231,7 +233,8 @@ export const api = {
   downloadBackup: () => request<{ filename: string; path: string }>("/api/backup"),
 
   // Notifications
-  getNotifications: () => request<Notification[]>("/api/notifications"),
+  getNotifications: () => request<NotificationWithTask[]>("/api/notifications"),
+  getDueNotifications: () => request<NotificationWithTask[]>("/api/notifications/due"),
   getUnreadCount: () => request<{ count: number }>("/api/notifications/unread-count"),
   createNotification: (input: NewNotificationInput) =>
     request<Notification>("/api/notifications", {
@@ -239,8 +242,18 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
+  deleteNotification: (id: string) =>
+    request<void>(`/api/notifications/${id}`, { method: "DELETE" }),
   deleteNotificationsByTaskId: (taskId: string) =>
     request<void>(`/api/notifications/task/${taskId}`, { method: "DELETE" }),
+  getSoundSettings: () =>
+    request<{ soundType: NotificationSoundType }>("/api/notifications/settings/sound"),
+  updateSoundSettings: (soundType: NotificationSoundType) =>
+    request<{ soundType: NotificationSoundType }>("/api/notifications/settings/sound", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ soundType }),
+    }),
 
   // Reminders
   getReminders: (date?: string) =>

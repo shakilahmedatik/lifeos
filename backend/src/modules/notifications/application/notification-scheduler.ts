@@ -6,6 +6,7 @@ export type NotificationCallback = (notification: NotificationWithTask) => void;
 
 export class NotificationScheduler {
   private running = false;
+  private timer: ReturnType<typeof setInterval> | null = null;
   private lastRun: string | undefined;
   private lastRunTimestamp = 0;
   private error: string | undefined;
@@ -13,13 +14,23 @@ export class NotificationScheduler {
 
   constructor(private notificationService: NotificationService) {}
 
-  start(_intervalMs = 10000): void {
-    logger.info("Notification scheduler enabled (lazy request-driven execution)");
+  start(intervalMs = 10000): void {
+    logger.info("Notification scheduler enabled (lazy request-driven execution + background timer)", { intervalMs });
     this.checkAndSendNotificationsLazy();
+    if (this.timer) clearInterval(this.timer);
+    this.timer = setInterval(() => {
+      this.checkAndSendNotificationsLazy().catch((err) => {
+        logger.error("Error in background notification scheduler timer", { error: (err as Error).message });
+      });
+    }, intervalMs);
   }
 
   stop(): void {
     logger.info("Notification scheduler disabled");
+    if (this.timer) {
+      clearInterval(this.timer);
+      this.timer = null;
+    }
   }
 
   onNotification(callback: NotificationCallback): () => void {

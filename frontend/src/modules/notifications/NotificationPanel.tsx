@@ -1,6 +1,6 @@
 import type { NotificationWithTask } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
-import { request } from "../../lib/api.js";
+import { api } from "../../lib/api.js";
 
 type Notification = NotificationWithTask;
 
@@ -14,7 +14,7 @@ export function NotificationPanel() {
     try {
       setLoading(true);
       setError(null);
-      const data = await request<Notification[]>("/api/notifications");
+      const data = await api.getNotifications();
       setNotifications(data);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -31,7 +31,7 @@ export function NotificationPanel() {
   const deleteNotification = async (id: string) => {
     try {
       setDeleting(id);
-      await request<void>(`/api/notifications/${id}`, { method: "DELETE" });
+      await api.deleteNotification(id);
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (error) {
       console.error("Error deleting notification:", error);

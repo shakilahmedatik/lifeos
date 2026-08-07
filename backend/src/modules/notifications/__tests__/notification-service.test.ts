@@ -18,6 +18,8 @@ describe("NotificationService", () => {
       update: vi.fn().mockResolvedValue(undefined),
       delete: vi.fn().mockResolvedValue(true),
       deleteByTaskId: vi.fn().mockResolvedValue(true),
+      getSoundPreference: vi.fn().mockResolvedValue("default"),
+      setSoundPreference: vi.fn().mockResolvedValue(undefined),
     };
 
     service = new NotificationService(mockRepository);
@@ -68,5 +70,14 @@ describe("NotificationService", () => {
     const count = await service.getUnreadCount("user-1");
     expect(mockRepository.getUnreadCount).toHaveBeenCalledWith("user-1");
     expect(count).toBe(0);
+  });
+
+  it("should get and set sound preferences", async () => {
+    const sound = await service.getSoundPreference("user-1");
+    expect(mockRepository.getSoundPreference).toHaveBeenCalledWith("user-1");
+    expect(sound).toBe("default");
+
+    await service.setSoundPreference("user-1", "urgent");
+    expect(mockRepository.setSoundPreference).toHaveBeenCalledWith("user-1", "urgent");
   });
 });

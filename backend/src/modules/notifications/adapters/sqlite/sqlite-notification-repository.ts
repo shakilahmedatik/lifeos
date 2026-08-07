@@ -4,6 +4,7 @@ import type { Client } from "@libsql/client";
 import type {
   NewNotificationInput,
   Notification,
+  NotificationSoundType,
   NotificationWithTask,
   UpdateNotificationInput,
 } from "../../domain/types.js";
@@ -29,7 +30,7 @@ function rowToNotification(row: NotificationRow): Notification {
     taskId: row.task_id,
     userId: row.user_id,
     reminderTime: row.reminder_time,
-    soundType: row.sound_type,
+    soundType: row.sound_type as NotificationSoundType,
     status: row.status,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -39,9 +40,9 @@ function rowToNotification(row: NotificationRow): Notification {
 function rowToNotificationWithTask(row: NotificationRow): NotificationWithTask {
   return {
     ...rowToNotification(row),
-    taskTitle: row.taskTitle,
-    taskDate: row.taskDate,
-    taskStartTime: row.taskStartTime,
+    taskTitle: row.taskTitle ?? "",
+    taskDate: row.taskDate ?? "",
+    taskStartTime: row.taskStartTime ?? "",
   };
 }
 
@@ -67,10 +68,10 @@ export class SqliteNotificationRepository implements NotificationRepository {
           t.start_time as taskStartTime
         FROM notifications n
         JOIN tasks t ON n.task_id = t.id
-        WHERE (n.user_id = ? OR n.user_id = '')
+        WHERE (n.user_id = ? OR n.user_id = 'default' OR ? = 'default')
         ORDER BY n.reminder_time ASC
       `,
-      args: [userId],
+      args: [userId, userId],
     });
     const rows = res.rows as unknown as NotificationRow[];
     return rows.map(rowToNotificationWithTask);
@@ -108,8 +109,8 @@ export class SqliteNotificationRepository implements NotificationRepository {
 
   async getUnreadCount(userId: string): Promise<number> {
     const res = await this.client.execute({
-      sql: "SELECT COUNT(*) as count FROM notifications WHERE (user_id = ? OR user_id = '') AND status = 'scheduled'",
-      args: [userId],
+      sql: "SELECT COUNT(*) as count FROM notifications WHERE (user_id = ? OR user_id = 'default' OR ? = 'default') AND status = 'scheduled'",
+      args: [userId, userId],
     });
     return Number(res.rows[0]?.count ?? 0);
   }
@@ -198,5 +199,27 @@ export class SqliteNotificationRepository implements NotificationRepository {
       args: [taskId],
     });
     return res.rowsAffected > 0;
+  }
+
+  async getSoundPreference(userId: string): Promise<string | null> {
+    const key = `sound_preference_${userId || "default"}`;
+    const res = await this.client.execute({
+      sql: "SELECT value FROM settings WHERE key = ?",
+      args: [key],
+    });
+    return (res.rows[0]?.value as string) || null;
+  }
+
+  async setSoundPreference(userId: string, soundType: string): Promise<void> {
+    const key = `sound_preference_${userId || "default"}`;
+    const now = new Date().toISOString();
+    await this.client.execute({
+      sql: `
+        INSERT INTO settings (key, value, updated_at)
+        VALUES (?, ?, ?)
+        ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+      `,
+      args: [key, soundType, now],
+    });
   }
 }

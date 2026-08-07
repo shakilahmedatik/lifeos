@@ -48,12 +48,25 @@ export class NotificationService {
     return await this.notificationRepo.update(id, { status: "sent" });
   }
 
-  async processDueRemindersForUser(userId = "default"): Promise<void> {
+  async processDueRemindersForUser(userId = "default"): Promise<NotificationWithTask[]> {
     const pending = await this.notificationRepo.findPendingNotifications();
+    const processed: NotificationWithTask[] = [];
     for (const notification of pending) {
-      if (notification.userId === userId || userId === "default") {
+      if (notification.userId === userId || userId === "default" || notification.userId === "default") {
         await this.markNotificationAsSent(notification.id);
+        processed.push(notification);
       }
     }
+    return processed;
+  }
+
+  async getSoundPreference(userId = "default"): Promise<string> {
+    const pref = await this.notificationRepo.getSoundPreference(userId);
+    return pref || "default";
+  }
+
+  async setSoundPreference(userId = "default", soundType: string): Promise<void> {
+    await this.notificationRepo.setSoundPreference(userId, soundType);
   }
 }
+

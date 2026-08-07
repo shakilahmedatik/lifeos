@@ -27,17 +27,19 @@ export function ReminderForm({ taskId, taskTitle, onSubmit, onCancel }: Reminder
       setLoading(true);
       setError(null);
 
+      const isoTime = new Date(reminderTime).toISOString();
+
       await request<void>("/api/notifications", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           taskId,
-          reminderTime,
+          reminderTime: isoTime,
           soundType,
         }),
       });
 
-      onSubmit(reminderTime, soundType);
+      onSubmit(isoTime, soundType);
     } catch (error) {
       console.error("Error creating reminder:", error);
       setError("Failed to create reminder. Please try again.");

@@ -22,7 +22,7 @@ import { api } from "../lib/api.js";
 type TaskReminder = {
   taskId: Task["id"];
   minutesBefore: NonNullable<Task["reminderMinutesBefore"]>;
-  sound: "none" | "default";
+  sound: string;
 };
 
 function getCurrentTimeStr(): string {
@@ -60,9 +60,10 @@ export default function NotificationsPage() {
   const fetchData = useCallback(async () => {
     try {
       const today = getClientDateString();
-      const [tasksData, remindersData] = await Promise.all([
+      const [tasksData, remindersData, notificationsData] = await Promise.all([
         api.getTasks(today),
         api.getReminders(),
+        api.getNotifications().catch(() => []),
       ]);
       setTasks(tasksData);
       setReminders(remindersData);
@@ -70,10 +71,11 @@ export default function NotificationsPage() {
       const r: TaskReminder[] = [];
       for (const t of tasksData) {
         if (t.reminderMinutesBefore) {
+          const matchingNotif = notificationsData.find((n) => n.taskId === t.id);
           r.push({
             taskId: t.id,
             minutesBefore: t.reminderMinutesBefore,
-            sound: t.reminderSilent ? "none" : "default",
+            sound: matchingNotif?.soundType || (t.reminderSilent ? "none" : "default"),
           });
         }
       }
@@ -100,13 +102,26 @@ export default function NotificationsPage() {
         reminderSilent: sound === "none",
       });
       if (sound !== "none") {
-        const [y, m, d] = task.date.split("-").map(Number);
-        const [hh, mm] = task.startTime.split(":").map(Number);
-        const dt = new Date(y, m - 1, d, hh, mm);
-        dt.setMinutes(dt.getMinutes() - minutesBefore);
+        let reminderDateObj: Date;
+        if (task.date && task.startTime) {
+          const [y, m, d] = task.date.split("-").map(Number);
+          const [hh, mm] = task.startTime.split(":").map(Number);
+          reminderDateObj = new Date(y, (m || 1) - 1, d || 1, hh || 0, mm || 0);
+        } else if (task.date) {
+          reminderDateObj = new Date(task.date);
+        } else {
+          reminderDateObj = new Date();
+        }
+
+        if (isNaN(reminderDateObj.getTime())) {
+          reminderDateObj = new Date();
+        }
+
+        reminderDateObj.setMinutes(reminderDateObj.getMinutes() - minutesBefore);
+
         const input: NewNotificationInput = {
           taskId: selectedTask,
-          reminderTime: dt.toISOString(),
+          reminderTime: reminderDateObj.toISOString(),
           soundType: sound as NewNotificationInput["soundType"],
         };
         await api.createNotification(input);

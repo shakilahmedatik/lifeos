@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NotificationScheduler } from "../application/notification-scheduler.js";
 import type { NotificationService } from "../application/notification-service.js";
 import type { NotificationWithTask } from "../domain/types.js";
@@ -14,6 +14,10 @@ describe("NotificationScheduler", () => {
     } as unknown as NotificationService;
 
     scheduler = new NotificationScheduler(mockNotificationService);
+  });
+
+  afterEach(() => {
+    scheduler.stop();
   });
 
   it("should start and stop the scheduler", () => {

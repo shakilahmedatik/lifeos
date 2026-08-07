@@ -15,4 +15,7 @@ export interface NotificationRepository {
   update(id: string, input: UpdateNotificationInput): Promise<Notification | null>;
   delete(id: string): Promise<boolean>;
   deleteByTaskId(taskId: string): Promise<boolean>;
+  getSoundPreference(userId: string): Promise<string | null>;
+  setSoundPreference(userId: string, soundType: string): Promise<void>;
 }
+
