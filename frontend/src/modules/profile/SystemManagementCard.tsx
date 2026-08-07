@@ -50,7 +50,7 @@ export const SystemManagementCard: React.FC = () => {
   };
 
   return (
-    <Card className="bg-surface/60 border-slate-800 p-6 shadow-lg">
+    <Card className="bg-surface border-border p-6 shadow-lg">
       <CardHeader className="mb-4">
         <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2">
           <Database className="w-5 h-5 text-amber-400" />
@@ -59,12 +59,12 @@ export const SystemManagementCard: React.FC = () => {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="flex items-center justify-between p-3.5 bg-surface/50 rounded-xl border border-slate-800/80">
+        <div className="flex items-center justify-between p-3.5 bg-surface-elevated rounded-xl border border-border-subtle">
           <div className="flex items-center gap-3">
             <Server className="w-5 h-5 text-amber-400" />
             <div>
-              <p className="text-sm font-medium text-slate-200">Backend Server Status</p>
-              <p className="text-xs text-slate-400">LibSQL SQLite Database & Services</p>
+              <p className="text-sm font-medium text-primary">Backend Server Status</p>
+              <p className="text-xs text-muted">LibSQL SQLite Database & Services</p>
             </div>
           </div>
           <span className="flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400">
@@ -72,10 +72,10 @@ export const SystemManagementCard: React.FC = () => {
           </span>
         </div>
 
-        <div className="p-4 bg-surface/40 rounded-xl border border-slate-800/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div className="p-4 bg-surface-elevated rounded-xl border border-border-subtle flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold text-slate-200">System Data Export</p>
-            <p className="text-xs text-slate-400">
+            <p className="text-sm font-semibold text-primary">System Data Export</p>
+            <p className="text-xs text-muted">
               Export a complete snapshot of your tasks, habits, workouts, and skills
             </p>
           </div>
@@ -85,7 +85,7 @@ export const SystemManagementCard: React.FC = () => {
             loading={downloading}
             onClick={handleBackupDownload}
             icon={<Download className="w-4 h-4 mr-1" />}
-            className="bg-slate-800 hover:bg-slate-700 text-slate-100 border border-slate-700 font-semibold px-4 py-2 rounded-xl text-xs shrink-0 transition-colors"
+            className="bg-card hover:bg-card-hover text-primary border border-border font-semibold px-4 py-2 rounded-xl text-xs shrink-0 transition-colors"
           >
             Export Backup JSON
           </Button>

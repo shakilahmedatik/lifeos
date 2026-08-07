@@ -1,4 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
+import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
+import { RelativeTime } from "../../components/ui/RelativeTime.js";
 
 import type { NewsArticle } from "../news/api.ts";
 import { fetchTickerArticles } from "../news/api.ts";
@@ -20,33 +22,13 @@ export function NewsTicker() {
     }
   }, []);
 
-  useEffect(() => {
-    loadArticles();
-
-    const intervalId = setInterval(loadArticles, 60000);
-
-    return () => clearInterval(intervalId);
-  }, [loadArticles]);
+  useVisibilityPolling(loadArticles, 60000);
 
   const handleArticleClick = (article: NewsArticle) => {
     window.open(article.url, "_blank");
   };
 
-  const formatDate = (dateString?: string) => {
-    if (!dateString) return "";
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMins / 60);
-    const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return "Just now";
-    if (diffMins < 60) return `${diffMins}m ago`;
-    if (diffHours < 24) return `${diffHours}h ago`;
-    if (diffDays < 7) return `${diffDays}d ago`;
-    return date.toLocaleDateString();
-  };
 
   if (loading) {
     return (
@@ -82,7 +64,9 @@ export function NewsTicker() {
             onClick={() => handleArticleClick(article)}
           >
             <div className="line-clamp-1 text-sm font-medium">{article.title}</div>
-            <div className="mt-1 text-xs text-muted">{formatDate(article.publishedAt)}</div>
+            <div className="mt-1 text-xs text-muted">
+              {article.publishedAt && <RelativeTime date={article.publishedAt} />}
+            </div>
           </button>
         ))}
       </div>

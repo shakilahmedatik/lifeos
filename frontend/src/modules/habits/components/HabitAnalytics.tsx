@@ -17,8 +17,8 @@ export function HabitAnalytics({ habitId }: { habitId: string }) {
   }));
 
   const donutData = [
-    { label: "Completed", value: data.completionRate, color: "#10b981" },
-    { label: "Missed", value: 100 - data.completionRate, color: "#374151" },
+    { label: "Completed", value: data.completionRate, color: "var(--color-success)" },
+    { label: "Missed", value: 100 - data.completionRate, color: "var(--color-border)" },
   ];
 
   return (

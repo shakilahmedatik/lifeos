@@ -28,7 +28,7 @@ export function WorkoutChartWidget({ data, labels }: WorkoutChartWidgetProps) {
 
   return (
     <DashboardPanel title="Workout" subtitle="this week, min">
-      <div className="h-full w-full -ml-3 min-h-[160px]">
+      <div className="h-full w-full min-h-[160px]">
         {data.length === 0 ? (
           <div className="flex items-center justify-center h-full text-xs text-muted">
             No workouts this week

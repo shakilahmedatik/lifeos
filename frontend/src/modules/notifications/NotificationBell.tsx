@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { api } from "../../lib/api.js";
+import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
 
 interface NotificationBellProps {
   onClick: () => void;
@@ -17,11 +18,7 @@ export function NotificationBell({ onClick }: NotificationBellProps) {
     }
   }, []);
 
-  useEffect(() => {
-    fetchUnreadCount();
-    const interval = setInterval(fetchUnreadCount, 30000);
-    return () => clearInterval(interval);
-  }, [fetchUnreadCount]);
+  useVisibilityPolling(fetchUnreadCount, 30000);
 
   return (
     <button

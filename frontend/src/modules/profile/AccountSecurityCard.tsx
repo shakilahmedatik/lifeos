@@ -16,7 +16,7 @@ export const AccountSecurityCard: React.FC = () => {
 
   return (
     <>
-      <Card className="bg-surface/60 border-slate-800 p-6 shadow-lg">
+      <Card className="bg-surface border-border p-6 shadow-lg">
         <CardHeader className="mb-4">
           <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2">
             <KeyRound className="w-5 h-5 text-amber-400" />
@@ -25,22 +25,22 @@ export const AccountSecurityCard: React.FC = () => {
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-surface/50 rounded-xl border border-slate-800">
+          <div className="flex items-center justify-between p-4 bg-surface-elevated rounded-xl border border-border-subtle">
             <div>
               <p className="text-sm font-semibold text-primary">Active Session</p>
-              <p className="text-xs text-slate-400">Authenticated on this browser device</p>
+              <p className="text-xs text-muted">Authenticated on this browser device</p>
             </div>
             <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
               Active
             </span>
           </div>
 
-          <div className="pt-2 border-t border-slate-800 flex items-center justify-between gap-4">
+          <div className="pt-2 border-t border-border flex items-center justify-between gap-4">
             <div>
               <p className="text-sm font-semibold text-red-400 flex items-center gap-1.5">
                 <ShieldAlert className="w-4 h-4" /> Log Out of LifeOS
               </p>
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-muted">
                 Safely end your current session on this device
               </p>
             </div>

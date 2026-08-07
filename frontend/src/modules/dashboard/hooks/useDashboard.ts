@@ -3,6 +3,7 @@ import { getClientDateString } from "@lifeos/contracts/date-utils";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppToast } from "../../../components/Toast.js";
 import { api } from "../../../lib/api.js";
+import { useVisibilityPolling } from "../../../lib/useVisibilityPolling.js";
 
 const POLL_INTERVAL = 30_000;
 
@@ -27,20 +28,7 @@ export function useDashboard() {
     }
   }, [toast]);
 
-  useEffect(() => {
-    fetchSummary();
-    const interval = setInterval(fetchSummary, POLL_INTERVAL);
-    return () => clearInterval(interval);
-  }, [fetchSummary]);
-
-  useEffect(() => {
-    const handleVisibility = () => {
-      pausedRef.current = document.hidden;
-      if (!document.hidden) fetchSummary();
-    };
-    document.addEventListener("visibilitychange", handleVisibility);
-    return () => document.removeEventListener("visibilitychange", handleVisibility);
-  }, [fetchSummary]);
+  useVisibilityPolling(fetchSummary, POLL_INTERVAL);
 
   const handleHabitLog = async (habitId: string, value: number, meta?: string) => {
     try {

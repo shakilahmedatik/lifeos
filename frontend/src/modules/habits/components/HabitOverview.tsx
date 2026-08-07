@@ -79,11 +79,11 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
 
   const donutData = analyticsData
     ? [
-        { label: "Completed", value: analyticsData.completionRate, color: "#10b981" },
+        { label: "Completed", value: analyticsData.completionRate, color: "var(--color-success)" },
         {
           label: "Missed",
           value: Math.max(0, 100 - analyticsData.completionRate),
-          color: "#374151",
+          color: "var(--color-border)",
         },
       ]
     : [];

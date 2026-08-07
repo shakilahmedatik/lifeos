@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { api } from "../../lib/api.js";
+import { useLocalStorage } from "../../lib/hooks/useLocalStorage.js";
 import { playNotificationSound } from "./sound-player.js";
 import { SOUND_PRESET_OPTIONS, type SoundPreset } from "./sound-presets.js";
 
@@ -7,6 +8,7 @@ const LOCAL_STORAGE_KEY = "lifeos_sound_preference";
 
 export function SoundSettings() {
   const [selectedSound, setSelectedSound] = useState<SoundPreset>("default");
+  const [cachedSound, setCachedSound] = useLocalStorage<SoundPreset | null>(LOCAL_STORAGE_KEY, null);
   const [loading, setLoading] = useState(true);
   const [savedMessage, setSavedMessage] = useState<string | null>(null);
 
@@ -15,12 +17,11 @@ export function SoundSettings() {
       const data = await api.getSoundSettings();
       if (data.soundType) {
         setSelectedSound(data.soundType as SoundPreset);
-        localStorage.setItem(LOCAL_STORAGE_KEY, data.soundType);
+        setCachedSound(data.soundType as SoundPreset);
       }
     } catch {
-      const cached = localStorage.getItem(LOCAL_STORAGE_KEY) as SoundPreset | null;
-      if (cached) {
-        setSelectedSound(cached);
+      if (cachedSound) {
+        setSelectedSound(cachedSound);
       }
     } finally {
       setLoading(false);
@@ -33,7 +34,7 @@ export function SoundSettings() {
 
   const saveSoundPreference = async (soundType: SoundPreset) => {
     setSelectedSound(soundType);
-    localStorage.setItem(LOCAL_STORAGE_KEY, soundType);
+    setCachedSound(soundType);
     try {
       await api.updateSoundSettings(soundType as any);
       setSavedMessage("Sound preference saved");

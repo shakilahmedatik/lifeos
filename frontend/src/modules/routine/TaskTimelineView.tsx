@@ -1,5 +1,6 @@
 import type { Task } from "@lifeos/contracts";
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
 import Card from "../../components/ui/Card.js";
 import TaskCategoryBadge, { CATEGORY_COLORS } from "./TaskCategoryBadge.js";
 import { computeDurationMins } from "./TaskList.js";
@@ -22,13 +23,10 @@ export default function TaskTimelineView({
     return d.getHours() * 60 + d.getMinutes();
   });
 
-  useEffect(() => {
-    const timer = setInterval(() => {
-      const d = new Date();
-      setCurrentMinutes(d.getHours() * 60 + d.getMinutes());
-    }, 30_000);
-    return () => clearInterval(timer);
-  }, []);
+  useVisibilityPolling(() => {
+    const d = new Date();
+    setCurrentMinutes(d.getHours() * 60 + d.getMinutes());
+  }, 30_000);
 
   const hours = Array.from({ length: 24 }, (_, i) => i);
   const isToday = selectedDate === todayDate;

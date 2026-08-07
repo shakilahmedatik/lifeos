@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import { Outlet } from "react-router-dom";
+import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
 import { api } from "../../lib/api.js";
 import { showBrowserNotification } from "../../modules/notifications/browser-notifications.js";
 import { NotificationToast } from "../../modules/notifications/NotificationToast.js";
@@ -40,11 +41,7 @@ export default function Layout() {
     }
   }, []);
 
-  useEffect(() => {
-    checkDueNotifications();
-    const interval = setInterval(checkDueNotifications, 15000);
-    return () => clearInterval(interval);
-  }, [checkDueNotifications]);
+  useVisibilityPolling(checkDueNotifications, 15000);
 
   return (
     <ToastProvider>

@@ -31,7 +31,7 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user }) => {
             </div>
           </div>
           <div
-            className="absolute -bottom-1 -right-1 bg-emerald-500 border-2 border-slate-900 rounded-full p-1 shadow-md"
+            className="absolute -bottom-1 -right-1 bg-emerald-500 border-2 border-surface-elevated rounded-full p-1 shadow-md"
             title="Active Session"
           >
             <CheckCircle2 className="w-3.5 h-3.5 text-slate-950" />
@@ -49,15 +49,15 @@ export const ProfileHeader: React.FC<ProfileHeaderProps> = ({ user }) => {
             </span>
           </div>
 
-          <p className="text-sm text-slate-400 font-medium truncate">{user.email}</p>
+          <p className="text-sm text-muted font-medium truncate">{user.email}</p>
 
-          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 pt-2 text-xs text-slate-400">
-            <div className="flex items-center gap-1.5 bg-surface/40 px-3 py-1.5 rounded-lg border border-slate-800">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-4 pt-2 text-xs text-muted">
+            <div className="flex items-center gap-1.5 bg-surface-elevated px-3 py-1.5 rounded-lg border border-border-subtle">
               <ShieldCheck className="w-4 h-4 text-emerald-400" />
               <span>Session Authenticated</span>
             </div>
-            <div className="bg-surface/40 px-3 py-1.5 rounded-lg border border-slate-800">
-              User ID: <span className="font-mono text-slate-300">{user.id.slice(0, 8)}...</span>
+            <div className="bg-surface-elevated px-3 py-1.5 rounded-lg border border-border-subtle">
+              User ID: <span className="font-mono text-secondary">{user.id.slice(0, 8)}...</span>
             </div>
           </div>
         </div>

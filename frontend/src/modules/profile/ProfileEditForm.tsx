@@ -84,7 +84,7 @@ export const ProfileEditForm: React.FC<ProfileEditFormProps> = ({ user }) => {
                 placeholder="name@example.com"
                 className="bg-surface/60 border-border text-primary placeholder-muted focus:border-amber-500 pr-10"
               />
-              <Mail className="absolute right-3 top-3 h-4 w-4 text-slate-500 pointer-events-none" />
+              <Mail className="absolute right-3 top-3 h-4 w-4 text-muted pointer-events-none" />
             </div>
           </FormField>
 

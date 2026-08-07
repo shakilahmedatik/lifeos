@@ -5,6 +5,7 @@ import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import Layout from "./components/layout/Layout.js";
 import PageSkeleton from "./components/PageSkeleton.js";
 import { AuthProvider, useAuth } from "./context/AuthContext.js";
+import { useTheme } from "./lib/hooks/useTheme.js";
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage.js"));
 const RoutinePage = lazy(() => import("./pages/RoutinePage.js"));
@@ -58,6 +59,8 @@ function MainContent() {
 }
 
 export default function App() {
+  useTheme(); // Initialize theme on mount
+
   return (
     <ErrorBoundary>
       <AuthProvider>

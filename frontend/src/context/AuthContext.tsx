@@ -1,5 +1,6 @@
 import type React from "react";
 import { createContext, useContext, useEffect, useState } from "react";
+import { useLocalStorage } from "../lib/hooks/useLocalStorage.js";
 
 export interface UserSession {
   id: string;
@@ -19,14 +20,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(() => {
-    return localStorage.getItem("lifeos_session_token");
-  });
-
-  const [user, setUser] = useState<UserSession | null>(() => {
-    const savedUser = localStorage.getItem("lifeos_user");
-    return savedUser ? JSON.parse(savedUser) : null;
-  });
+  const [token, setToken, removeToken] = useLocalStorage<string | null>("lifeos_session_token", null);
+  const [user, setUser, removeUser] = useLocalStorage<UserSession | null>("lifeos_user", null);
 
   const [isLoadingSession, setIsLoadingSession] = useState<boolean>(true);
 
@@ -49,14 +44,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setUser(data.user);
             const sessionToken = data.session?.token || token || "session-token";
             setToken(sessionToken);
-            localStorage.setItem("lifeos_user", JSON.stringify(data.user));
-            localStorage.setItem("lifeos_session_token", sessionToken);
           } else if (isMounted) {
             // Session expired or invalid on backend
-            setUser(null);
-            setToken(null);
-            localStorage.removeItem("lifeos_user");
-            localStorage.removeItem("lifeos_session_token");
+            removeUser();
+            removeToken();
           }
         }
       } catch (_err) {
@@ -77,13 +68,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const login = (newToken: string, newUser: UserSession) => {
     setToken(newToken);
     setUser(newUser);
-    localStorage.setItem("lifeos_session_token", newToken);
-    localStorage.setItem("lifeos_user", JSON.stringify(newUser));
   };
 
   const updateUser = (updatedUser: UserSession) => {
     setUser(updatedUser);
-    localStorage.setItem("lifeos_user", JSON.stringify(updatedUser));
   };
 
   const logout = () => {
@@ -91,10 +79,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       method: "POST",
       credentials: "include",
     }).catch(() => {});
-    setToken(null);
-    setUser(null);
-    localStorage.removeItem("lifeos_session_token");
-    localStorage.removeItem("lifeos_user");
+    removeToken();
+    removeUser();
   };
 
   return (

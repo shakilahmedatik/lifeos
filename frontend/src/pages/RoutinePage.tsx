@@ -14,7 +14,8 @@ import {
   Plus as PlusIcon,
   RefreshCw as RefreshCwIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useVisibilityPolling } from "../lib/useVisibilityPolling.js";
 import { useAppToast } from "../components/Toast.js";
 import Button from "../components/ui/Button.js";
 import { ErrorBanner } from "../components/ui/ErrorBanner.js";
@@ -54,7 +55,6 @@ export default function RoutinePage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
-  const pausedRef = useRef(false);
   const toast = useAppToast();
 
   const fetchStats = useCallback(async () => {
@@ -85,28 +85,19 @@ export default function RoutinePage() {
     fetchStats();
   }, [fetchStats]);
 
-  // Polling with Fixed Tab Visibility Leak
-  useEffect(() => {
-    fetchTasks();
-    const interval = setInterval(() => {
-      if (!pausedRef.current) {
-        fetchTasks();
-      }
-    }, 30_000);
-    return () => clearInterval(interval);
-  }, [fetchTasks]);
+  // Polling tasks
+  useVisibilityPolling(fetchTasks, 30_000);
 
+  // Re-fetch stats when visibility changes since they aren't polled
   useEffect(() => {
     const handler = () => {
-      pausedRef.current = document.hidden;
       if (!document.hidden) {
-        fetchTasks();
         fetchStats();
       }
     };
     document.addEventListener("visibilitychange", handler);
     return () => document.removeEventListener("visibilitychange", handler);
-  }, [fetchTasks, fetchStats]);
+  }, [fetchStats]);
 
   // Date Navigation Helpers
   const handleShiftDate = (days: number) => {
