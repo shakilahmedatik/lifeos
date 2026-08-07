@@ -6,6 +6,7 @@ import { useAppToast } from "../../components/Toast.js";
 import Button from "../../components/ui/Button.js";
 import { Input } from "../../components/ui/Input.js";
 import Modal from "../../components/ui/Modal.js";
+import ModalFooter from "../../components/ui/ModalFooter.js";
 import { Select } from "../../components/ui/Select.js";
 import { createTransfer } from "./api.js";
 
@@ -131,14 +132,14 @@ export function TransferModal({ open, onClose, onSuccess, accounts }: TransferMo
           placeholder="Reason or reference for transfer"
         />
 
-        <div className="flex justify-end gap-2 pt-2">
+        <ModalFooter>
           <Button variant="secondary" type="button" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" disabled={submitting} icon={<ArrowRightLeft size={16} />}>
             {submitting ? "Transferring..." : "Complete Transfer"}
           </Button>
-        </div>
+        </ModalFooter>
       </form>
     </Modal>
   );

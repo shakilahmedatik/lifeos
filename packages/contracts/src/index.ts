@@ -713,6 +713,25 @@ export interface DashboardSummary {
   newsItems: DashboardNewsItem[];
 }
 
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  createdAt?: string;
+}
+
+export interface UpdateProfileInput {
+  name?: string;
+  email?: string;
+}
+
+export interface SystemSettings {
+  theme?: "dark" | "light" | "system";
+  notificationSound?: NotificationSoundType;
+  desktopNotifications?: boolean;
+  [key: string]: unknown;
+}
+
 export {
   getClientCurrentMinute,
   getClientDateString,

@@ -1,4 +1,5 @@
-import { type InputHTMLAttributes, type ReactNode, useId } from "react";
+import { type InputHTMLAttributes, type ReactNode, useId, forwardRef } from "react";
+import { cn } from "../../lib/utils.js";
 
 export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, "size"> {
   label?: string;
@@ -7,15 +8,8 @@ export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 
   leftIcon?: ReactNode;
 }
 
-export function Input({
-  label,
-  error,
-  helperText,
-  leftIcon,
-  className = "",
-  id,
-  ...props
-}: InputProps) {
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, helperText, leftIcon, className = "", id, ...props }, ref) => {
   const generatedId = useId();
   const inputId = id || generatedId;
 
@@ -34,14 +28,15 @@ export function Input({
         )}
         <input
           id={inputId}
-          className={[
+          ref={ref}
+          className={cn(
             "w-full bg-input/40 border border-border rounded-lg px-3 py-2 text-sm text-primary",
             "placeholder:text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50",
             "disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
-            leftIcon ? "pl-9" : "",
-            error ? "border-danger focus:border-danger focus:ring-danger/50" : "",
-            className,
-          ].join(" ")}
+            leftIcon && "pl-9",
+            error && "border-danger focus:border-danger focus:ring-danger/50",
+            className
+          )}
           {...props}
         />
       </div>
@@ -49,4 +44,6 @@ export function Input({
       {helperText && !error && <p className="text-xs text-muted">{helperText}</p>}
     </div>
   );
-}
+});
+
+export default Input;

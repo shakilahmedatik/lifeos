@@ -5,6 +5,7 @@ import { useState } from "react";
 import Button from "../../../components/ui/Button.js";
 import Modal from "../../../components/ui/Modal.js";
 import { Select } from "../../../components/ui/Select.js";
+import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { DashboardPanel } from "../components/DashboardPanel.js";
 
 interface RemindersWidgetProps {
@@ -66,9 +67,7 @@ export function RemindersWidget({ reminders, onComplete, onAdd }: RemindersWidge
         <div className="flex flex-col h-full overflow-hidden">
           <div className="flex flex-col overflow-y-auto divide-y divide-border/40">
             {reminders.length === 0 ? (
-              <div className="flex-1 flex flex-col items-center justify-center text-center py-6 text-muted text-xs">
-                <p>No upcoming reminders</p>
-              </div>
+              <EmptyState title="No upcoming reminders" className="py-6" />
             ) : (
               reminders.slice(0, 4).map((r) => (
                 <div
@@ -82,7 +81,7 @@ export function RemindersWidget({ reminders, onComplete, onAdd }: RemindersWidge
                     ) : (
                       <Calendar size={13} className="text-indigo-400 shrink-0" />
                     )}
-                    <span className="text-xs text-gray-200 truncate">{r.title}</span>
+                    <span className="text-xs text-primary truncate">{r.title}</span>
                   </div>
                   <button
                     type="button"

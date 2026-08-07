@@ -26,11 +26,14 @@ interface RoutineHistoryProps {
 
 type DateRangePreset = "all" | "7days" | "30days" | "thisMonth" | "custom";
 
-const STATUS_VARIANTS: Record<TaskStatus, "info" | "success" | "warning" | "default"> = {
+const STATUS_VARIANTS: Record<TaskStatus, "default" | "info" | "success" | "warning"> = {
   planned: "default",
+  todo: "default",
   in_progress: "info",
   done: "success",
   skipped: "warning",
+  cancelled: "default",
+  missed: "warning",
 };
 
 export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) {
@@ -103,18 +106,18 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Search & Filters Section */}
-      <Card padding="md" className="border-gray-700/50">
+      <Card padding="md" className="border-border">
         <div className="space-y-4">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
             {/* Search Input */}
             <div className="relative flex-1">
-              <SearchIcon size={16} className="absolute left-3 top-2.5 text-gray-400" />
+              <SearchIcon size={16} className="absolute left-3 top-2.5 text-secondary" />
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="Search history by task title or notes..."
-                className="w-full bg-gray-800/80 border border-gray-700/70 text-gray-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-blue-500/60"
+                className="w-full bg-card-solid/80 border border-border-subtle/70 text-primary rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:border-blue-500/60"
               />
             </div>
 
@@ -128,10 +131,10 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-gray-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-2 border-t border-border">
             {/* Preset Date Selector */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">Timeframe</label>
+              <label className="block text-xs font-medium text-secondary mb-1">Timeframe</label>
               <Select
                 value={rangePreset}
                 onChange={(e) => handleRangePresetChange(e.target.value as DateRangePreset)}
@@ -147,7 +150,7 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
 
             {/* Category Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">Category</label>
+              <label className="block text-xs font-medium text-secondary mb-1">Category</label>
               <Select
                 value={categoryFilter}
                 onChange={(e) => setCategoryFilter(e.target.value as TaskCategory | "all")}
@@ -165,7 +168,7 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
 
             {/* Status Filter */}
             <div>
-              <label className="block text-xs font-medium text-gray-400 mb-1">Status</label>
+              <label className="block text-xs font-medium text-secondary mb-1">Status</label>
               <Select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as TaskStatus | "all")}
@@ -187,7 +190,7 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
                   value={startDate}
                   onChange={(e) => setStartDate(e.target.value)}
                 />
-                <span className="text-gray-400 text-xs">–</span>
+                <span className="text-secondary text-xs">–</span>
                 <Input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
               </div>
             )}
@@ -196,28 +199,28 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
       </Card>
 
       {/* History Metrics Summary Banner */}
-      <div className="flex items-center justify-between p-4 bg-gray-800/40 rounded-xl border border-gray-700/40 text-xs flex-wrap gap-4">
+      <div className="flex items-center justify-between p-4 bg-surface-elevated rounded-xl border border-border text-xs flex-wrap gap-4">
         <div className="flex items-center gap-6">
           <div className="flex items-center gap-2">
             <FilterIcon size={16} className="text-blue-400" />
-            <span className="text-gray-400">Matching Tasks:</span>
-            <span className="font-bold text-gray-100 font-mono text-sm">{totalTasks}</span>
+            <span className="text-secondary">Matching Tasks:</span>
+            <span className="font-bold text-primary font-mono text-sm">{totalTasks}</span>
           </div>
 
           <div className="flex items-center gap-2">
             <CheckCircle2Icon size={16} className="text-emerald-400" />
-            <span className="text-gray-400">Completed Rate:</span>
+            <span className="text-secondary">Completed Rate:</span>
             <span className="font-bold text-emerald-300 font-mono text-sm">{completionRate}%</span>
           </div>
 
           <div className="flex items-center gap-2">
             <ClockIcon size={16} className="text-purple-400" />
-            <span className="text-gray-400">Total Duration:</span>
+            <span className="text-secondary">Total Duration:</span>
             <span className="font-bold text-purple-300 font-mono text-sm">{totalHours} hrs</span>
           </div>
         </div>
 
-        <span className="text-gray-400 text-[11px]">
+        <span className="text-secondary text-[11px]">
           Showing routines from {startDate} to {endDate}
         </span>
       </div>
@@ -226,7 +229,7 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-16 bg-gray-800/60 rounded-xl animate-pulse" />
+            <div key={i} className="h-16 bg-card rounded-xl animate-pulse" />
           ))}
         </div>
       ) : tasks.length === 0 ? (
@@ -246,23 +249,23 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
               <Card
                 key={`${task.id}_${task.date}`}
                 padding="sm"
-                className="hover:bg-gray-800/80 transition-all border-gray-800 hover:border-gray-700 cursor-pointer"
+                className="hover:bg-card-solid/80 transition-all border-border hover:border-border-subtle cursor-pointer"
                 onClick={() => onViewTask(task)}
               >
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="text-xs font-mono font-medium text-gray-400 bg-gray-900/60 px-2 py-0.5 rounded">
+                      <span className="text-xs font-mono font-medium text-secondary bg-surface px-2 py-0.5 rounded">
                         {task.date}
                       </span>
 
                       <span
                         className={`text-sm font-semibold truncate ${
                           task.status === "done"
-                            ? "line-through text-gray-400"
+                            ? "line-through text-secondary"
                             : task.status === "skipped"
-                              ? "line-through text-gray-500"
-                              : "text-gray-100"
+                              ? "line-through text-muted"
+                              : "text-primary"
                         }`}
                       >
                         {task.title}
@@ -275,7 +278,7 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
                       </Badge>
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                    <div className="flex items-center gap-2 text-xs text-secondary mt-1">
                       <span className="font-mono">
                         {task.startTime} – {task.endTime} ({duration}m)
                       </span>
@@ -290,7 +293,7 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
                       {task.notes && (
                         <>
                           <span>•</span>
-                          <span className="truncate text-gray-400 max-w-sm">{task.notes}</span>
+                          <span className="truncate text-secondary max-w-sm">{task.notes}</span>
                         </>
                       )}
                     </div>

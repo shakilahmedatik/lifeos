@@ -58,9 +58,9 @@ export const CATEGORY_COLORS: Record<
     borderLeft: "border-l-indigo-500",
   },
   general: {
-    bg: "bg-gray-500/10",
-    text: "text-gray-400",
-    border: "border-gray-500/20",
+    bg: "bg-card0/10",
+    text: "text-secondary",
+    border: "border-border-subtle/20",
     borderLeft: "border-l-gray-500",
   },
 };

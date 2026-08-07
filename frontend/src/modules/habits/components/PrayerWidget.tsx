@@ -21,9 +21,9 @@ export function PrayerWidget({ progress, onLog, onUnlog }: PrayerWidgetProps) {
   const currentValue = progress.currentValue || 0;
 
   return (
-    <Card className="bg-gray-900/60 border border-gray-800 hover:border-gray-700/80 transition-all">
+    <Card className="bg-surface border border-border hover:border-border-subtle/80 transition-all">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <CardTitle className="text-gray-200 flex items-center gap-2 text-sm font-semibold">
+        <CardTitle className="text-primary flex items-center gap-2 text-sm font-semibold">
           <span className="text-xl">{progress.habit?.icon || "🕌"}</span>
           {progress.habit?.name || "Daily Salah"}
         </CardTitle>
@@ -44,7 +44,7 @@ export function PrayerWidget({ progress, onLog, onUnlog }: PrayerWidgetProps) {
                 className={`py-2 px-1 rounded-lg border flex flex-col items-center gap-1 transition-all ${
                   isCompleted
                     ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-300"
-                    : "bg-gray-800/40 border-gray-700/50 text-gray-400 hover:border-gray-600 hover:bg-gray-800/80"
+                    : "bg-surface-elevated border-border text-secondary hover:border-border-subtle hover:bg-card-solid/80"
                 }`}
                 onClick={() => {
                   if (isCompleted && logged) {
@@ -58,7 +58,7 @@ export function PrayerWidget({ progress, onLog, onUnlog }: PrayerWidgetProps) {
                   className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
                     isCompleted
                       ? "bg-emerald-500 text-gray-950 font-bold"
-                      : "bg-gray-700/80 text-gray-400"
+                      : "bg-card-hover text-secondary"
                   }`}
                 >
                   {isCompleted ? <Check size={12} strokeWidth={3} /> : prayer.name[0]}

@@ -36,13 +36,13 @@ describe("Badge", () => {
   it("applies success variant styles", () => {
     render(<Badge variant="success">Done</Badge>);
     const el = screen.getByText("Done");
-    expect(el.className).toContain("bg-green-900/60");
+    expect(el.className).toContain("bg-success/15");
   });
 
   it("applies danger variant styles", () => {
     render(<Badge variant="danger">Error</Badge>);
     const el = screen.getByText("Error");
-    expect(el.className).toContain("bg-red-900/60");
+    expect(el.className).toContain("bg-danger/15");
   });
 
   it("applies sm size by default", () => {

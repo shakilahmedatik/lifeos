@@ -24,7 +24,7 @@ export function HabitAnalytics({ habitId }: { habitId: string }) {
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-medium text-gray-200">Analytics</h3>
+        <h3 className="text-lg font-medium text-primary">Analytics</h3>
         <Select
           value={period}
           onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -45,11 +45,11 @@ export function HabitAnalytics({ habitId }: { habitId: string }) {
           <CardContent className="flex justify-between">
             <div>
               <div className="text-2xl font-bold text-orange-400">{data.currentStreak}</div>
-              <div className="text-xs text-gray-500">Current</div>
+              <div className="text-xs text-muted">Current</div>
             </div>
             <div>
-              <div className="text-2xl font-bold text-gray-200">{data.longestStreak}</div>
-              <div className="text-xs text-gray-500">Best</div>
+              <div className="text-2xl font-bold text-primary">{data.longestStreak}</div>
+              <div className="text-xs text-muted">Best</div>
             </div>
           </CardContent>
         </Card>
@@ -59,10 +59,10 @@ export function HabitAnalytics({ habitId }: { habitId: string }) {
             <DonutChart data={donutData} />
           </div>
           <div className="text-center">
-            <div className="text-3xl font-bold text-gray-200">
+            <div className="text-3xl font-bold text-primary">
               {Math.round(data.completionRate)}%
             </div>
-            <div className="text-sm text-gray-500">Completion Rate</div>
+            <div className="text-sm text-muted">Completion Rate</div>
           </div>
         </Card>
       </div>

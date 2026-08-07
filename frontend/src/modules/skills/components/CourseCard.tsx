@@ -14,28 +14,28 @@ export default function CourseCard({ resource, progress, onEdit, onDelete }: Cou
   const completionPercent = progress?.completionPercent ?? 0;
 
   return (
-    <Card className="hover:border-gray-600/50 transition-colors">
+    <Card className="hover:border-border-subtle transition-colors">
       <div className="flex justify-between items-start">
         <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-medium text-gray-200 truncate">{resource.title}</h3>
+          <h3 className="text-sm font-medium text-primary truncate">{resource.title}</h3>
           <div className="flex items-center gap-2 mt-1">
             <span className="px-2 py-0.5 text-xs bg-purple-600/20 text-purple-400 rounded-full border border-purple-500/20 capitalize">
               {resource.type}
             </span>
-            <span className="text-xs text-gray-500 ml-2">
+            <span className="text-xs text-muted ml-2">
               {progress ? `${progress.totalMinutesSpent} min spent` : "Loading..."}
             </span>
           </div>
           {progress && (
             <div className="mt-2">
               <div className="flex items-center gap-2">
-                <div className="flex-1 h-1.5 bg-gray-700/50 rounded-full overflow-hidden">
+                <div className="flex-1 h-1.5 bg-card-hover rounded-full overflow-hidden">
                   <div
                     className="h-full bg-linear-to-r from-purple-500 to-purple-400 rounded-full transition-all"
                     style={{ width: `${completionPercent}%` }}
                   />
                 </div>
-                <span className="text-xs font-medium text-gray-400">{completionPercent}%</span>
+                <span className="text-xs font-medium text-secondary">{completionPercent}%</span>
               </div>
             </div>
           )}

@@ -257,7 +257,7 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
   const handleCompleteSetRef = useRef<() => void>(null);
   handleCompleteSetRef.current = handleCompleteSet;
 
-  if (loading) return <div className="p-4 text-gray-400">Loading workout...</div>;
+  if (loading) return <div className="p-4 text-secondary">Loading workout...</div>;
   if (error || !workout)
     return <div className="p-4 text-red-400">Error: {error || "Workout not found"}</div>;
 
@@ -273,12 +273,12 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
   }
 
   if (!currentExercise || !exercise) {
-    return <div className="p-4 text-gray-400">No exercises configured</div>;
+    return <div className="p-4 text-secondary">No exercises configured</div>;
   }
 
   return (
     <Card className="animate-fade-in overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between border-b border-gray-800 pb-4">
+      <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-4">
         <CardTitle className="text-xl">{workout.name}</CardTitle>
         <Button onClick={handleExitClick} variant="secondary" size="sm">
           Exit
@@ -288,17 +288,17 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
       <CardContent className="p-0">
         <div className="grid grid-cols-1 lg:grid-cols-2">
           {/* Left Column: Controls & Timer */}
-          <div className="p-6 border-b lg:border-b-0 lg:border-r border-gray-800">
+          <div className="p-6 border-b lg:border-b-0 lg:border-r border-border">
             <div className="mb-8">
               <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-gray-400">
+                <span className="text-sm font-medium text-secondary">
                   Exercise {currentExerciseIndex + 1} of {workout.exercises.length}
                 </span>
-                <span className="text-sm font-medium text-gray-400">
+                <span className="text-sm font-medium text-secondary">
                   Set {currentSet} of {currentExercise.sets}
                 </span>
               </div>
-              <div className="w-full bg-gray-700/50 rounded-full h-2 overflow-hidden border border-gray-700/50">
+              <div className="w-full bg-card-hover rounded-full h-2 overflow-hidden border border-border">
                 <div
                   className="bg-linear-to-r from-blue-500 to-emerald-500 h-2 rounded-full transition-all duration-500"
                   style={{
@@ -313,13 +313,13 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
             </div>
 
             <div className="text-center mb-8">
-              <h3 className="text-4xl font-bold mb-3 text-gray-100">{exercise.name}</h3>
-              <p className="text-lg font-medium text-gray-400 mb-4 tracking-wider uppercase">
+              <h3 className="text-4xl font-bold mb-3 text-primary">{exercise.name}</h3>
+              <p className="text-lg font-medium text-secondary mb-4 tracking-wider uppercase">
                 {exercise.muscleGroup}
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 mb-8 bg-gray-800/40 p-4 rounded-xl border border-gray-700/50">
+            <div className="grid grid-cols-2 gap-4 mb-8 bg-surface-elevated p-4 rounded-xl border border-border">
               <div className="space-y-1">
                 <Input
                   label="Reps (Actual)"
@@ -327,7 +327,7 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
                   min="1"
                   value={actualReps}
                   onChange={(e) => setActualReps(Number(e.target.value))}
-                  className="bg-gray-800/50 text-gray-300"
+                  className="bg-card text-primary"
                 />
               </div>
               <div className="space-y-1">
@@ -338,7 +338,7 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
                   step="0.5"
                   value={actualWeight}
                   onChange={(e) => setActualWeight(Number(e.target.value))}
-                  className="bg-gray-800/50 text-gray-300"
+                  className="bg-card text-primary"
                 />
               </div>
             </div>
@@ -357,8 +357,8 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
           </div>
 
           {/* Right Column: Video Player */}
-          <div className="p-6 bg-gray-900/30 flex flex-col items-center justify-center">
-            <h4 className="text-gray-400 font-medium mb-4 w-full text-left uppercase tracking-wider text-sm">
+          <div className="p-6 bg-surface flex flex-col items-center justify-center">
+            <h4 className="text-secondary font-medium mb-4 w-full text-left uppercase tracking-wider text-sm">
               Reference Video
             </h4>
             <VideoPlayer url={exercise.videoUrl} isRunning={timer.isRunning} />
@@ -387,7 +387,7 @@ export function CoachMode(props: CoachModeProps) {
   }, []);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-gray-950 flex flex-col overflow-y-auto w-screen h-screen">
+    <div className="fixed inset-0 z-50 bg-surface flex flex-col overflow-y-auto w-screen h-screen">
       <div className="w-full min-h-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col justify-center">
         <CoachModeInner {...props} />
       </div>

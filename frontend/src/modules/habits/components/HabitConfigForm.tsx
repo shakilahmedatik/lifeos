@@ -7,6 +7,7 @@ import type {
 import { useState } from "react";
 import Button from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
+import ModalFooter from "../../../components/ui/ModalFooter.js";
 import { Select } from "../../../components/ui/Select.js";
 
 interface HabitConfigFormProps {
@@ -61,7 +62,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <div>
-        <label className="block text-sm font-medium text-gray-400 mb-1">Name</label>
+        <label className="block text-sm font-medium text-secondary mb-1">Name</label>
         <Input
           required
           value={name}
@@ -71,7 +72,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">Icon (emoji)</label>
+          <label className="block text-sm font-medium text-secondary mb-1">Icon (emoji)</label>
           <Input
             value={icon}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => setIcon(e.target.value)}
@@ -79,7 +80,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">Category</label>
+          <label className="block text-sm font-medium text-secondary mb-1">Category</label>
           <Select
             value={category}
             onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -101,7 +102,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
         <div className="space-y-3">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 Daily Goal (ml)
               </label>
               <Input
@@ -114,7 +115,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 Reminder Every (mins)
               </label>
               <Input
@@ -128,7 +129,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">
+            <label className="block text-sm font-medium text-secondary mb-1">
               Preset Amounts (comma separated, ml)
             </label>
             <Input
@@ -152,7 +153,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
       {type === "walking" && (
         <div className="grid grid-cols-2 gap-4">
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Daily Goal</label>
+            <label className="block text-sm font-medium text-secondary mb-1">Daily Goal</label>
             <Input
               type="number"
               required
@@ -163,7 +164,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Unit</label>
+            <label className="block text-sm font-medium text-secondary mb-1">Unit</label>
             <Select
               value={(config.unit as string) ?? "steps"}
               onChange={(e: React.ChangeEvent<HTMLSelectElement>) =>
@@ -180,7 +181,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
 
       {type === "timed" && (
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">
+          <label className="block text-sm font-medium text-secondary mb-1">
             Daily Goal (minutes)
           </label>
           <Input
@@ -196,7 +197,7 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
 
       {type === "prayer" && (
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-400 mb-1">Prayers & Times</label>
+          <label className="block text-sm font-medium text-secondary mb-1">Prayers & Times</label>
           {((config.prayers as Array<{ name: string; time: string }>) || []).map((p, i) => (
             <div key={i} className="flex gap-2">
               <Input
@@ -225,14 +226,14 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
         </div>
       )}
 
-      <div className="flex justify-end gap-3 mt-6">
+      <ModalFooter>
         <Button type="button" variant="secondary" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="submit" variant="primary">
           Save Habit
         </Button>
-      </div>
+      </ModalFooter>
     </form>
   );
 }

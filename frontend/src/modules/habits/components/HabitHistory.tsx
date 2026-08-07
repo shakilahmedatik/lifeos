@@ -63,13 +63,13 @@ export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
           type="date"
           value={dateStr}
           onChange={(e: React.ChangeEvent<HTMLInputElement>) => setDateStr(e.target.value)}
-          className="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-gray-200"
+          className="bg-surface border border-border-subtle rounded-lg px-3 py-2 text-primary"
         />
       </div>
 
       <div className="space-y-2">
         {logs.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 bg-gray-900/30 rounded-xl border border-gray-800">
+          <div className="p-8 text-center text-muted bg-surface rounded-xl border border-border">
             No logs found for this date.
           </div>
         ) : (
@@ -77,10 +77,10 @@ export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
             <Card key={log.id}>
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
-                  <span className="font-medium text-gray-200">{log.value}</span>
-                  {log.meta && <span className="ml-2 text-sm text-gray-400">({log.meta})</span>}
+                  <span className="font-medium text-primary">{log.value}</span>
+                  {log.meta && <span className="ml-2 text-sm text-secondary">({log.meta})</span>}
                 </div>
-                <div className="flex items-center gap-3 text-sm text-gray-500">
+                <div className="flex items-center gap-3 text-sm text-muted">
                   <span>
                     {new Date(log.loggedAt).toLocaleTimeString([], {
                       hour: "2-digit",
@@ -91,7 +91,7 @@ export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
                     type="button"
                     onClick={() => handleDeleteLog(log.id)}
                     title="Delete log"
-                    className="p-1.5 text-gray-500 hover:text-red-400 transition-colors"
+                    className="p-1.5 text-muted hover:text-red-400 transition-colors"
                   >
                     <Trash2 size={15} />
                   </button>

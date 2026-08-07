@@ -58,6 +58,7 @@ export function createApp(container: Container): Express {
   app.use("/api/news", modules.auth.middleware, modules.news.router);
   app.use("/api/skills", modules.auth.middleware, modules.skills.router);
   app.use("/api/backup", modules.auth.middleware, modules.backup.router);
+  app.use("/api/settings", modules.auth.middleware, modules.settings.router);
 
   // Global error handler
   app.use(

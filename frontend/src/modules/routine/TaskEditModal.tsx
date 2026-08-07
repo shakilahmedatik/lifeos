@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import { Input } from "../../components/ui/Input.js";
 import Modal from "../../components/ui/Modal.js";
+import ModalFooter from "../../components/ui/ModalFooter.js";
 import { Select } from "../../components/ui/Select.js";
 import { useLearningResources } from "../skills/hooks/useLearningResources.js";
 import { useWorkouts } from "../workouts/useWorkouts.js";
@@ -194,7 +195,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
             <div>
               <label
                 htmlFor="edit-task-workout"
-                className="block text-xs font-medium text-gray-400 mb-1"
+                className="block text-xs font-medium text-secondary mb-1"
               >
                 Select Workout Plan
               </label>
@@ -202,7 +203,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                 id="edit-task-workout"
                 value={referenceId}
                 onChange={(e) => setReferenceId(e.target.value)}
-                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+                className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
               >
                 <option value="">No linked workout</option>
                 {workouts.map((w) => (
@@ -218,7 +219,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
             <div>
               <label
                 htmlFor="edit-task-learning-resource"
-                className="block text-xs font-medium text-gray-400 mb-1"
+                className="block text-xs font-medium text-secondary mb-1"
               >
                 Select Learning Resource (Optional)
               </label>
@@ -226,7 +227,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                 id="edit-task-learning-resource"
                 value={referenceId}
                 onChange={(e) => setReferenceId(e.target.value)}
-                className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+                className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
               >
                 <option value="">No linked resource</option>
                 {learningResources.map((r) => (
@@ -238,12 +239,12 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
             </div>
           )}
 
-          <div className="space-y-2 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">
+          <div className="space-y-2 bg-surface-elevated p-3 rounded-xl border border-border">
             <div className="grid grid-cols-2 gap-3">
               <div>
                 <label
                   htmlFor="edit-start-time"
-                  className="block text-xs font-medium text-gray-400 mb-1"
+                  className="block text-xs font-medium text-secondary mb-1"
                 >
                   Start Time
                 </label>
@@ -252,14 +253,14 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                   type="time"
                   value={startTime}
                   onChange={(e) => setStartTime(e.target.value)}
-                  className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+                  className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
                 />
               </div>
 
               <div>
                 <label
                   htmlFor="edit-end-time"
-                  className="block text-xs font-medium text-gray-400 mb-1"
+                  className="block text-xs font-medium text-secondary mb-1"
                 >
                   End Time
                 </label>
@@ -271,13 +272,13 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                     setEndTime(e.target.value);
                     setDurationPreset(-1);
                   }}
-                  className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
+                  className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50"
                 />
               </div>
             </div>
 
             <div>
-              <span className="block text-xs font-medium text-gray-400 mb-1.5">
+              <span className="block text-xs font-medium text-secondary mb-1.5">
                 Duration Presets:
               </span>
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -294,7 +295,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                     className={`px-2 py-0.5 text-xs font-medium rounded-md border transition-colors ${
                       durationPreset === opt.value
                         ? "bg-blue-600 border-blue-500 text-white"
-                        : "bg-gray-700/50 border-gray-600/50 text-gray-300 hover:bg-gray-700"
+                        : "bg-card-hover border-border-subtle text-primary hover:bg-card-hover"
                     }`}
                   >
                     {opt.label}
@@ -312,8 +313,8 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
           )}
 
           {/* Subtasks Checklist Editor */}
-          <div className="space-y-2 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">
-            <label className="block text-xs font-medium text-gray-300">
+          <div className="space-y-2 bg-surface-elevated p-3 rounded-xl border border-border">
+            <label className="block text-xs font-medium text-primary">
               Sub-tasks / Todos Checklist ({subtasks.filter((s) => s.completed).length}/
               {subtasks.length})
             </label>
@@ -330,7 +331,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                     handleAddSubtask();
                   }
                 }}
-                className="flex-1 bg-gray-700/50 border border-gray-600/50 text-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
+                className="flex-1 bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
               />
               <Button
                 type="button"
@@ -348,17 +349,17 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                 {subtasks.map((st) => (
                   <div
                     key={st.id}
-                    className="flex items-center justify-between p-2 rounded-lg bg-gray-700/30 border border-gray-600/30 text-xs text-gray-200"
+                    className="flex items-center justify-between p-2 rounded-lg bg-card-hover border border-border-subtle text-xs text-primary"
                   >
                     <label className="flex items-center gap-2 flex-1 cursor-pointer min-w-0">
                       <input
                         type="checkbox"
                         checked={st.completed}
                         onChange={() => handleToggleSubtask(st.id)}
-                        className="rounded bg-gray-700 border-gray-600 accent-blue-500"
+                        className="rounded bg-card-hover border-border-subtle accent-blue-500"
                       />
                       <span
-                        className={`truncate ${st.completed ? "line-through text-gray-500" : ""}`}
+                        className={`truncate ${st.completed ? "line-through text-muted" : ""}`}
                       >
                         {st.title}
                       </span>
@@ -367,7 +368,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                       type="button"
                       onClick={() => handleRemoveSubtask(st.id)}
                       aria-label={`Remove subtask ${st.title}`}
-                      className="text-gray-400 hover:text-red-400 p-1 ml-2"
+                      className="text-secondary hover:text-red-400 p-1 ml-2"
                     >
                       <XIcon size={12} />
                     </button>
@@ -378,7 +379,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
           </div>
 
           <div>
-            <label htmlFor="edit-notes" className="block text-xs font-medium text-gray-400 mb-1">
+            <label htmlFor="edit-notes" className="block text-xs font-medium text-secondary mb-1">
               Notes
             </label>
             <textarea
@@ -386,18 +387,18 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               rows={2}
-              className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 resize-none"
+              className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 resize-none"
             />
           </div>
 
           {/* Notification Settings Section */}
-          <div className="space-y-2 pt-1 border-t border-gray-700/40">
-            <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+          <div className="space-y-2 pt-1 border-t border-border">
+            <label className="flex items-center gap-2 text-sm text-primary cursor-pointer">
               <input
                 type="checkbox"
                 checked={enableReminder}
                 onChange={(e) => setEnableReminder(e.target.checked)}
-                className="rounded bg-gray-700 border-gray-600 accent-blue-500"
+                className="rounded bg-card-hover border-border-subtle accent-blue-500"
               />
               <span>Set Notification Reminder</span>
             </label>
@@ -407,7 +408,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                 <div>
                   <label
                     htmlFor="edit-reminder-timing"
-                    className="block text-xs text-gray-400 mb-1"
+                    className="block text-xs text-secondary mb-1"
                   >
                     Timing
                   </label>
@@ -415,7 +416,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                     id="edit-reminder-timing"
                     value={reminderMinutesBefore}
                     onChange={(e) => setReminderMinutesBefore(Number(e.target.value))}
-                    className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
+                    className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
                   >
                     <option value={5}>5 min before</option>
                     <option value={10}>10 min before</option>
@@ -426,14 +427,14 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
                 </div>
 
                 <div>
-                  <label htmlFor="edit-reminder-sound" className="block text-xs text-gray-400 mb-1">
+                  <label htmlFor="edit-reminder-sound" className="block text-xs text-secondary mb-1">
                     Sound
                   </label>
                   <select
                     id="edit-reminder-sound"
                     value={reminderSound}
                     onChange={(e) => setReminderSound(e.target.value)}
-                    className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
+                    className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
                   >
                     <option value="default">Default</option>
                     <option value="gentle">Gentle</option>
@@ -446,7 +447,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
             )}
           </div>
 
-          <div className="flex items-center justify-end gap-3 pt-3 border-t border-gray-700/50">
+          <ModalFooter>
             <Button type="button" variant="secondary" size="sm" onClick={onClose}>
               Cancel
             </Button>
@@ -454,7 +455,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
             <Button type="submit" size="sm" disabled={submitting}>
               {submitting ? "Saving..." : "Save Changes"}
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       </div>
     </Modal>

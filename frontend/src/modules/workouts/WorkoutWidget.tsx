@@ -1,5 +1,7 @@
-import { Dumbbell as DumbbellIcon } from "lucide-react";
+import { Dumbbell as DumbbellIcon, Play } from "lucide-react";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
+import { EmptyState } from "../../components/ui/EmptyState.js";
+import { Skeleton } from "../../components/ui/Skeleton.js";
 import { useWorkoutSessions, useWorkoutStats, useWorkouts } from "./useWorkouts.js";
 
 interface WorkoutWidgetProps {
@@ -17,12 +19,12 @@ export function WorkoutWidget({ onSelectWorkout, onViewHistory }: WorkoutWidgetP
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DumbbellIcon className="w-5 h-5 text-gray-500" />
+            <DumbbellIcon className="w-5 h-5 text-muted" />
             Workouts
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="h-32 bg-gray-800/60 rounded-xl animate-pulse"></div>
+          <Skeleton className="h-32 w-full rounded-xl" />
         </CardContent>
       </Card>
     );
@@ -52,16 +54,16 @@ export function WorkoutWidget({ onSelectWorkout, onViewHistory }: WorkoutWidgetP
       <CardContent className="flex-1 flex flex-col">
         {stats && (
           <div className="grid grid-cols-2 gap-3 mb-6">
-            <div className="bg-gray-800/40 p-3 rounded-lg border border-gray-700/50 text-center">
+            <div className="bg-surface-elevated p-3 rounded-lg border border-border text-center">
               <p className="text-2xl font-bold text-emerald-400">{stats.totalWorkouts}</p>
-              <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">Workouts</p>
+              <p className="text-xs text-secondary uppercase tracking-wider mt-1">Workouts</p>
             </div>
-            <div className="bg-gray-800/40 p-3 rounded-lg border border-gray-700/50 text-center">
+            <div className="bg-surface-elevated p-3 rounded-lg border border-border text-center">
               <p className="text-2xl font-bold text-blue-400">
                 {Math.round(stats.averageDuration / 60)}
-                <span className="text-sm font-normal text-gray-500">m</span>
+                <span className="text-sm font-normal text-muted">m</span>
               </p>
-              <p className="text-xs text-gray-400 uppercase tracking-wider mt-1">Avg Time</p>
+              <p className="text-xs text-secondary uppercase tracking-wider mt-1">Avg Time</p>
             </div>
           </div>
         )}
@@ -69,7 +71,7 @@ export function WorkoutWidget({ onSelectWorkout, onViewHistory }: WorkoutWidgetP
         <div className="space-y-4 flex-1">
           {upcomingWorkouts.length > 0 && (
             <div>
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              <h4 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
                 Upcoming
               </h4>
               <div className="space-y-2">
@@ -77,10 +79,10 @@ export function WorkoutWidget({ onSelectWorkout, onViewHistory }: WorkoutWidgetP
                   <button
                     type="button"
                     key={workout.id}
-                    className="flex justify-between items-center p-2.5 bg-gray-800/40 border border-gray-700/50 rounded-lg hover:bg-gray-700/60 hover:border-gray-600 transition-all w-full text-left group"
+                    className="flex justify-between items-center p-2.5 bg-surface-elevated border border-border rounded-lg hover:bg-card-hover hover:border-border-subtle transition-all w-full text-left group"
                     onClick={() => onSelectWorkout?.(workout.id)}
                   >
-                    <span className="text-sm font-medium text-gray-200 group-hover:text-white transition-colors">
+                    <span className="text-sm font-medium text-primary group-hover:text-white transition-colors">
                       {workout.name}
                     </span>
                     <span className="text-xs text-blue-400 bg-blue-900/20 px-2 py-0.5 rounded capitalize">
@@ -94,22 +96,22 @@ export function WorkoutWidget({ onSelectWorkout, onViewHistory }: WorkoutWidgetP
 
           {recentSessions.length > 0 && (
             <div className={upcomingWorkouts.length > 0 ? "pt-2" : ""}>
-              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">
+              <h4 className="text-xs font-semibold text-muted uppercase tracking-wider mb-2">
                 Recent Sessions
               </h4>
               <div className="space-y-2">
                 {recentSessions.map((session) => (
                   <div
                     key={session.id}
-                    className="flex justify-between items-center p-2.5 bg-gray-800/40 border border-gray-700/50 rounded-lg"
+                    className="flex justify-between items-center p-2.5 bg-surface-elevated border border-border rounded-lg"
                   >
-                    <span className="text-sm text-gray-300">
+                    <span className="text-sm text-primary">
                       {new Date(session.startedAt).toLocaleDateString(undefined, {
                         month: "short",
                         day: "numeric",
                       })}
                     </span>
-                    <span className="text-xs text-gray-400">
+                    <span className="text-xs text-secondary">
                       {session.durationSeconds ? (
                         `${Math.round(session.durationSeconds / 60)}m`
                       ) : (
@@ -123,18 +125,21 @@ export function WorkoutWidget({ onSelectWorkout, onViewHistory }: WorkoutWidgetP
           )}
 
           {upcomingWorkouts.length === 0 && recentSessions.length === 0 && (
-            <div className="flex-1 flex flex-col items-center justify-center text-center py-4">
-              <p className="text-sm text-gray-500">No workout data yet.</p>
-              {onSelectWorkout && (
-                <button
-                  type="button"
-                  onClick={() => onSelectWorkout("new")}
-                  className="mt-2 text-sm text-blue-400 hover:text-blue-300"
-                >
-                  Start a workout
-                </button>
-              )}
-            </div>
+            <EmptyState
+              title="No workout data yet."
+              className="py-4"
+              action={
+                onSelectWorkout && (
+                  <button
+                    type="button"
+                    onClick={() => onSelectWorkout("new")}
+                    className="text-sm font-medium text-blue-400 hover:text-blue-300"
+                  >
+                    Start a workout
+                  </button>
+                )
+              }
+            />
           )}
         </div>
       </CardContent>

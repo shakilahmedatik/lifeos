@@ -7,12 +7,13 @@ import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import {
   AccountList,
-  BackupPanel,
   CategoryList,
   MonthlyView,
   TransactionForm,
   TransactionList,
+  useFinanceBackup,
 } from "../modules/finance/index.js";
+import BackupPanel from "../components/ui/BackupPanel.js";
 
 type Tab = "overview" | "transactions" | "accounts" | "categories" | "backup";
 
@@ -30,6 +31,8 @@ export default function FinancePage() {
     setEditingTransaction(tx);
     setShowTransactionModal(true);
   }, []);
+
+  const { exportCsv, exportJson, importJson } = useFinanceBackup(handleRefresh);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -82,7 +85,12 @@ export default function FinancePage() {
         </TabsContent>
 
         <TabsContent value="backup" className="mt-6">
-          <BackupPanel onImportComplete={handleRefresh} />
+          <BackupPanel 
+            entityName="Finance"
+            onExportCsv={exportCsv}
+            onExportJson={exportJson}
+            onImportJson={importJson}
+          />
         </TabsContent>
       </Tabs>
 

@@ -50,15 +50,15 @@ export function NewsTicker() {
 
   if (loading) {
     return (
-      <div className="rounded border bg-gray-50 p-3">
-        <div className="text-sm text-gray-500">Loading news...</div>
+      <div className="rounded border bg-card p-3">
+        <div className="text-sm text-muted">Loading news...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="rounded border bg-gray-50 p-3">
+      <div className="rounded border bg-card p-3">
         <div className="text-sm text-red-500">{error}</div>
       </div>
     );
@@ -69,20 +69,20 @@ export function NewsTicker() {
   }
 
   return (
-    <div className="overflow-hidden rounded border bg-gray-50">
-      <div className="border-b bg-gray-100 px-3 py-2">
-        <h3 className="text-sm font-medium text-gray-700">News</h3>
+    <div className="overflow-hidden rounded border bg-card">
+      <div className="border-b bg-card-hover px-3 py-2">
+        <h3 className="text-sm font-medium text-muted">News</h3>
       </div>
       <div className="divide-y">
         {articles.map((article) => (
           <button
             key={article.id}
             type="button"
-            className="w-full cursor-pointer px-3 py-2 text-left transition-colors hover:bg-gray-100"
+            className="w-full cursor-pointer px-3 py-2 text-left transition-colors hover:bg-card-hover"
             onClick={() => handleArticleClick(article)}
           >
             <div className="line-clamp-1 text-sm font-medium">{article.title}</div>
-            <div className="mt-1 text-xs text-gray-500">{formatDate(article.publishedAt)}</div>
+            <div className="mt-1 text-xs text-muted">{formatDate(article.publishedAt)}</div>
           </button>
         ))}
       </div>

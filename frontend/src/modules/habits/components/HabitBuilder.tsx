@@ -117,10 +117,10 @@ export function HabitBuilder({
 
   return (
     <div className="space-y-8 animate-fade-in">
-      <div className="flex justify-between items-center bg-gray-900/60 p-4 rounded-xl border border-gray-800">
+      <div className="flex justify-between items-center bg-surface p-4 rounded-xl border border-border">
         <div>
-          <h3 className="font-semibold text-gray-200">Build a New Habit</h3>
-          <p className="text-xs text-gray-400">
+          <h3 className="font-semibold text-primary">Build a New Habit</h3>
+          <p className="text-xs text-secondary">
             Choose a habit type or pick from pre-configured healthy templates.
           </p>
         </div>
@@ -148,15 +148,15 @@ export function HabitBuilder({
       </div>
 
       <div className="space-y-4">
-        <h3 className="text-lg font-medium text-gray-200">Active Habits</h3>
+        <h3 className="text-lg font-medium text-primary">Active Habits</h3>
         {activeHabits.length === 0 ? (
-          <div className="p-8 text-center text-gray-500 bg-gray-900/30 rounded-xl border border-gray-800">
+          <div className="p-8 text-center text-muted bg-surface rounded-xl border border-border">
             No active habits. Click a type above or Browse Templates to add one!
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {activeHabits.map((habit, index) => (
-              <Card key={habit.id} className="bg-card group hover:border-gray-700 transition-all">
+              <Card key={habit.id} className="bg-card group hover:border-border-subtle transition-all">
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     {onReorder && (
@@ -164,14 +164,14 @@ export function HabitBuilder({
                         <button
                           disabled={index === 0}
                           onClick={() => handleMove(index, "up")}
-                          className="text-gray-400 hover:text-white disabled:opacity-20"
+                          className="text-secondary hover:text-white disabled:opacity-20"
                         >
                           <ChevronUp size={14} />
                         </button>
                         <button
                           disabled={index === activeHabits.length - 1}
                           onClick={() => handleMove(index, "down")}
-                          className="text-gray-400 hover:text-white disabled:opacity-20"
+                          className="text-secondary hover:text-white disabled:opacity-20"
                         >
                           <ChevronDown size={14} />
                         </button>
@@ -179,8 +179,8 @@ export function HabitBuilder({
                     )}
                     <div className="text-2xl">{habit.icon || "📌"}</div>
                     <div>
-                      <h4 className="font-medium text-gray-200">{habit.name}</h4>
-                      <span className="text-xs text-gray-500 capitalize">
+                      <h4 className="font-medium text-primary">{habit.name}</h4>
+                      <span className="text-xs text-muted capitalize">
                         {habit.type} • {habit.category}
                       </span>
                     </div>
@@ -189,21 +189,21 @@ export function HabitBuilder({
                     <button
                       onClick={() => openEdit(habit)}
                       title="Edit"
-                      className="p-2 text-gray-400 hover:text-blue-400 transition-colors"
+                      className="p-2 text-secondary hover:text-blue-400 transition-colors"
                     >
                       <Edit2 size={16} />
                     </button>
                     <button
                       onClick={() => onArchive(habit.id)}
                       title="Archive"
-                      className="p-2 text-gray-400 hover:text-yellow-400 transition-colors"
+                      className="p-2 text-secondary hover:text-yellow-400 transition-colors"
                     >
                       <Archive size={16} />
                     </button>
                     <button
                       onClick={() => onDelete(habit.id)}
                       title="Delete"
-                      className="p-2 text-gray-400 hover:text-red-400 transition-colors"
+                      className="p-2 text-secondary hover:text-red-400 transition-colors"
                     >
                       <Trash2 size={16} />
                     </button>
@@ -216,23 +216,23 @@ export function HabitBuilder({
       </div>
 
       {archivedHabits.length > 0 && (
-        <div className="space-y-4 pt-8 border-t border-gray-800">
-          <h3 className="text-lg font-medium text-gray-500">Archived Habits</h3>
+        <div className="space-y-4 pt-8 border-t border-border">
+          <h3 className="text-lg font-medium text-muted">Archived Habits</h3>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 opacity-75">
             {archivedHabits.map((habit) => (
-              <Card key={habit.id} className="bg-gray-900/40">
+              <Card key={habit.id} className="bg-surface">
                 <CardContent className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="text-2xl grayscale">{habit.icon || "📌"}</div>
                     <div>
-                      <h4 className="font-medium text-gray-400 line-through">{habit.name}</h4>
+                      <h4 className="font-medium text-secondary line-through">{habit.name}</h4>
                     </div>
                   </div>
                   <div className="flex gap-2">
                     <button
                       onClick={() => onArchive(habit.id)}
                       title="Unarchive"
-                      className="p-2 text-gray-500 hover:text-green-400 transition-colors"
+                      className="p-2 text-muted hover:text-green-400 transition-colors"
                     >
                       <ArrowUpCircle size={16} />
                     </button>
@@ -267,22 +267,22 @@ export function HabitBuilder({
         title="Healthy Habit Templates"
       >
         <div className="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
-          <p className="text-xs text-gray-400 mb-2">
+          <p className="text-xs text-secondary mb-2">
             Select a template to auto-fill your habit configuration.
           </p>
           {HABIT_TEMPLATES.map((tmpl) => (
             <div
               key={tmpl.id}
               onClick={() => applyTemplate(tmpl)}
-              className="p-3 bg-gray-900/80 border border-gray-800 hover:border-emerald-500/50 rounded-xl cursor-pointer transition-all flex items-center justify-between group"
+              className="p-3 bg-surface border border-border hover:border-emerald-500/50 rounded-xl cursor-pointer transition-all flex items-center justify-between group"
             >
               <div className="flex items-center gap-3">
                 <div className="text-2xl">{tmpl.icon}</div>
                 <div>
-                  <h4 className="font-semibold text-gray-200 group-hover:text-emerald-400 transition-colors">
+                  <h4 className="font-semibold text-primary group-hover:text-emerald-400 transition-colors">
                     {tmpl.name}
                   </h4>
-                  <p className="text-xs text-gray-400">{tmpl.description}</p>
+                  <p className="text-xs text-secondary">{tmpl.description}</p>
                 </div>
               </div>
               <Button

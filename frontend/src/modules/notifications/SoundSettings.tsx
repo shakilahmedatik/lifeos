@@ -50,7 +50,7 @@ export function SoundSettings() {
 
   if (loading) {
     return (
-      <div className="p-6 flex items-center justify-center text-gray-400">
+      <div className="p-6 flex items-center justify-center text-secondary">
         <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-500" />
         <span className="ml-3 text-sm">Loading sound settings...</span>
       </div>
@@ -58,9 +58,9 @@ export function SoundSettings() {
   }
 
   return (
-    <div className="p-4 bg-gray-800/40 border border-gray-700/40 rounded-xl">
+    <div className="p-4 bg-surface-elevated border border-border rounded-xl">
       <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-semibold text-gray-100">Sound Settings</h2>
+        <h2 className="text-lg font-semibold text-primary">Sound Settings</h2>
         {savedMessage && (
           <span className="text-xs text-emerald-400 font-medium animate-fade-in">
             {savedMessage}
@@ -73,8 +73,8 @@ export function SoundSettings() {
             key={option.value}
             className={`flex items-center justify-between border rounded-xl p-3 transition-colors ${
               selectedSound === option.value
-                ? "bg-blue-600/10 border-blue-500/40 text-gray-100"
-                : "bg-gray-700/20 border-gray-700/40 text-gray-300 hover:bg-gray-700/40"
+                ? "bg-blue-600/10 border-blue-500/40 text-primary"
+                : "bg-card-hover/20 border-border text-primary hover:bg-card-hover"
             }`}
           >
             <div className="flex items-center gap-3">
@@ -85,7 +85,7 @@ export function SoundSettings() {
                 value={option.value}
                 checked={selectedSound === option.value}
                 onChange={() => saveSoundPreference(option.value)}
-                className="h-4 w-4 text-blue-600 border-gray-600 focus:ring-blue-500"
+                className="h-4 w-4 text-blue-600 border-border-subtle focus:ring-blue-500"
               />
               <label htmlFor={option.value} className="text-sm font-medium cursor-pointer">
                 {option.label}

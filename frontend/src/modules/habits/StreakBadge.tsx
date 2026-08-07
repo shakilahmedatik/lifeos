@@ -9,7 +9,7 @@ export default function StreakBadge({ currentStreak, longestStreak }: StreakBadg
       <span className="text-orange-500">🔥</span>
       <span className="font-medium">{currentStreak}</span>
       {longestStreak > currentStreak && (
-        <span className="text-gray-400 text-xs">(best: {longestStreak})</span>
+        <span className="text-secondary text-xs">(best: {longestStreak})</span>
       )}
     </div>
   );

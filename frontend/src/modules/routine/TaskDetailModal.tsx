@@ -24,11 +24,14 @@ interface TaskDetailModalProps {
   onStatusChange: (id: string, status: TaskStatus) => void;
 }
 
-const STATUS_VARIANTS: Record<TaskStatus, "info" | "success" | "warning" | "default"> = {
+const STATUS_VARIANTS: Record<TaskStatus, "default" | "info" | "success" | "warning"> = {
   planned: "default",
+  todo: "default",
   in_progress: "info",
   done: "success",
   skipped: "warning",
+  cancelled: "default",
+  missed: "warning",
 };
 
 export default function TaskDetailModal({
@@ -71,13 +74,13 @@ export default function TaskDetailModal({
           )}
         </div>
         {/* Time & Duration Info Card */}
-        <div className="bg-gray-800/50 p-3.5 rounded-xl border border-gray-700/40 space-y-2">
-          <div className="flex items-center gap-2 text-gray-300">
+        <div className="bg-card p-3.5 rounded-xl border border-border space-y-2">
+          <div className="flex items-center gap-2 text-primary">
             <CalendarIcon size={16} className="text-blue-400" />
             <span className="font-medium">{task.date}</span>
           </div>
 
-          <div className="flex items-center gap-2 text-gray-300">
+          <div className="flex items-center gap-2 text-primary">
             <ClockIcon size={16} className="text-blue-400" />
             <span>
               {task.startTime} – {task.endTime} ({duration} minutes)
@@ -89,8 +92,8 @@ export default function TaskDetailModal({
             )}
           </div>
 
-          <div className="pt-2 border-t border-gray-700/40 flex items-center justify-between">
-            <span className="text-xs text-gray-400 shrink-0 mr-2">Status:</span>
+          <div className="pt-2 border-t border-border flex items-center justify-between">
+            <span className="text-xs text-secondary shrink-0 mr-2">Status:</span>
             <div className="w-32">
               <Select
                 value={task.status}
@@ -108,9 +111,9 @@ export default function TaskDetailModal({
 
         {/* Subtasks Checklist Section */}
         {totalSubtasks > 0 && (
-          <div className="bg-gray-800/50 p-3.5 rounded-xl border border-gray-700/40 space-y-3">
+          <div className="bg-card p-3.5 rounded-xl border border-border space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="text-xs font-semibold text-gray-300 uppercase tracking-wider">
+              <h3 className="text-xs font-semibold text-primary uppercase tracking-wider">
                 Sub-tasks Checklist ({completedSubtasks}/{totalSubtasks})
               </h3>
               <span className="text-xs font-medium text-purple-400">
@@ -119,7 +122,7 @@ export default function TaskDetailModal({
             </div>
 
             {/* Progress Bar */}
-            <div className="w-full bg-gray-700/50 h-2 rounded-full overflow-hidden">
+            <div className="w-full bg-card-hover h-2 rounded-full overflow-hidden">
               <div
                 className="bg-purple-500 h-full transition-all duration-300"
                 style={{ width: `${progressPercent}%` }}
@@ -130,16 +133,16 @@ export default function TaskDetailModal({
               {task.subtasks?.map((st) => (
                 <label
                   key={st.id}
-                  className="flex items-center gap-2.5 p-2 rounded-lg bg-gray-700/30 border border-gray-600/30 cursor-pointer hover:bg-gray-700/50 transition-colors"
+                  className="flex items-center gap-2.5 p-2 rounded-lg bg-card-hover border border-border-subtle cursor-pointer hover:bg-card-hover transition-colors"
                 >
                   <input
                     type="checkbox"
                     checked={st.completed}
                     onChange={() => handleSubtaskCheck(st.id)}
-                    className="rounded bg-gray-700 border-gray-600 accent-purple-500"
+                    className="rounded bg-card-hover border-border-subtle accent-purple-500"
                   />
                   <span
-                    className={`text-xs ${st.completed ? "line-through text-gray-500" : "text-gray-200"}`}
+                    className={`text-xs ${st.completed ? "line-through text-muted" : "text-primary"}`}
                   >
                     {st.title}
                   </span>
@@ -151,9 +154,9 @@ export default function TaskDetailModal({
 
         {/* Notes Section */}
         {task.notes && (
-          <div className="bg-gray-800/50 p-3.5 rounded-xl border border-gray-700/40 space-y-1">
-            <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Notes</h3>
-            <p className="text-xs text-gray-300 whitespace-pre-wrap leading-relaxed">
+          <div className="bg-card p-3.5 rounded-xl border border-border space-y-1">
+            <h3 className="text-xs font-semibold text-secondary uppercase tracking-wider">Notes</h3>
+            <p className="text-xs text-primary whitespace-pre-wrap leading-relaxed">
               {task.notes}
             </p>
           </div>
@@ -161,7 +164,7 @@ export default function TaskDetailModal({
 
         {/* Reminder Info */}
         {task.reminderMinutesBefore && (
-          <div className="bg-gray-800/50 p-3.5 rounded-xl border border-gray-700/40 flex items-center gap-2 text-xs text-blue-300">
+          <div className="bg-card p-3.5 rounded-xl border border-border flex items-center gap-2 text-xs text-blue-300">
             <BellIcon size={16} className="text-blue-400" />
             <span>
               Reminder set for {task.reminderMinutesBefore} minutes before (
@@ -172,7 +175,7 @@ export default function TaskDetailModal({
       </div>
 
       {/* Modal Actions */}
-      <div className="flex items-center justify-between pt-4 mt-4 border-t border-gray-700/50">
+      <div className="flex items-center justify-between pt-4 mt-4 border-t border-border">
         <Button
           variant="danger"
           size="sm"

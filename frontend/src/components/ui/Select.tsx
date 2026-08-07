@@ -1,4 +1,5 @@
-import { type SelectHTMLAttributes, useId } from "react";
+import { type SelectHTMLAttributes, useId, forwardRef } from "react";
+import { cn } from "../../lib/utils.js";
 
 export interface SelectOption {
   value: string;
@@ -13,15 +14,8 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   options: SelectOption[];
 }
 
-export function Select({
-  label,
-  error,
-  helperText,
-  options,
-  className = "",
-  id,
-  ...props
-}: SelectProps) {
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ label, error, helperText, options, className = "", id, ...props }, ref) => {
   const generatedId = useId();
   const selectId = id || generatedId;
 
@@ -34,13 +28,14 @@ export function Select({
       )}
       <select
         id={selectId}
-        className={[
+        ref={ref}
+        className={cn(
           "w-full bg-input/40 border border-border rounded-lg px-3 py-2 text-sm text-primary",
           "focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent/50",
           "disabled:opacity-50 disabled:cursor-not-allowed transition-colors",
-          error ? "border-danger focus:border-danger focus:ring-danger/50" : "",
-          className,
-        ].join(" ")}
+          error && "border-danger focus:border-danger focus:ring-danger/50",
+          className
+        )}
         {...props}
       >
         {options.map((opt) => (
@@ -58,4 +53,4 @@ export function Select({
       {helperText && !error && <p className="text-xs text-muted">{helperText}</p>}
     </div>
   );
-}
+});

@@ -1,5 +1,6 @@
 import type { DashboardSkillProgress } from "@lifeos/contracts";
 import { DashboardPanel } from "../components/DashboardPanel.js";
+import { EmptyState } from "../../../components/ui/EmptyState.js";
 
 interface SkillsProgressWidgetProps {
   skills: DashboardSkillProgress[];
@@ -12,12 +13,12 @@ export function SkillsProgressWidget({ skills }: SkillsProgressWidgetProps) {
     <DashboardPanel title="Skills" subtitle="weekly target">
       <div className="flex flex-col gap-2.5 justify-center h-full overflow-hidden">
         {skills.length === 0 ? (
-          <div className="text-center text-muted text-xs py-4">No skill areas tracked</div>
+          <EmptyState title="No skill areas tracked" className="py-4" />
         ) : (
           skills.slice(0, 4).map((s, i) => (
             <div key={s.skillAreaId}>
               <div className="flex items-center justify-between mb-1">
-                <span className="text-xs text-gray-200 truncate max-w-[150px]">{s.name}</span>
+                <span className="text-xs text-primary truncate max-w-[150px]">{s.name}</span>
                 <span className="font-mono text-[10px] text-muted">
                   {s.hoursThisWeek}h / {s.weeklyGoalHours}h
                 </span>

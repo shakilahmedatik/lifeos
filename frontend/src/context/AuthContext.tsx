@@ -12,6 +12,7 @@ interface AuthContextType {
   token: string | null;
   isLoadingSession: boolean;
   login: (token: string, user: UserSession) => void;
+  updateUser: (updatedUser: UserSession) => void;
   logout: () => void;
 }
 
@@ -80,6 +81,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     localStorage.setItem("lifeos_user", JSON.stringify(newUser));
   };
 
+  const updateUser = (updatedUser: UserSession) => {
+    setUser(updatedUser);
+    localStorage.setItem("lifeos_user", JSON.stringify(updatedUser));
+  };
+
   const logout = () => {
     fetch("/api/auth/sign-out", {
       method: "POST",
@@ -98,6 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         isLoadingSession,
         login,
+        updateUser,
         logout,
       }}
     >

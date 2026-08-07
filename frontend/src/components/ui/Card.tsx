@@ -1,5 +1,6 @@
-import type { ReactNode } from "react";
+import type { ReactNode, KeyboardEvent } from "react";
 import { TiltCard } from "./TiltCard.js";
+import { cn } from "../../lib/utils.js";
 
 interface CardProps {
   children: ReactNode;
@@ -29,10 +30,31 @@ export default function Card({
 }: CardProps) {
   const isInteractive = interactive || !!onClick || hover || className.includes("hover:");
 
+  const interactiveProps = onClick
+    ? {
+        role: "button",
+        tabIndex: 0,
+        onKeyDown: (e: KeyboardEvent) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onClick();
+          }
+        },
+      }
+    : {};
+
   const content = (
     <div
-      className={`bg-gray-800/60 border border-gray-700/50 rounded-xl ${paddingStyles[padding]} ${hover ? "hover:bg-gray-800/80 transition-colors duration-200" : ""} ${accent ? `border-l-4 ${accent}` : ""} ${onClick ? "cursor-pointer" : ""} ${className}`}
+      className={cn(
+        "bg-card border border-border rounded-xl",
+        paddingStyles[padding],
+        hover && "hover:bg-card-hover transition-colors duration-200",
+        accent && `border-l-4 ${accent}`,
+        onClick && "cursor-pointer",
+        className
+      )}
       onClick={onClick}
+      {...interactiveProps}
     >
       {children}
     </div>
@@ -42,7 +64,12 @@ export default function Card({
     return (
       <TiltCard className={className} onClick={onClick}>
         <div
-          className={`bg-gray-800/60 border border-gray-700/50 rounded-xl h-full w-full ${paddingStyles[padding]} ${hover ? "hover:bg-gray-800/80 transition-colors duration-200" : ""} ${accent ? `border-l-4 ${accent}` : ""}`}
+          className={cn(
+            "bg-card border border-border rounded-xl h-full w-full",
+            paddingStyles[padding],
+            hover && "hover:bg-card-hover transition-colors duration-200",
+            accent && `border-l-4 ${accent}`
+          )}
         >
           {children}
         </div>
@@ -60,7 +87,7 @@ export function CardHeader({
   children: ReactNode;
   className?: string;
 }) {
-  return <div className={`flex items-center justify-between mb-3 ${className}`}>{children}</div>;
+  return <div className={cn("flex items-center justify-between mb-3", className)}>{children}</div>;
 }
 
 export function CardTitle({
@@ -70,7 +97,7 @@ export function CardTitle({
   children: ReactNode;
   className?: string;
 }) {
-  return <h3 className={`text-sm font-semibold text-gray-200 ${className}`}>{children}</h3>;
+  return <h3 className={cn("text-sm font-semibold text-primary", className)}>{children}</h3>;
 }
 
 export function CardContent({

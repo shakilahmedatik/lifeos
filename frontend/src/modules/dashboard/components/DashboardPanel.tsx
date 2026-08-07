@@ -17,7 +17,7 @@ export function DashboardPanel({
 }: DashboardPanelProps) {
   return (
     <div
-      className={`bg-gray-800/60 border border-gray-700/50 rounded-xl p-3.5 flex flex-col h-auto lg:h-full lg:min-h-0 overflow-visible lg:overflow-hidden shadow-sm hover:border-gray-600/60 transition-colors ${className}`}
+      className={`bg-card border border-border rounded-xl p-3.5 flex flex-col h-auto lg:h-full lg:min-h-0 overflow-visible lg:overflow-hidden shadow-sm hover:border-border-subtle transition-colors ${className}`}
     >
       <div className="flex items-center justify-between mb-2.5 shrink-0">
         <div className="flex items-center gap-2">

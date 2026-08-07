@@ -244,6 +244,19 @@ export const api = {
 
   // Backup
   downloadBackup: () => request<{ filename: string; path: string }>("/api/backup"),
+  exportBackupJson: async () => {
+    const token =
+      typeof localStorage !== "undefined" ? localStorage.getItem("lifeos_session_token") : null;
+    const headers: Record<string, string> = {};
+    if (token) headers.Authorization = `Bearer ${token}`;
+
+    const res = await fetch("/api/backup/export", {
+      headers,
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("Failed to export database backup");
+    return res.blob();
+  },
 
   // Notifications
   getNotifications: () => request<NotificationWithTask[]>("/api/notifications"),
@@ -285,4 +298,23 @@ export const api = {
       body: JSON.stringify(patch),
     }),
   deleteReminder: (id: string) => request<void>(`/api/reminders/${id}`, { method: "DELETE" }),
+
+  // User Profile & System Settings
+  updateProfile: (input: { name?: string; email?: string }) =>
+    request<{ user: { id: string; name: string; email: string; createdAt?: string } }>(
+      "/api/auth/profile",
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(input),
+      },
+    ),
+  getSettings: () => request<Record<string, string>>("/api/settings"),
+  updateSettings: (settings: Record<string, string>) =>
+    request<Record<string, string>>("/api/settings", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(settings),
+    }),
+  getHealth: () => request<{ status: string; timestamp: string; version?: string }>("/api/health"),
 };

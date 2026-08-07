@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { cn } from "../../lib/utils.js";
 
 type BadgeVariant =
   | "default"
@@ -20,15 +21,15 @@ interface BadgeProps {
 }
 
 const variantStyles: Record<BadgeVariant, string> = {
-  default: "bg-gray-700 text-gray-300",
-  success: "bg-green-900/60 text-green-300 border border-green-700/50",
-  warning: "bg-yellow-900/60 text-yellow-300 border border-yellow-700/50",
-  danger: "bg-red-900/60 text-red-300 border border-red-700/50",
-  info: "bg-blue-900/60 text-blue-300 border border-blue-700/50",
-  blue: "bg-blue-900/50 text-blue-300",
-  purple: "bg-purple-900/50 text-purple-300",
-  orange: "bg-orange-900/50 text-orange-300",
-  pink: "bg-pink-900/50 text-pink-300",
+  default: "bg-card-solid text-secondary",
+  success: "bg-success/15 text-success border border-success/30",
+  warning: "bg-warning/15 text-warning border border-warning/30",
+  danger: "bg-danger/15 text-danger border border-danger/30",
+  info: "bg-accent-muted text-accent border border-accent/30",
+  blue: "bg-blue-500/15 text-blue-500",
+  purple: "bg-purple-500/15 text-purple-500",
+  orange: "bg-orange-500/15 text-orange-500",
+  pink: "bg-pink-500/15 text-pink-500",
 };
 
 const sizeStyles = {
@@ -43,11 +44,13 @@ export default function Badge({
   className = "",
   onClick,
 }: BadgeProps) {
-  const combinedClassName = `inline-flex items-center font-medium rounded-full ${variantStyles[variant]} ${sizeStyles[size]} ${className} ${
-    onClick
-      ? "cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-      : ""
-  }`;
+  const combinedClassName = cn(
+    "inline-flex items-center font-medium rounded-full",
+    variantStyles[variant],
+    sizeStyles[size],
+    onClick && "cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-accent",
+    className
+  );
 
   if (onClick) {
     return (

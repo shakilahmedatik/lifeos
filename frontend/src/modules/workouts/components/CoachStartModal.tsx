@@ -15,31 +15,31 @@ export function CoachStartModal({ workout, exercises, onStart, onExit }: CoachSt
     <Modal open={true} onClose={onExit} title="Start Workout Session">
       <div className="space-y-6">
         <div>
-          <h3 className="text-xl font-bold text-gray-100">{workout.name}</h3>
+          <h3 className="text-xl font-bold text-primary">{workout.name}</h3>
           {workout.description && (
-            <p className="text-sm text-gray-400 mt-1">{workout.description}</p>
+            <p className="text-sm text-secondary mt-1">{workout.description}</p>
           )}
         </div>
 
-        <div className="grid grid-cols-2 gap-3 bg-gray-800/40 p-4 rounded-xl border border-gray-700/50 text-center">
+        <div className="grid grid-cols-2 gap-3 bg-surface-elevated p-4 rounded-xl border border-border text-center">
           <div>
-            <p className="text-2xl font-bold text-gray-100">{workout.exercises.length}</p>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mt-0.5">
+            <p className="text-2xl font-bold text-primary">{workout.exercises.length}</p>
+            <p className="text-xs text-secondary font-medium uppercase tracking-wider mt-0.5">
               Exercises
             </p>
           </div>
           <div>
-            <p className="text-2xl font-bold text-gray-100">
+            <p className="text-2xl font-bold text-primary">
               {workout.exercises.reduce((acc, we) => acc + we.sets, 0)}
             </p>
-            <p className="text-xs text-gray-400 font-medium uppercase tracking-wider mt-0.5">
+            <p className="text-xs text-secondary font-medium uppercase tracking-wider mt-0.5">
               Total Sets
             </p>
           </div>
         </div>
 
         <div>
-          <h4 className="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">
+          <h4 className="text-xs font-semibold text-secondary uppercase tracking-wider mb-2">
             Exercise Plan
           </h4>
           <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
@@ -48,15 +48,15 @@ export function CoachStartModal({ workout, exercises, onStart, onExit }: CoachSt
               return (
                 <div
                   key={we.id}
-                  className="flex items-center justify-between p-3 rounded-lg bg-gray-800/30 border border-gray-700/40 text-sm"
+                  className="flex items-center justify-between p-3 rounded-lg bg-card-solid/30 border border-border text-sm"
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-6 h-6 rounded-full bg-gray-800 text-gray-400 font-mono text-xs flex items-center justify-center font-bold">
+                    <span className="w-6 h-6 rounded-full bg-card-solid text-secondary font-mono text-xs flex items-center justify-center font-bold">
                       {idx + 1}
                     </span>
-                    <span className="font-medium text-gray-200">{ex?.name || "Exercise"}</span>
+                    <span className="font-medium text-primary">{ex?.name || "Exercise"}</span>
                   </div>
-                  <span className="text-xs text-gray-400 font-medium">
+                  <span className="text-xs text-secondary font-medium">
                     {we.sets} sets • {we.reps} reps
                   </span>
                 </div>
@@ -77,7 +77,7 @@ export function CoachStartModal({ workout, exercises, onStart, onExit }: CoachSt
           <Button
             onClick={onExit}
             variant="secondary"
-            className="h-11 px-5 text-gray-300 hover:bg-gray-800 border-gray-700 font-medium text-sm"
+            className="h-11 px-5 text-primary hover:bg-card-solid border-border-subtle font-medium text-sm"
           >
             Exit
           </Button>

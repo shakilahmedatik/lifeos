@@ -52,13 +52,13 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
 
   if (activeHabits.length === 0) {
     return (
-      <div className="p-12 text-center bg-gray-900/40 rounded-2xl border border-gray-800 space-y-4">
+      <div className="p-12 text-center bg-surface rounded-2xl border border-border space-y-4">
         <div className="w-12 h-12 rounded-full bg-blue-500/10 text-blue-400 flex items-center justify-center mx-auto">
           <Activity size={24} />
         </div>
         <div>
-          <h3 className="text-lg font-semibold text-gray-200">No Habits Configured</h3>
-          <p className="text-xs text-gray-400 mt-1">
+          <h3 className="text-lg font-semibold text-primary">No Habits Configured</h3>
+          <p className="text-xs text-secondary mt-1">
             Configure habits in the Builder to see analytics and trends.
           </p>
         </div>
@@ -110,7 +110,7 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
               <p className="text-xs font-medium text-emerald-400 uppercase tracking-wider">
                 Weekly Completion
               </p>
-              <p className="text-2xl font-bold text-gray-100 mt-1">{overallRate}%</p>
+              <p className="text-2xl font-bold text-primary mt-1">{overallRate}%</p>
             </div>
             <div className="p-3 rounded-xl bg-emerald-500/10 text-emerald-400">
               <TrendingUp size={20} />
@@ -124,7 +124,7 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
               <p className="text-xs font-medium text-blue-400 uppercase tracking-wider">
                 Active Habits
               </p>
-              <p className="text-2xl font-bold text-gray-100 mt-1">{activeHabits.length}</p>
+              <p className="text-2xl font-bold text-primary mt-1">{activeHabits.length}</p>
             </div>
             <div className="p-3 rounded-xl bg-blue-500/10 text-blue-400">
               <Activity size={20} />
@@ -138,7 +138,7 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
               <p className="text-xs font-medium text-orange-400 uppercase tracking-wider">
                 Current Streak
               </p>
-              <p className="text-2xl font-bold text-gray-100 mt-1">
+              <p className="text-2xl font-bold text-primary mt-1">
                 {analyticsData?.currentStreak ?? 0} days
               </p>
             </div>
@@ -154,7 +154,7 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
               <p className="text-xs font-medium text-purple-400 uppercase tracking-wider">
                 Top Habit
               </p>
-              <p className="text-base font-semibold text-gray-100 mt-1 truncate max-w-[120px]">
+              <p className="text-base font-semibold text-primary mt-1 truncate max-w-[120px]">
                 {topHabit?.name || "N/A"}
               </p>
             </div>
@@ -167,9 +167,9 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
 
       {/* 7-Day Weekly Breakdown Heatmap */}
       {weeklySummary && (
-        <Card className="bg-gray-900/60 border-gray-800">
+        <Card className="bg-surface border-border">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium text-gray-200">
+            <CardTitle className="text-sm font-medium text-primary">
               7-Day Consistency Heatmap
             </CardTitle>
           </CardHeader>
@@ -180,12 +180,12 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
                 const dayName = dateObj.toLocaleDateString("en-US", { weekday: "short" });
                 return (
                   <div key={day.date} className="text-center space-y-1.5">
-                    <span className="text-[11px] text-gray-500 font-medium">{dayName}</span>
+                    <span className="text-[11px] text-muted font-medium">{dayName}</span>
                     <div
                       className={`h-10 rounded-xl flex items-center justify-center font-bold text-xs transition-all ${
                         day.completions > 0
                           ? "bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
-                          : "bg-gray-800/40 border border-gray-800 text-gray-600"
+                          : "bg-surface-elevated border border-border text-muted"
                       }`}
                     >
                       {day.completions > 0 ? `${day.completions} ✓` : "0"}
@@ -200,10 +200,10 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
 
       {/* Detailed Per-Habit Analytics View */}
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-gray-900/60 p-4 rounded-xl border border-gray-800">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-surface p-4 rounded-xl border border-border">
           <div>
-            <h3 className="font-semibold text-gray-200">Habit Analytics & Performance</h3>
-            <p className="text-xs text-gray-400">
+            <h3 className="font-semibold text-primary">Habit Analytics & Performance</h3>
+            <p className="text-xs text-secondary">
               Select a habit to view completion rates and progress trends.
             </p>
           </div>
@@ -242,23 +242,23 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
                 <DonutChart data={donutData} />
               </div>
               <div className="text-center">
-                <span className="text-3xl font-bold text-gray-100">
+                <span className="text-3xl font-bold text-primary">
                   {analyticsData?.completionRate ?? 0}%
                 </span>
-                <p className="text-xs text-gray-500 mt-0.5">Completion Rate ({period})</p>
+                <p className="text-xs text-muted mt-0.5">Completion Rate ({period})</p>
               </div>
-              <div className="flex gap-6 pt-2 border-t border-gray-800 w-full justify-center text-center">
+              <div className="flex gap-6 pt-2 border-t border-border w-full justify-center text-center">
                 <div>
                   <div className="text-lg font-bold text-orange-400">
                     {analyticsData?.currentStreak ?? 0}
                   </div>
-                  <div className="text-[11px] text-gray-500">Current Streak</div>
+                  <div className="text-[11px] text-muted">Current Streak</div>
                 </div>
                 <div>
-                  <div className="text-lg font-bold text-gray-200">
+                  <div className="text-lg font-bold text-primary">
                     {analyticsData?.longestStreak ?? 0}
                   </div>
-                  <div className="text-[11px] text-gray-500">Best Streak</div>
+                  <div className="text-[11px] text-muted">Best Streak</div>
                 </div>
               </div>
             </Card>
@@ -266,7 +266,7 @@ export function HabitOverview({ habits, loading, onNavigateBuilder }: HabitOverv
             {/* Daily Values Bar Chart */}
             <Card className="md:col-span-2">
               <CardHeader>
-                <CardTitle className="text-sm font-medium text-gray-200">
+                <CardTitle className="text-sm font-medium text-primary">
                   Daily Intake & Logs ({selectedHabit?.name})
                 </CardTitle>
               </CardHeader>

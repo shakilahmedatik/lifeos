@@ -1,4 +1,5 @@
 import { Activity, BookOpen, Clock, Target } from "lucide-react";
+import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { ProgressBar } from "../../../components/ui/ProgressBar.js";
 import { Skeleton } from "../../../components/ui/Skeleton.js";
 import { StatCard } from "../../../components/ui/StatCard.js";
@@ -78,7 +79,7 @@ export function SkillsDashboard({
           </div>
           <div className="mt-6 space-y-5 overflow-y-auto pr-2 scrollbar-hide flex-1">
             {activeResources.length === 0 ? (
-              <p className="text-xs text-muted text-center py-4">No active resources</p>
+              <EmptyState title="No active resources" className="py-4" />
             ) : (
               activeResources.map((resource) => (
                 <div key={resource.id} className="space-y-2">

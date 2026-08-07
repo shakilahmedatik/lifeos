@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-
+import { Play, Search } from "lucide-react";
+import { EmptyState } from "../../components/ui/EmptyState.js";
 import type { NewsArticle, RssFeed } from "./api.ts";
 import { fetchArticles, fetchFeeds, markArticleAsRead } from "./api.ts";
 
@@ -165,13 +166,16 @@ export function NewsDigest() {
       </div>
 
       {loading && articles.length === 0 ? (
-        <div className="text-center text-gray-500">Loading articles...</div>
+        <div className="text-center text-muted">Loading articles...</div>
       ) : articles.length === 0 ? (
-        <div className="text-center text-gray-500">
-          {searchQuery
-            ? "No articles found matching your search"
-            : "No articles available. Add some RSS feeds to get started."}
-        </div>
+        <EmptyState
+          title={
+            searchQuery
+              ? "No articles found matching your search"
+              : "No articles available. Add some RSS feeds to get started."
+          }
+          className="py-12"
+        />
       ) : (
         <div className="space-y-4">
           {articles.map((article, index) => (
@@ -179,7 +183,7 @@ export function NewsDigest() {
               key={article.id}
               type="button"
               ref={index === articles.length - 1 ? lastArticleRef : undefined}
-              className={`w-full cursor-pointer rounded border p-4 text-left transition-colors hover:bg-gray-50 ${
+              className={`w-full cursor-pointer rounded border p-4 text-left transition-colors hover:bg-card ${
                 article.isRead ? "opacity-60" : ""
               }`}
               onClick={() => handleArticleClick(article)}
@@ -187,23 +191,23 @@ export function NewsDigest() {
               <div className="mb-1 flex items-center gap-2">
                 <h3 className="font-medium">{article.title}</h3>
                 {article.isRead && (
-                  <span className="rounded bg-gray-200 px-2 py-0.5 text-xs text-gray-600">
+                  <span className="rounded bg-gray-200 px-2 py-0.5 text-xs text-muted">
                     Read
                   </span>
                 )}
               </div>
               {article.summary && (
-                <p className="mb-2 line-clamp-2 text-sm text-gray-600">{article.summary}</p>
+                <p className="mb-2 line-clamp-2 text-sm text-muted">{article.summary}</p>
               )}
-              <div className="flex items-center gap-4 text-xs text-gray-500">
+              <div className="flex items-center gap-4 text-xs text-muted">
                 <span>{feeds.find((f) => f.id === article.feedId)?.title || "Unknown Feed"}</span>
                 <span>{formatDate(article.publishedAt)}</span>
               </div>
             </button>
           ))}
-          {loadingMore && <div className="text-center text-gray-500">Loading more...</div>}
+          {loadingMore && <div className="text-center text-muted">Loading more...</div>}
           {!hasMore && articles.length > 0 && (
-            <div className="text-center text-gray-500">No more articles</div>
+            <div className="text-center text-muted">No more articles</div>
           )}
         </div>
       )}

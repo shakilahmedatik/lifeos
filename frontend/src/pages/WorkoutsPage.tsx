@@ -12,6 +12,7 @@ import Card, { CardContent, CardHeader, CardTitle } from "../components/ui/Card.
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
+import ModalFooter from "../components/ui/ModalFooter.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { CoachMode } from "../modules/workouts/CoachMode.js";
@@ -151,7 +152,7 @@ export default function WorkoutsPage() {
         <TabsContent value="plans">
           <div className="space-y-6">
             <div className="flex justify-between items-center">
-              <h2 className="text-lg font-semibold text-gray-200">Your Plans</h2>
+              <h2 className="text-lg font-semibold text-primary">Your Plans</h2>
               <Button onClick={() => setIsNewModalOpen(true)} variant="primary">
                 <PlusIcon className="w-4 h-4 mr-2" />
                 New Workout
@@ -161,7 +162,7 @@ export default function WorkoutsPage() {
             {loading ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-32 bg-gray-800/60 rounded-xl animate-pulse" />
+                  <div key={i} className="h-32 bg-card rounded-xl animate-pulse" />
                 ))}
               </div>
             ) : error ? (
@@ -189,14 +190,14 @@ export default function WorkoutsPage() {
                     <Card className="group cursor-pointer hover:border-blue-500/50 transition-colors">
                       <CardHeader className="flex flex-row items-center justify-between pb-2">
                         <CardTitle className="text-lg">{w.name}</CardTitle>
-                        <ChevronRightIcon className="w-5 h-5 text-gray-600 group-hover:text-blue-400 transition-colors" />
+                        <ChevronRightIcon className="w-5 h-5 text-muted group-hover:text-blue-400 transition-colors" />
                       </CardHeader>
                       <CardContent>
                         {w.description && (
-                          <p className="text-sm text-gray-400 mb-4 line-clamp-2">{w.description}</p>
+                          <p className="text-sm text-secondary mb-4 line-clamp-2">{w.description}</p>
                         )}
                         <div className="flex items-center gap-2">
-                          <Badge variant="default" className="bg-gray-800">
+                          <Badge variant="default" className="bg-card-solid">
                             {w.exerciseCount || 0} exercises
                           </Badge>
                           {w.scheduledDay && (
@@ -233,7 +234,7 @@ export default function WorkoutsPage() {
       >
         <form onSubmit={handleCreateWorkout} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Name</label>
+            <label className="block text-sm font-medium text-secondary mb-1">Name</label>
             <Input
               value={newWorkoutName}
               onChange={(e) => setNewWorkoutName(e.target.value)}
@@ -242,7 +243,7 @@ export default function WorkoutsPage() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">
+            <label className="block text-sm font-medium text-secondary mb-1">
               Description (optional)
             </label>
             <Input
@@ -251,14 +252,14 @@ export default function WorkoutsPage() {
               placeholder="Brief description of the workout"
             />
           </div>
-          <div className="flex justify-end gap-3 mt-6">
+          <ModalFooter>
             <Button type="button" variant="secondary" onClick={() => setIsNewModalOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" variant="primary">
               Create Plan
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       </Modal>
     </div>

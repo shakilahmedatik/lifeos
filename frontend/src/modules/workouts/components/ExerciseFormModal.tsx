@@ -45,7 +45,7 @@ export function ExerciseFormModal({
         />
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
-            <label htmlFor="sets" className="text-sm font-medium text-gray-300">
+            <label htmlFor="sets" className="text-sm font-medium text-primary">
               Sets
             </label>
             <Input
@@ -74,7 +74,7 @@ export function ExerciseFormModal({
             />
           </div>
           <div className="space-y-2">
-            <label htmlFor="rest" className="text-sm font-medium text-gray-300">
+            <label htmlFor="rest" className="text-sm font-medium text-primary">
               Rest (s)
             </label>
             <Input
@@ -89,18 +89,18 @@ export function ExerciseFormModal({
           </div>
 
           <div className="space-y-2 md:col-span-2">
-            <label className="text-sm font-medium text-gray-300 block mb-2">Configure Sets</label>
+            <label className="text-sm font-medium text-primary block mb-2">Configure Sets</label>
             <div className="flex flex-col gap-2">
               {Array.from({ length: exerciseConfig.sets || 3 }, (_, idx) => idx + 1).map(
                 (setNum) => (
                   <div
                     key={`set-${setNum}`}
-                    className="flex items-center gap-2 bg-gray-800/30 p-2 rounded-lg"
+                    className="flex items-center gap-2 bg-card-solid/30 p-2 rounded-lg"
                   >
-                    <span className="text-xs font-semibold text-gray-400 w-12">Set {setNum}</span>
+                    <span className="text-xs font-semibold text-secondary w-12">Set {setNum}</span>
                     <div className="flex-1 flex gap-2">
                       <div className="flex-1">
-                        <label className="text-[10px] text-gray-500 uppercase">Reps</label>
+                        <label className="text-[10px] text-muted uppercase">Reps</label>
                         <Input
                           type="number"
                           min="1"
@@ -114,7 +114,7 @@ export function ExerciseFormModal({
                         />
                       </div>
                       <div className="flex-1">
-                        <label className="text-[10px] text-gray-500 uppercase">Weight (kg)</label>
+                        <label className="text-[10px] text-muted uppercase">Weight (kg)</label>
                         <Input
                           type="number"
                           min="0"

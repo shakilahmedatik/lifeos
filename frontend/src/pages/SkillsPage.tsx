@@ -4,7 +4,8 @@ import { useAppToast } from "../components/Toast.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { api } from "../lib/api.js";
-import BackupPanel from "../modules/skills/components/BackupPanel.js";
+import BackupPanel from "../components/ui/BackupPanel.js";
+import { exportBackup, importBackup, shouldShowBackupReminder, markBackupCompleted } from "../modules/skills/backup.js";
 import CategoriesTab from "../modules/skills/components/CategoriesTab.js";
 import CoursesTab from "../modules/skills/components/CoursesTab.js";
 import SessionsTab from "../modules/skills/components/SessionsTab.js";
@@ -210,10 +211,29 @@ export default function SkillsPage() {
               </p>
             </div>
             <BackupPanel
-              onImportComplete={() => {
-                refreshLogs();
-                refreshAreas();
-                refreshResources();
+              entityName="Learning"
+              header={
+                shouldShowBackupReminder() ? (
+                  <div className="p-4 bg-warning/20 border border-warning/30 rounded-xl">
+                    <p className="text-sm text-warning">
+                      <strong>Backup reminder:</strong> Consider exporting your data to prevent loss.
+                    </p>
+                  </div>
+                ) : undefined
+              }
+              onExportJson={async () => {
+                const data = await exportBackup();
+                markBackupCompleted();
+                return data;
+              }}
+              onImportJson={async (data) => {
+                const result = await importBackup(data);
+                if (result.success) {
+                  refreshLogs();
+                  refreshAreas();
+                  refreshResources();
+                }
+                return result;
               }}
             />
           </div>

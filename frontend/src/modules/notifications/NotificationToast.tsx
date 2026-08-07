@@ -31,7 +31,7 @@ export function NotificationToast({ notification, onDismiss }: NotificationToast
     <div
       role="alert"
       aria-live="assertive"
-      className={`fixed top-4 right-4 z-50 bg-gray-900/90 border border-blue-500/50 shadow-2xl rounded-xl p-4 max-w-sm transform transition-all duration-300 ${
+      className={`fixed top-4 right-4 z-50 bg-surface border border-blue-500/50 shadow-2xl rounded-xl p-4 max-w-sm transform transition-all duration-300 ${
         visible ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
       }`}
     >
@@ -53,8 +53,8 @@ export function NotificationToast({ notification, onDismiss }: NotificationToast
           </svg>
         </div>
         <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-gray-100 truncate">{notification.taskTitle}</p>
-          <p className="text-xs text-gray-400 mt-0.5">Reminder for task</p>
+          <p className="text-sm font-semibold text-primary truncate">{notification.taskTitle}</p>
+          <p className="text-xs text-secondary mt-0.5">Reminder for task</p>
         </div>
         <button
           type="button"
@@ -62,7 +62,7 @@ export function NotificationToast({ notification, onDismiss }: NotificationToast
             setVisible(false);
             setTimeout(onDismiss, 300);
           }}
-          className="text-gray-400 hover:text-gray-200 p-1 transition-colors"
+          className="text-secondary hover:text-primary p-1 transition-colors"
         >
           <svg
             className="h-4 w-4"

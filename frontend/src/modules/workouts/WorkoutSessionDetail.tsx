@@ -56,8 +56,8 @@ export function WorkoutSessionDetail({ sessionId, onBack, onDeleted }: WorkoutSe
   if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
-        <div className="h-32 bg-gray-800/60 rounded-xl" />
-        <div className="h-64 bg-gray-800/60 rounded-xl" />
+        <div className="h-32 bg-card rounded-xl" />
+        <div className="h-64 bg-card rounded-xl" />
       </div>
     );
   }
@@ -85,25 +85,25 @@ export function WorkoutSessionDetail({ sessionId, onBack, onDeleted }: WorkoutSe
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card className="bg-gray-800/40 border-gray-700/50">
+        <Card className="bg-surface-elevated border-border">
           <CardContent className="p-4 text-center">
-            <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Started</p>
-            <p className="font-medium text-gray-200">
+            <p className="text-xs uppercase tracking-wider text-muted mb-1">Started</p>
+            <p className="font-medium text-primary">
               {new Date(session.startedAt).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
             </p>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-muted mt-1">
               {new Date(session.startedAt).toLocaleDateString()}
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-800/40 border-gray-700/50">
+        <Card className="bg-surface-elevated border-border">
           <CardContent className="p-4 text-center">
-            <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Duration</p>
-            <p className="font-medium text-gray-200">
+            <p className="text-xs uppercase tracking-wider text-muted mb-1">Duration</p>
+            <p className="font-medium text-primary">
               {session.durationSeconds ? (
                 `${Math.round(session.durationSeconds / 60)} min`
               ) : (
@@ -113,9 +113,9 @@ export function WorkoutSessionDetail({ sessionId, onBack, onDeleted }: WorkoutSe
           </CardContent>
         </Card>
 
-        <Card className="bg-gray-800/40 border-gray-700/50">
+        <Card className="bg-surface-elevated border-border">
           <CardContent className="p-4 text-center flex flex-col justify-center items-center h-full">
-            <p className="text-xs uppercase tracking-wider text-gray-500 mb-2">Status</p>
+            <p className="text-xs uppercase tracking-wider text-muted mb-2">Status</p>
             <Badge
               variant={session.completedAt ? "success" : "warning"}
               className={
@@ -130,16 +130,16 @@ export function WorkoutSessionDetail({ sessionId, onBack, onDeleted }: WorkoutSe
         </Card>
 
         {session.completedAt && (
-          <Card className="bg-gray-800/40 border-gray-700/50">
+          <Card className="bg-surface-elevated border-border">
             <CardContent className="p-4 text-center">
-              <p className="text-xs uppercase tracking-wider text-gray-500 mb-1">Completed</p>
-              <p className="font-medium text-gray-200">
+              <p className="text-xs uppercase tracking-wider text-muted mb-1">Completed</p>
+              <p className="font-medium text-primary">
                 {new Date(session.completedAt).toLocaleTimeString([], {
                   hour: "2-digit",
                   minute: "2-digit",
                 })}
               </p>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-muted mt-1">
                 {new Date(session.completedAt).toLocaleDateString()}
               </p>
             </CardContent>
@@ -148,21 +148,21 @@ export function WorkoutSessionDetail({ sessionId, onBack, onDeleted }: WorkoutSe
       </div>
 
       {session.notes && (
-        <Card className="bg-gray-800/40 border-gray-700/50">
+        <Card className="bg-surface-elevated border-border">
           <CardHeader>
-            <CardTitle className="text-lg text-gray-300">Session Notes</CardTitle>
+            <CardTitle className="text-lg text-primary">Session Notes</CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-gray-400 whitespace-pre-wrap">{session.notes}</p>
+            <p className="text-secondary whitespace-pre-wrap">{session.notes}</p>
           </CardContent>
         </Card>
       )}
 
       <div>
-        <h3 className="text-lg font-semibold mb-4 text-gray-200">Exercise Logs</h3>
+        <h3 className="text-lg font-semibold mb-4 text-primary">Exercise Logs</h3>
         {groupedLogs.length === 0 ? (
           <Card className="bg-transparent border-dashed">
-            <CardContent className="py-12 text-center text-gray-500">
+            <CardContent className="py-12 text-center text-muted">
               No exercise logs recorded.
             </CardContent>
           </Card>
@@ -172,8 +172,8 @@ export function WorkoutSessionDetail({ sessionId, onBack, onDeleted }: WorkoutSe
               const exerciseName =
                 exercises.find((e) => e.id === group.exerciseId)?.name || "Unknown Exercise";
               return (
-                <Card key={group.exerciseId} className="bg-gray-800/20 border-gray-700/50">
-                  <CardHeader className="pb-3 border-b border-gray-700/30">
+                <Card key={group.exerciseId} className="bg-card-solid/20 border-border">
+                  <CardHeader className="pb-3 border-b border-border">
                     <CardTitle className="text-md text-emerald-400">{exerciseName}</CardTitle>
                   </CardHeader>
                   <CardContent className="pt-3">
@@ -181,24 +181,24 @@ export function WorkoutSessionDetail({ sessionId, onBack, onDeleted }: WorkoutSe
                       {group.logs.map((log) => (
                         <div
                           key={log.id}
-                          className="flex justify-between items-center p-2 rounded-lg hover:bg-gray-800/40 transition-colors"
+                          className="flex justify-between items-center p-2 rounded-lg hover:bg-surface-elevated transition-colors"
                         >
                           <div className="flex items-center gap-4">
-                            <span className="text-xs font-bold text-gray-500 uppercase tracking-wider w-12">
+                            <span className="text-xs font-bold text-muted uppercase tracking-wider w-12">
                               Set {log.setNumber}
                             </span>
-                            <span className="text-gray-200 font-medium">
+                            <span className="text-primary font-medium">
                               {log.actualReps}{" "}
-                              <span className="text-sm font-normal text-gray-400">reps</span>
+                              <span className="text-sm font-normal text-secondary">reps</span>
                               {log.actualWeight ? (
                                 <span className="ml-2">
                                   @ {log.actualWeight}{" "}
-                                  <span className="text-sm font-normal text-gray-400">kg</span>
+                                  <span className="text-sm font-normal text-secondary">kg</span>
                                 </span>
                               ) : null}
                             </span>
                           </div>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-muted">
                             {new Date(log.completedAt).toLocaleTimeString([], {
                               hour: "2-digit",
                               minute: "2-digit",

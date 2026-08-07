@@ -1,4 +1,5 @@
 import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import { cn } from "../lib/utils.js";
 
 type ToastType = "error" | "success" | "info" | "warning";
 
@@ -42,15 +43,16 @@ export function ToastContainer({ toasts }: { toasts: Toast[] }) {
       {toasts.map((toast) => (
         <div
           key={toast.id}
-          className={`pointer-events-auto px-4 py-3 rounded-xl text-sm font-medium shadow-lg border animate-fade-in ${
+          className={cn(
+            "pointer-events-auto px-4 py-3 rounded-xl text-sm font-medium shadow-lg border animate-fade-in",
             toast.type === "error"
-              ? "bg-red-900/80 border-red-700/50 text-red-200"
+              ? "bg-danger/15 border-danger/30 text-danger"
               : toast.type === "success"
-                ? "bg-emerald-900/80 border-emerald-700/50 text-emerald-200"
+                ? "bg-success/15 border-success/30 text-success"
                 : toast.type === "warning"
-                  ? "bg-amber-900/80 border-amber-700/50 text-amber-200"
-                  : "bg-gray-800/80 border-gray-700/50 text-gray-200"
-          }`}
+                  ? "bg-warning/15 border-warning/30 text-warning"
+                  : "bg-card border-border text-primary"
+          )}
         >
           {toast.message}
         </div>

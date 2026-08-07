@@ -69,8 +69,8 @@ export function WorkoutHistoryWithFilter({
   if (sessionsLoading || workoutsLoading) {
     return (
       <div className="space-y-4 animate-pulse">
-        <div className="h-20 bg-gray-800/60 rounded-xl" />
-        <div className="h-64 bg-gray-800/60 rounded-xl" />
+        <div className="h-20 bg-card rounded-xl" />
+        <div className="h-64 bg-card rounded-xl" />
       </div>
     );
   }
@@ -83,11 +83,11 @@ export function WorkoutHistoryWithFilter({
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="relative">
-          <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">
+          <label className="block text-xs uppercase tracking-wider text-muted mb-1">
             Search
           </label>
           <div className="relative">
-            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+            <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted" />
             <Input
               type="text"
               placeholder="Search..."
@@ -98,7 +98,7 @@ export function WorkoutHistoryWithFilter({
           </div>
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">
+          <label className="block text-xs uppercase tracking-wider text-muted mb-1">
             Workout
           </label>
           <Select
@@ -111,11 +111,11 @@ export function WorkoutHistoryWithFilter({
           />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">Date</label>
+          <label className="block text-xs uppercase tracking-wider text-muted mb-1">Date</label>
           <Input type="date" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
         </div>
         <div>
-          <label className="block text-xs uppercase tracking-wider text-gray-500 mb-1">
+          <label className="block text-xs uppercase tracking-wider text-muted mb-1">
             Sort By
           </label>
           <Select
@@ -130,15 +130,15 @@ export function WorkoutHistoryWithFilter({
       </div>
 
       <div className="flex justify-between items-center">
-        <h3 className="text-lg font-semibold text-gray-200">History</h3>
-        <span className="text-sm text-gray-500">
+        <h3 className="text-lg font-semibold text-primary">History</h3>
+        <span className="text-sm text-muted">
           {filteredSessions.length} session{filteredSessions.length !== 1 ? "s" : ""}
         </span>
       </div>
 
       {filteredSessions.length === 0 ? (
         <Card className="bg-transparent border-dashed">
-          <CardContent className="py-12 text-center text-gray-500">
+          <CardContent className="py-12 text-center text-muted">
             No sessions match your filters.
           </CardContent>
         </Card>
@@ -153,13 +153,13 @@ export function WorkoutHistoryWithFilter({
                 className="w-full text-left"
                 onClick={() => handleSelect(session.id)}
               >
-                <Card className="hover:border-gray-600 transition-colors bg-gray-800/20">
+                <Card className="hover:border-border-subtle transition-colors bg-card-solid/20">
                   <CardContent className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                     <div>
-                      <p className="font-semibold text-gray-200">
+                      <p className="font-semibold text-primary">
                         {workout?.name || "Unknown Workout"}
                       </p>
-                      <p className="text-sm text-gray-400 mt-1">
+                      <p className="text-sm text-secondary mt-1">
                         {new Date(session.startedAt).toLocaleString(undefined, {
                           weekday: "short",
                           month: "short",
@@ -171,7 +171,7 @@ export function WorkoutHistoryWithFilter({
                     </div>
                     <div className="flex items-center gap-4">
                       {session.durationSeconds && (
-                        <p className="text-sm font-medium text-gray-300">
+                        <p className="text-sm font-medium text-primary">
                           {Math.round(session.durationSeconds / 60)} min
                         </p>
                       )}

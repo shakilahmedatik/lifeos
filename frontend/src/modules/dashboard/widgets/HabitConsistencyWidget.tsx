@@ -2,6 +2,7 @@ import type { DashboardHabitConsistency } from "@lifeos/contracts";
 import { Flame } from "lucide-react";
 import { Area, AreaChart, ResponsiveContainer, Tooltip, YAxis } from "recharts";
 import { DashboardPanel } from "../components/DashboardPanel.js";
+import { EmptyState } from "../../../components/ui/EmptyState.js";
 
 interface HabitConsistencyWidgetProps {
   habits: DashboardHabitConsistency[];
@@ -101,7 +102,7 @@ export function HabitConsistencyWidget({ habits }: HabitConsistencyWidgetProps) 
     >
       <div className="flex flex-col gap-2 justify-center h-full overflow-hidden">
         {habits.length === 0 ? (
-          <div className="text-center text-muted text-xs py-4">No habit data</div>
+          <EmptyState title="No habit data" className="py-4" />
         ) : (
           habits.slice(0, 4).map((row) => (
             <div key={row.habitId} className="flex items-center gap-2 text-xs">
@@ -110,7 +111,7 @@ export function HabitConsistencyWidget({ habits }: HabitConsistencyWidgetProps) 
                   className="w-1.5 h-1.5 rounded-full shrink-0"
                   style={{ backgroundColor: row.color }}
                 />
-                <span className="text-gray-300 truncate text-[11.5px]">{row.name}</span>
+                <span className="text-primary truncate text-[11.5px]">{row.name}</span>
               </div>
 
               <HabitSparkline row={row} />

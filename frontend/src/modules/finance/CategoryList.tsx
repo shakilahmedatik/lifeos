@@ -9,6 +9,7 @@ import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { EmptyState } from "../../components/ui/EmptyState.js";
 import { Input } from "../../components/ui/Input.js";
 import Modal from "../../components/ui/Modal.js";
+import ModalFooter from "../../components/ui/ModalFooter.js";
 import { Select } from "../../components/ui/Select.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
 import {
@@ -344,7 +345,7 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
               { value: "income", label: "Income" },
             ]}
           />
-          <div className="flex justify-end gap-2 pt-2">
+          <ModalFooter>
             <Button
               variant="secondary"
               type="button"
@@ -358,7 +359,7 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
             <Button type="submit" disabled={submitting}>
               {submitting ? "Adding..." : "Add Category"}
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       </Modal>
 
@@ -388,7 +389,7 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
               { value: "income", label: "Income" },
             ]}
           />
-          <div className="flex justify-end gap-2 pt-2">
+          <ModalFooter>
             <Button
               variant="secondary"
               type="button"
@@ -403,7 +404,7 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
             <Button type="submit" disabled={submitting}>
               {submitting ? "Saving..." : "Save Changes"}
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       </Modal>
 

@@ -17,7 +17,10 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useAppToast } from "../components/Toast.js";
 import Button from "../components/ui/Button.js";
+import { ErrorBanner } from "../components/ui/ErrorBanner.js";
+import IconButton from "../components/ui/IconButton.js";
 import { Input } from "../components/ui/Input.js";
+import ListSkeleton from "../components/ui/ListSkeleton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { api } from "../lib/api.js";
@@ -296,10 +299,10 @@ export default function RoutinePage() {
         <TabsContent value="schedule">
           <div className="space-y-6">
             {/* Header controls: Date selector + View Mode toggle */}
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-gray-800/40 p-3.5 rounded-xl border border-gray-700/40">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-surface-elevated p-3.5 rounded-xl border border-border">
               <div className="flex items-center gap-2 flex-wrap">
                 <CalendarIcon size={18} className="text-blue-400 shrink-0" />
-                <span className="text-xs font-medium text-gray-400 shrink-0">
+                <span className="text-xs font-medium text-secondary shrink-0">
                   Viewing Schedule:
                 </span>
 
@@ -307,7 +310,7 @@ export default function RoutinePage() {
                   <button
                     type="button"
                     onClick={() => handleShiftDate(-1)}
-                    className="p-1 rounded-lg bg-gray-700/50 hover:bg-gray-700 text-gray-300 transition-colors"
+                    className="p-1 rounded-lg bg-card-hover hover:bg-card-hover text-primary transition-colors"
                     title="Previous Day"
                   >
                     <ChevronLeftIcon size={16} />
@@ -325,7 +328,7 @@ export default function RoutinePage() {
                   <button
                     type="button"
                     onClick={() => handleShiftDate(1)}
-                    className="p-1 rounded-lg bg-gray-700/50 hover:bg-gray-700 text-gray-300 transition-colors"
+                    className="p-1 rounded-lg bg-card-hover hover:bg-card-hover text-primary transition-colors"
                     title="Next Day"
                   >
                     <ChevronRightIcon size={16} />
@@ -370,11 +373,7 @@ export default function RoutinePage() {
 
             {/* Content View Area */}
             {loadingTasks ? (
-              <div className="space-y-3">
-                {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 bg-gray-800/60 rounded-xl animate-pulse" />
-                ))}
-              </div>
+              <ListSkeleton count={3} height="h-16" gap="gap-3" />
             ) : viewMode === "list" ? (
               <TaskList
                 tasks={tasks}

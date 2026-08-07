@@ -49,8 +49,8 @@ export function WorkoutList({ onSelectWorkout, onStartSession }: WorkoutListProp
   if (loading) {
     return (
       <div className="space-y-4 animate-pulse">
-        <div className="h-20 bg-gray-800/60 rounded-xl" />
-        <div className="h-20 bg-gray-800/60 rounded-xl" />
+        <div className="h-20 bg-card rounded-xl" />
+        <div className="h-20 bg-card rounded-xl" />
       </div>
     );
   }
@@ -62,7 +62,7 @@ export function WorkoutList({ onSelectWorkout, onStartSession }: WorkoutListProp
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
-        <h2 className="text-xl font-bold text-gray-100">Workouts</h2>
+        <h2 className="text-xl font-bold text-primary">Workouts</h2>
         <Button onClick={() => setIsCreating(true)} variant="primary">
           <PlusIcon className="w-4 h-4 mr-2" />
           Create Workout
@@ -70,10 +70,10 @@ export function WorkoutList({ onSelectWorkout, onStartSession }: WorkoutListProp
       </div>
 
       {isCreating && (
-        <Card className="bg-gray-800/40 border-gray-700/50">
+        <Card className="bg-surface-elevated border-border">
           <CardContent className="p-4 space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Workout Name</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Workout Name</label>
               <Input
                 type="text"
                 placeholder="e.g. Upper Body Hypertrophy"
@@ -83,7 +83,7 @@ export function WorkoutList({ onSelectWorkout, onStartSession }: WorkoutListProp
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">
+              <label className="block text-sm font-medium text-secondary mb-1">
                 Description (optional)
               </label>
               <Input
@@ -107,7 +107,7 @@ export function WorkoutList({ onSelectWorkout, onStartSession }: WorkoutListProp
 
       {workouts.length === 0 ? (
         <Card className="bg-transparent border-dashed">
-          <CardContent className="py-12 text-center text-gray-500">
+          <CardContent className="py-12 text-center text-muted">
             No workouts yet. Create your first workout plan!
           </CardContent>
         </Card>
@@ -116,14 +116,14 @@ export function WorkoutList({ onSelectWorkout, onStartSession }: WorkoutListProp
           {workouts.map((workout) => (
             <Card
               key={workout.id}
-              className="hover:border-gray-600 transition-colors bg-gray-800/20 cursor-pointer"
+              className="hover:border-border-subtle transition-colors bg-card-solid/20 cursor-pointer"
               onClick={() => onSelectWorkout?.(workout)}
             >
               <CardContent className="p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
                 <div>
-                  <h3 className="text-lg font-semibold text-gray-100">{workout.name}</h3>
+                  <h3 className="text-lg font-semibold text-primary">{workout.name}</h3>
                   {workout.description && (
-                    <p className="text-sm text-gray-400 mt-1">{workout.description}</p>
+                    <p className="text-sm text-secondary mt-1">{workout.description}</p>
                   )}
                   {workout.scheduledDay && (
                     <div className="mt-2">

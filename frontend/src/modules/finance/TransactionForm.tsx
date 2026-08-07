@@ -166,7 +166,7 @@ export function TransactionForm({
   const loading = accountsLoading || categoriesLoading;
   const selectedCategory = categories.find((c) => c.id === categoryId);
 
-  if (loading) return <div className="text-sm text-gray-500 py-4">Loading form...</div>;
+  if (loading) return <div className="text-sm text-muted py-4">Loading form...</div>;
 
   const noAccounts = activeAccounts.length === 0;
   const noCategories = filteredCategories.length === 0;

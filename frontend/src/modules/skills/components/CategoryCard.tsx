@@ -17,11 +17,11 @@ export default function CategoryCard({
   onDelete,
 }: CategoryCardProps) {
   return (
-    <Card className="hover:border-gray-600/50 transition-colors">
+    <Card className="hover:border-border-subtle transition-colors">
       <div className="flex justify-between items-start">
         <div>
-          <h3 className="text-sm font-medium text-gray-200">{category.name}</h3>
-          <p className="text-xs text-gray-500 mt-1">
+          <h3 className="text-sm font-medium text-primary">{category.name}</h3>
+          <p className="text-xs text-muted mt-1">
             {resourceCount} {resourceCount === 1 ? "resource" : "resources"}
           </p>
         </div>

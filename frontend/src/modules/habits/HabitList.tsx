@@ -16,12 +16,12 @@ export default function HabitList({ habits, onEdit, onDelete }: HabitListProps) 
         return (
           <div
             key={habit.id}
-            className="flex items-center justify-between p-3 bg-gray-900/60 rounded-lg border border-gray-800"
+            className="flex items-center justify-between p-3 bg-surface rounded-lg border border-border"
           >
             <div className="flex items-center gap-3">
               <div>
-                <div className="font-medium text-gray-200">{habit.name}</div>
-                <div className="text-sm text-gray-500">
+                <div className="font-medium text-primary">{habit.name}</div>
+                <div className="text-sm text-muted">
                   {habit.type} · {habit.category}
                 </div>
               </div>
@@ -34,7 +34,7 @@ export default function HabitList({ habits, onEdit, onDelete }: HabitListProps) 
               <button
                 type="button"
                 onClick={() => onEdit(habit)}
-                className="text-gray-400 hover:text-gray-200 text-xs"
+                className="text-secondary hover:text-primary text-xs"
               >
                 Edit
               </button>

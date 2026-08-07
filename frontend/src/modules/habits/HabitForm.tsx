@@ -29,7 +29,7 @@ export default function HabitForm({ habit, onSubmit, onCancel }: HabitFormProps)
   return (
     <form
       onSubmit={handleSubmit}
-      className="space-y-4 p-4 bg-gray-900 rounded-lg border border-gray-800"
+      className="space-y-4 p-4 bg-surface rounded-lg border border-border"
     >
       <div>
         <Input

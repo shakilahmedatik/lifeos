@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Button from "./Button.js";
 import Modal from "./Modal.js";
+import ModalFooter from "./ModalFooter.js";
 
 export interface ConfirmDialogProps {
   open: boolean;
@@ -11,6 +12,7 @@ export interface ConfirmDialogProps {
   onConfirm: () => void | Promise<void>;
   onCancel: () => void;
   variant?: "danger" | "warning";
+  className?: string;
 }
 
 export function ConfirmDialog({
@@ -22,6 +24,7 @@ export function ConfirmDialog({
   onConfirm,
   onCancel,
   variant = "danger",
+  className,
 }: ConfirmDialogProps) {
   const [loading, setLoading] = useState(false);
 
@@ -35,9 +38,9 @@ export function ConfirmDialog({
   };
 
   return (
-    <Modal open={open} onClose={onCancel} title={title}>
+    <Modal open={open} onClose={onCancel} title={title} className={className}>
       <p className="text-sm text-secondary mb-6">{message}</p>
-      <div className="flex justify-end gap-2">
+      <ModalFooter>
         <Button variant="secondary" onClick={onCancel} disabled={loading}>
           {cancelLabel}
         </Button>
@@ -48,7 +51,9 @@ export function ConfirmDialog({
         >
           {loading ? "Processing..." : confirmLabel}
         </Button>
-      </div>
+      </ModalFooter>
     </Modal>
   );
 }
+
+export default ConfirmDialog;

@@ -11,6 +11,7 @@ import { useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card from "../../components/ui/Card.js";
 import { Input } from "../../components/ui/Input.js";
+import ModalFooter from "../../components/ui/ModalFooter.js";
 import { Select } from "../../components/ui/Select.js";
 import { useLearningResources } from "../skills/hooks/useLearningResources.js";
 import { useWorkouts } from "../workouts/useWorkouts.js";
@@ -180,7 +181,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
     <Card className="border-blue-500/30">
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-gray-100">Create New Task</h2>
+          <h2 className="text-base font-semibold text-primary">Create New Task</h2>
           <Button
             type="button"
             variant="ghost"
@@ -276,7 +277,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
         )}
 
         {/* Start Time & Duration Selection */}
-        <div className="space-y-2 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">
+        <div className="space-y-2 bg-surface-elevated p-3 rounded-xl border border-border">
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Input
@@ -305,7 +306,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
 
           {/* Quick Duration Buttons */}
           <div>
-            <span className="block text-xs font-medium text-gray-400 mb-1.5">
+            <span className="block text-xs font-medium text-secondary mb-1.5">
               Task Duration Preset:
             </span>
             <div className="flex items-center gap-1.5 flex-wrap">
@@ -322,7 +323,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
                   className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-colors ${
                     durationPreset === opt.value
                       ? "bg-blue-600 border-blue-500 text-white"
-                      : "bg-gray-700/50 border-gray-600/50 text-gray-300 hover:bg-gray-700"
+                      : "bg-card-hover border-border-subtle text-primary hover:bg-card-hover"
                   }`}
                 >
                   {opt.label}
@@ -332,7 +333,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
 
             {durationPreset === -1 && (
               <div className="mt-2 flex items-center gap-2">
-                <span className="text-xs text-gray-400">Custom Minutes:</span>
+                <span className="text-xs text-secondary">Custom Minutes:</span>
                 <div className="w-24">
                   <Input
                     id="custom-duration-input"
@@ -356,8 +357,8 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
         )}
 
         {/* Sub-tasks / Todo Checklist Builder */}
-        <div className="space-y-2 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">
-          <label className="block text-xs font-medium text-gray-300">
+        <div className="space-y-2 bg-surface-elevated p-3 rounded-xl border border-border">
+          <label className="block text-xs font-medium text-primary">
             Sub-tasks Checklist / Todos (Optional)
           </label>
 
@@ -373,7 +374,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
                   handleAddSubtask();
                 }
               }}
-              className="flex-1 bg-gray-700/50 border border-gray-600/50 text-gray-200 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
+              className="flex-1 bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50 placeholder-gray-500"
             />
             <Button
               type="button"
@@ -391,7 +392,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
               {subtasks.map((st, idx) => (
                 <div
                   key={st.id}
-                  className="flex items-center justify-between p-2 rounded-lg bg-gray-700/30 border border-gray-600/30 text-xs text-gray-200"
+                  className="flex items-center justify-between p-2 rounded-lg bg-card-hover border border-border-subtle text-xs text-primary"
                 >
                   <span className="truncate flex-1">
                     {idx + 1}. {st.title}
@@ -400,7 +401,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
                     type="button"
                     onClick={() => handleRemoveSubtask(st.id)}
                     aria-label={`Remove subtask ${st.title}`}
-                    className="text-gray-400 hover:text-red-400 p-1"
+                    className="text-secondary hover:text-red-400 p-1"
                   >
                     <XIcon size={12} />
                   </button>
@@ -411,7 +412,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
         </div>
 
         <div>
-          <label htmlFor="task-notes" className="block text-xs font-medium text-gray-400 mb-1">
+          <label htmlFor="task-notes" className="block text-xs font-medium text-secondary mb-1">
             Notes (Optional)
           </label>
           <textarea
@@ -420,18 +421,18 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
             onChange={(e) => setNotes(e.target.value)}
             placeholder="Add details, sub-tasks, or links..."
             rows={2}
-            className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500 resize-none"
+            className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500 resize-none"
           />
         </div>
 
         {/* Reminder Settings */}
-        <div className="space-y-2 pt-1 border-t border-gray-700/40">
-          <label className="flex items-center gap-2 text-sm text-gray-300 cursor-pointer">
+        <div className="space-y-2 pt-1 border-t border-border">
+          <label className="flex items-center gap-2 text-sm text-primary cursor-pointer">
             <input
               type="checkbox"
               checked={enableReminder}
               onChange={(e) => setEnableReminder(e.target.checked)}
-              className="rounded bg-gray-700 border-gray-600 accent-blue-500"
+              className="rounded bg-card-hover border-border-subtle accent-blue-500"
             />
             <span>Set Reminder Notification</span>
           </label>
@@ -439,14 +440,14 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
           {enableReminder && (
             <div className="grid grid-cols-2 gap-3 pl-6">
               <div>
-                <label htmlFor="task-reminder-timing" className="block text-xs text-gray-400 mb-1">
+                <label htmlFor="task-reminder-timing" className="block text-xs text-secondary mb-1">
                   Timing
                 </label>
                 <select
                   id="task-reminder-timing"
                   value={reminderMinutesBefore}
                   onChange={(e) => setReminderMinutesBefore(Number(e.target.value))}
-                  className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
+                  className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
                 >
                   <option value={5}>5 min before</option>
                   <option value={10}>10 min before</option>
@@ -457,7 +458,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
               </div>
 
               <div>
-                <label htmlFor="task-reminder-sound" className="block text-xs text-gray-400 mb-1">
+                <label htmlFor="task-reminder-sound" className="block text-xs text-secondary mb-1">
                   Sound
                 </label>
                 <select
@@ -466,7 +467,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
                   onChange={(e) =>
                     setReminderSound(e.target.value as NotificationSoundType | "none")
                   }
-                  className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-300 rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
+                  className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
                 >
                   <option value="default">Default</option>
                   <option value="gentle">Gentle</option>
@@ -479,7 +480,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
           )}
         </div>
 
-        <div className="flex items-center justify-end gap-3 pt-2">
+        <ModalFooter>
           <Button type="button" variant="secondary" size="sm" onClick={onCancel}>
             Cancel
           </Button>
@@ -487,7 +488,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
           <Button type="submit" size="sm" disabled={submitting}>
             {submitting ? "Creating..." : "Save Task"}
           </Button>
-        </div>
+        </ModalFooter>
       </form>
     </Card>
   );

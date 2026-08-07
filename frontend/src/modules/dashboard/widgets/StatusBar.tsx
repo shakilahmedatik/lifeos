@@ -28,7 +28,7 @@ export function StatusBar({ loading, onRefresh }: StatusBarProps) {
   return (
     <div className="flex items-center justify-between mb-1 shrink-0 px-1">
       <div>
-        <h1 className="text-gray-100 text-lg font-semibold tracking-tight leading-tight">
+        <h1 className="text-primary text-lg font-semibold tracking-tight leading-tight">
           {dateStr}
         </h1>
         <div className="font-mono text-xs text-muted tabular-nums">{timeStr}</div>

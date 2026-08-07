@@ -14,6 +14,7 @@ import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
+import ModalFooter from "../components/ui/ModalFooter.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import * as newsApi from "../modules/news/api.js";
 
@@ -174,7 +175,7 @@ export default function NewsPage() {
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                 !filterFeedId
                   ? "bg-blue-600/20 text-blue-400 border border-blue-500/20"
-                  : "bg-gray-800/60 text-gray-400 border border-gray-700/50 hover:text-gray-200"
+                  : "bg-card text-secondary border border-border hover:text-primary"
               }`}
             >
               All Feeds
@@ -186,7 +187,7 @@ export default function NewsPage() {
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
                   filterFeedId === f.id
                     ? "bg-blue-600/20 text-blue-400 border border-blue-500/20"
-                    : "bg-gray-800/60 text-gray-400 border border-gray-700/50 hover:text-gray-200"
+                    : "bg-card text-secondary border border-border hover:text-primary"
                 }`}
               >
                 {f.title}
@@ -198,14 +199,14 @@ export default function NewsPage() {
         <div className="relative min-w-50">
           <SearchIcon
             size={14}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-muted"
           />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search articles..."
-            className="w-full pl-9 pr-3 py-1.5 text-xs bg-gray-800/60 border border-gray-700/50 rounded-lg text-gray-200 placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
+            className="w-full pl-9 pr-3 py-1.5 text-xs bg-card border border-border rounded-lg text-primary placeholder-gray-500 focus:outline-none focus:border-blue-500/50"
           />
         </div>
       </div>
@@ -213,7 +214,7 @@ export default function NewsPage() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="h-20 bg-gray-800/60 rounded-xl animate-pulse" />
+            <div key={i} className="h-20 bg-card rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
@@ -243,11 +244,11 @@ export default function NewsPage() {
                 >
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-medium text-gray-200 truncate">{a.title}</p>
+                      <p className="text-sm font-medium text-primary truncate">{a.title}</p>
                       {a.summary && (
-                        <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{a.summary}</p>
+                        <p className="text-xs text-secondary mt-0.5 line-clamp-2">{a.summary}</p>
                       )}
-                      <p className="text-xs text-gray-500 mt-1">
+                      <p className="text-xs text-muted mt-1">
                         {a.publishedAt
                           ? new Date(a.publishedAt).toLocaleDateString()
                           : new Date(a.fetchedAt).toLocaleDateString()}
@@ -277,11 +278,11 @@ export default function NewsPage() {
                   feeds.map((f) => (
                     <div
                       key={f.id}
-                      className="flex items-center justify-between py-1.5 border-b border-gray-800/60 last:border-0"
+                      className="flex items-center justify-between py-1.5 border-b border-border/60 last:border-0"
                     >
                       <div className="flex-1 min-w-0 pr-2">
-                        <p className="text-sm text-gray-200 truncate">{f.title}</p>
-                        <p className="text-xs text-gray-500 truncate">{f.url}</p>
+                        <p className="text-sm text-primary truncate">{f.title}</p>
+                        <p className="text-xs text-muted truncate">{f.url}</p>
                         {f.lastFetchError && (
                           <p className="text-[10px] text-red-400 truncate mt-0.5">
                             Error: {f.lastFetchError}
@@ -294,21 +295,21 @@ export default function NewsPage() {
                           className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                             f.status === "active"
                               ? "bg-emerald-900/40 text-emerald-400 hover:bg-emerald-900/60"
-                              : "bg-gray-800 text-gray-500 hover:bg-gray-700"
+                              : "bg-card-solid text-muted hover:bg-card-hover"
                           }`}
                         >
                           {f.status}
                         </button>
                         <button
                           onClick={() => startEdit(f)}
-                          className="p-1 rounded text-gray-500 hover:text-blue-400 transition-colors"
+                          className="p-1 rounded text-muted hover:text-blue-400 transition-colors"
                           title="Edit Feed"
                         >
                           <EditIcon size={12} />
                         </button>
                         <button
                           onClick={() => handleDeleteFeed(f.id)}
-                          className="p-1 rounded text-gray-500 hover:text-red-400 transition-colors"
+                          className="p-1 rounded text-muted hover:text-red-400 transition-colors"
                           title="Delete Feed"
                         >
                           <TrashIcon size={12} />
@@ -345,12 +346,12 @@ export default function NewsPage() {
               placeholder="Auto-detected from URL if left empty"
             />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <ModalFooter>
             <Button variant="secondary" type="button" onClick={() => setShowAddForm(false)}>
               Cancel
             </Button>
             <Button type="submit">Add Feed</Button>
-          </div>
+          </ModalFooter>
         </form>
       </Modal>
 
@@ -375,12 +376,12 @@ export default function NewsPage() {
               required
             />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <ModalFooter>
             <Button variant="secondary" type="button" onClick={() => setEditingFeed(null)}>
               Cancel
             </Button>
             <Button type="submit">Save Changes</Button>
-          </div>
+          </ModalFooter>
         </form>
       </Modal>
     </div>

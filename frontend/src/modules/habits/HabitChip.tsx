@@ -19,7 +19,7 @@ export default function HabitChip({ habit, onToggle }: HabitChipProps) {
       className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-medium transition-colors ${
         isLogged
           ? "bg-green-100/10 text-green-400 border border-green-500/30"
-          : "bg-gray-800 text-gray-300 border border-gray-700 hover:bg-gray-700"
+          : "bg-card-solid text-primary border border-border-subtle hover:bg-card-hover"
       }`}
     >
       <span className="text-lg">{habit.icon}</span>

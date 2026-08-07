@@ -13,7 +13,7 @@ export interface AuthModule {
 
 export function initAuthModule(client: Client, config: AppConfig): AuthModule {
   const auth = createAuth(client, config);
-  const router = createAuthRouter(auth);
+  const router = createAuthRouter(auth, client);
   const middleware = createAuthMiddleware(auth);
 
   return {

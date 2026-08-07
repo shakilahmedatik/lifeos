@@ -52,7 +52,7 @@ export function RestTimerDisplay({
             : "bg-linear-to-b from-emerald-950/40 via-gray-900/70 to-gray-900/90 border-emerald-500/30 shadow-[0_0_35px_rgba(16,185,129,0.15)]"
         }`}
       >
-        <div className="h-9 w-36 flex items-center justify-center rounded-full bg-gray-950/60 border border-gray-800 transition-all duration-700 shadow-inner">
+        <div className="h-9 w-36 flex items-center justify-center rounded-full bg-surface/60 border border-border transition-all duration-700 shadow-inner">
           {timer.isResting ? (
             <span
               key="rest-pill"
@@ -109,14 +109,14 @@ export function RestTimerDisplay({
             >
               {formatTime(timer.seconds)}
             </p>
-            <p className="text-xs font-medium uppercase tracking-wider text-gray-400 mt-2 transition-all duration-700">
+            <p className="text-xs font-medium uppercase tracking-wider text-secondary mt-2 transition-all duration-700">
               {timer.isResting ? "Catch your breath" : "Focus & Work"}
             </p>
           </div>
         </div>
 
         <div className="h-6 flex items-center justify-center">
-          <p className="text-xs text-gray-400 uppercase tracking-widest font-medium">
+          <p className="text-xs text-secondary uppercase tracking-widest font-medium">
             {timer.isResting
               ? `Resting before Set ${currentSet} of ${totalSets}`
               : `Set ${currentSet} • ${actualReps} Reps @ ${actualWeight}kg`}
@@ -161,7 +161,7 @@ export function RestTimerDisplay({
             <Button
               onClick={() => onToggleTimer(false)}
               variant="secondary"
-              className="w-full h-12 text-gray-300 hover:bg-gray-800 border-gray-700 transition-all flex items-center justify-center gap-2 text-sm md:text-base"
+              className="w-full h-12 text-primary hover:bg-card-solid border-border-subtle transition-all flex items-center justify-center gap-2 text-sm md:text-base"
             >
               <PauseIcon size={18} />
               Pause

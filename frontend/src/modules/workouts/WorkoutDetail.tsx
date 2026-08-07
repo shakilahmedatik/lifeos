@@ -154,7 +154,7 @@ export function WorkoutDetail({
   };
 
   if (loading) {
-    return <div className="p-4 text-gray-400">Loading workout...</div>;
+    return <div className="p-4 text-secondary">Loading workout...</div>;
   }
 
   if (error || !workout) {
@@ -173,7 +173,7 @@ export function WorkoutDetail({
 
       <div>
         <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-200">Exercises</h3>
+          <h3 className="text-lg font-semibold text-primary">Exercises</h3>
           <Button
             onClick={() => {
               setIsAddingExercise(true);
@@ -208,7 +208,7 @@ export function WorkoutDetail({
 
         {workout.exercises.length === 0 ? (
           <Card className="bg-transparent border-dashed">
-            <CardContent className="py-8 text-center text-gray-500">
+            <CardContent className="py-8 text-center text-muted">
               No exercises added yet.
             </CardContent>
           </Card>

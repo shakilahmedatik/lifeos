@@ -3,6 +3,7 @@ import type { SubmitEvent } from "react";
 import Button from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
 import Modal from "../../../components/ui/Modal.js";
+import ModalFooter from "../../../components/ui/ModalFooter.js";
 import { Select } from "../../../components/ui/Select.js";
 
 interface WorkoutEditModalProps {
@@ -32,7 +33,7 @@ export function WorkoutEditModal({
     <Modal open={open} onClose={onClose} title="Edit Workout Plan">
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">Name</label>
+          <label className="block text-sm font-medium text-secondary mb-1">Name</label>
           <Input
             value={name}
             onChange={(e) => onChangeName(e.target.value)}
@@ -41,7 +42,7 @@ export function WorkoutEditModal({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">
+          <label className="block text-sm font-medium text-secondary mb-1">
             Description (optional)
           </label>
           <Input
@@ -51,7 +52,7 @@ export function WorkoutEditModal({
           />
         </div>
         <div>
-          <label className="block text-sm font-medium text-gray-400 mb-1">
+          <label className="block text-sm font-medium text-secondary mb-1">
             Scheduled Day (optional)
           </label>
           <Select
@@ -69,14 +70,14 @@ export function WorkoutEditModal({
             ]}
           />
         </div>
-        <div className="flex justify-end gap-3 mt-6">
+        <ModalFooter>
           <Button type="button" variant="secondary" onClick={onClose}>
             Cancel
           </Button>
           <Button type="submit" variant="primary">
             Save Changes
           </Button>
-        </div>
+        </ModalFooter>
       </form>
     </Modal>
   );

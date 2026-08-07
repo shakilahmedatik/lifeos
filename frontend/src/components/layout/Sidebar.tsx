@@ -6,6 +6,7 @@ import {
   GraduationCap as GraduationCapIcon,
   Home as HomeIcon,
   Newspaper as NewspaperIcon,
+  User as UserIcon,
   Wallet as WalletIcon,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
@@ -19,6 +20,7 @@ const navItems = [
   { to: "/finance", icon: WalletIcon, label: "Finance" },
   { to: "/news", icon: NewspaperIcon, label: "News" },
   { to: "/notifications", icon: BellIcon, label: "Alerts" },
+  { to: "/profile", icon: UserIcon, label: "Profile" },
 ];
 
 export default function Dock() {

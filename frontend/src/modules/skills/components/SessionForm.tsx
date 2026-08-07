@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Button from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
+import ModalFooter from "../../../components/ui/ModalFooter.js";
 import { Select } from "../../../components/ui/Select.js";
 import type { LearningLog, LearningResource, NewLearningLogInput } from "../types.js";
 
@@ -95,14 +96,14 @@ export default function SessionForm({
           placeholder="Optional notes"
         />
       </div>
-      <div className="flex justify-end gap-2 pt-2">
+      <ModalFooter>
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="submit" variant="primary">
           {log ? "Update" : "Log Session"}
         </Button>
-      </div>
+      </ModalFooter>
     </form>
   );
 }

@@ -30,9 +30,9 @@ export function DashboardHabitsSection({
   }).length;
 
   return (
-    <Card className="bg-card border-gray-800">
+    <Card className="bg-card border-border">
       <CardHeader className="pb-2 flex flex-row items-center justify-between">
-        <CardTitle className="text-sm font-semibold text-gray-200 flex items-center gap-2">
+        <CardTitle className="text-sm font-semibold text-primary flex items-center gap-2">
           <CheckCheck size={18} className="text-emerald-400" />
           <span>Today's Habits</span>
           <span className="text-xs font-normal text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 ml-1">

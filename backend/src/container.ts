@@ -13,6 +13,7 @@ import { initNewsModule } from "./modules/news/index.js";
 import { initNotificationsModule } from "./modules/notifications/index.js";
 import { initRemindersModule } from "./modules/reminders/index.js";
 import { initRoutineModule } from "./modules/routine/index.js";
+import { initSettingsModule } from "./modules/settings/index.js";
 import { initSkillsModule } from "./modules/skills/index.js";
 import { initWorkoutsModule } from "./modules/workouts/index.js";
 import { createDatabase } from "./shared/db.js";
@@ -33,6 +34,7 @@ export interface Container {
     notifications: ReturnType<typeof initNotificationsModule>;
     reminders: ReturnType<typeof initRemindersModule>;
     routine: ReturnType<typeof initRoutineModule>;
+    settings: ReturnType<typeof initSettingsModule>;
     skills: ReturnType<typeof initSkillsModule>;
     workouts: ReturnType<typeof initWorkoutsModule>;
   };
@@ -46,7 +48,7 @@ export async function createContainer(config: AppConfig): Promise<Container> {
   await runMigrations(db, fileURLToPath(new URL("./shared/migrations/", import.meta.url)));
 
   const auth = initAuthModule(db, config);
-  const backup = initBackupModule(config.dbPath);
+  const backup = initBackupModule(config.dbPath, db);
   const routine = initRoutineModule(db);
   const habits = initHabitsModule(db);
   const reminders = initRemindersModule(db);
@@ -55,6 +57,7 @@ export async function createContainer(config: AppConfig): Promise<Container> {
   const finance = initFinanceModule(db);
   const news = initNewsModule(db);
   const skills = initSkillsModule(db);
+  const settings = initSettingsModule(db);
   const cron = initCronModule(news.rssFetchService, config);
 
   const dashboard = initDashboardModule({
@@ -116,6 +119,7 @@ export async function createContainer(config: AppConfig): Promise<Container> {
       notifications,
       reminders,
       routine,
+      settings,
       skills,
       workouts,
     },

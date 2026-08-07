@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Button from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
+import ModalFooter from "../../../components/ui/ModalFooter.js";
 import type { NewSkillAreaInput, SkillArea } from "../types.js";
 
 interface CategoryFormProps {
@@ -26,14 +27,14 @@ export default function CategoryForm({ category, onSubmit, onCancel }: CategoryF
         placeholder="e.g., Programming, Design, Language"
         required
       />
-      <div className="flex justify-end gap-2 pt-2">
+      <ModalFooter>
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="submit" variant="primary">
           {category ? "Update" : "Create Area"}
         </Button>
-      </div>
+      </ModalFooter>
     </form>
   );
 }

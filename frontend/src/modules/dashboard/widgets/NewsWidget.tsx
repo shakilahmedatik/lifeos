@@ -27,7 +27,7 @@ export function NewsWidget({ items }: NewsWidgetProps) {
                 <span className="font-mono text-[9px] uppercase tracking-widest text-accent/90 mr-1.5 font-semibold">
                   [{n.source}]
                 </span>
-                <span className="text-[12px] text-gray-300 group-hover:text-primary leading-snug line-clamp-2">
+                <span className="text-[12px] text-primary group-hover:text-primary leading-snug line-clamp-2">
                   {n.title}
                 </span>
               </div>

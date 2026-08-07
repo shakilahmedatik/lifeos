@@ -4,10 +4,11 @@ import { cn } from "../../lib/utils.js";
 interface ErrorBannerProps {
   message: string;
   onRetry?: () => void;
+  onClose?: () => void;
   className?: string;
 }
 
-export function ErrorBanner({ message, onRetry, className }: ErrorBannerProps) {
+export function ErrorBanner({ message, onRetry, onClose, className }: ErrorBannerProps) {
   return (
     <div
       className={cn(
@@ -24,6 +25,16 @@ export function ErrorBanner({ message, onRetry, className }: ErrorBannerProps) {
           className="text-xs font-medium text-danger hover:text-danger/80 transition-colors px-3 py-1.5 rounded-lg hover:bg-danger/10"
         >
           Retry
+        </button>
+      )}
+      {onClose && (
+        <button
+          type="button"
+          onClick={onClose}
+          className="p-1 rounded hover:bg-danger/10 text-danger hover:text-danger/80 transition-colors"
+          aria-label="Close error"
+        >
+          ×
         </button>
       )}
     </div>

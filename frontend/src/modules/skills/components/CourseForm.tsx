@@ -1,6 +1,7 @@
 import { useState } from "react";
 import Button from "../../../components/ui/Button.js";
 import { Input } from "../../../components/ui/Input.js";
+import ModalFooter from "../../../components/ui/ModalFooter.js";
 import { Select } from "../../../components/ui/Select.js";
 import type {
   LearningResource,
@@ -97,14 +98,14 @@ export default function CourseForm({ resource, areas, onSubmit, onCancel }: Cour
           options={unitOptions}
         />
       </div>
-      <div className="flex justify-end gap-2 pt-2">
+      <ModalFooter>
         <Button type="button" variant="ghost" onClick={onCancel}>
           Cancel
         </Button>
         <Button type="submit" variant="primary">
           {resource ? "Update" : "Add Resource"}
         </Button>
-      </div>
+      </ModalFooter>
     </form>
   );
 }

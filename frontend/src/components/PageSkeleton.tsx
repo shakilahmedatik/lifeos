@@ -1,8 +1,14 @@
-function PageSkeleton() {
+import { cn } from "../lib/utils.js";
+
+interface PageSkeletonProps {
+  className?: string;
+}
+
+function PageSkeleton({ className }: PageSkeletonProps = {}) {
   return (
-    <div className="p-6 space-y-4 animate-pulse max-w-7xl mx-auto">
-      <div className="h-8 bg-card/60 rounded-lg w-1/4" />
-      <div className="h-64 bg-card/40 rounded-xl border border-border/50" />
+    <div className={cn("p-6 space-y-4 animate-pulse max-w-7xl mx-auto", className)}>
+      <div className="h-8 bg-card-hover rounded-lg w-1/4" />
+      <div className="h-64 bg-card rounded-xl border border-border" />
     </div>
   );
 }

@@ -52,8 +52,8 @@ export function WorkoutDetailHeader({
 
       <Card>
         <CardContent className="pt-6">
-          <h2 className="text-2xl font-bold mb-2 text-gray-100">{workout.name}</h2>
-          {workout.description && <p className="text-gray-400 mb-4">{workout.description}</p>}
+          <h2 className="text-2xl font-bold mb-2 text-primary">{workout.name}</h2>
+          {workout.description && <p className="text-secondary mb-4">{workout.description}</p>}
           {workout.scheduledDay && (
             <Badge variant="blue" className="mb-4 bg-blue-900/30 text-blue-400">
               Scheduled:{" "}

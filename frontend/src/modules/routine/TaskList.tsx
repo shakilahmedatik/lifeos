@@ -23,11 +23,14 @@ interface TaskListProps {
   onToggleSubtask?: (taskId: string, updatedSubtasks: TaskSubtask[]) => void;
 }
 
-const STATUS_VARIANTS: Record<TaskStatus, "info" | "success" | "warning" | "default"> = {
+const STATUS_VARIANTS: Record<TaskStatus, "default" | "info" | "success" | "warning"> = {
   planned: "default",
+  todo: "default",
   in_progress: "info",
   done: "success",
   skipped: "warning",
+  cancelled: "default",
+  missed: "warning",
 };
 
 export function computeDurationMins(startTime: string, endTime: string): number {
@@ -65,15 +68,15 @@ export default function TaskList({
   return (
     <div className="space-y-4">
       {/* Search and Category Filter Bar */}
-      <div className="flex flex-col sm:flex-row items-center gap-3 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">
+      <div className="flex flex-col sm:flex-row items-center gap-3 bg-surface-elevated p-3 rounded-xl border border-border">
         <div className="relative flex-1 w-full">
-          <SearchIcon size={14} className="absolute left-3 top-2.5 text-gray-400" />
+          <SearchIcon size={14} className="absolute left-3 top-2.5 text-secondary" />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search today's tasks..."
-            className="w-full bg-gray-700/50 border border-gray-600/50 text-gray-200 text-xs rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-blue-500/50"
+            className="w-full bg-card-hover border border-border-subtle text-primary text-xs rounded-lg pl-8 pr-3 py-1.5 focus:outline-none focus:border-blue-500/50"
           />
         </div>
 
@@ -127,7 +130,7 @@ export default function TaskList({
               <Card
                 key={task.id}
                 padding="sm"
-                className={`border-l-4 ${catStyle.borderLeft} transition-all hover:bg-gray-800/80`}
+                className={`border-l-4 ${catStyle.borderLeft} transition-all hover:bg-card-solid/80`}
               >
                 <div className="flex items-center gap-3">
                   <div className="flex-1 min-w-0">
@@ -135,10 +138,10 @@ export default function TaskList({
                       <span
                         className={`text-sm font-semibold truncate ${
                           task.status === "done"
-                            ? "line-through text-gray-400"
+                            ? "line-through text-secondary"
                             : task.status === "skipped"
-                              ? "line-through text-gray-500"
-                              : "text-gray-100"
+                              ? "line-through text-muted"
+                              : "text-primary"
                         }`}
                       >
                         {task.title}
@@ -163,7 +166,7 @@ export default function TaskList({
                       )}
                     </div>
 
-                    <div className="flex items-center gap-2 text-xs text-gray-400 mt-1">
+                    <div className="flex items-center gap-2 text-xs text-secondary mt-1">
                       <span>
                         {task.startTime} – {task.endTime}
                       </span>
@@ -173,7 +176,7 @@ export default function TaskList({
                       {task.notes && (
                         <>
                           <span>•</span>
-                          <span className="truncate text-gray-400 max-w-xs">{task.notes}</span>
+                          <span className="truncate text-secondary max-w-xs">{task.notes}</span>
                         </>
                       )}
                     </div>
@@ -217,7 +220,7 @@ export default function TaskList({
                       id={`status-select-${task.id}`}
                       value={task.status}
                       onChange={(e) => onStatusChange(task.id, e.target.value as TaskStatus)}
-                      className="bg-gray-700/60 border border-gray-600/50 text-gray-300 text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500/50 cursor-pointer"
+                      className="bg-card-hover border border-border-subtle text-primary text-xs rounded-lg px-2 py-1 focus:outline-none focus:border-blue-500/50 cursor-pointer"
                     >
                       <option value="planned">Planned</option>
                       <option value="in_progress">In Progress</option>
@@ -229,7 +232,7 @@ export default function TaskList({
                       type="button"
                       onClick={() => onEdit(task)}
                       aria-label={`Edit task ${task.title}`}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-blue-400 hover:bg-gray-700/60 transition-colors"
+                      className="p-1.5 rounded-lg text-secondary hover:text-blue-400 hover:bg-card-hover transition-colors"
                       title="Edit task"
                     >
                       <EditIcon size={14} />
@@ -239,7 +242,7 @@ export default function TaskList({
                       type="button"
                       onClick={() => onDelete(task.id)}
                       aria-label={`Delete task ${task.title}`}
-                      className="p-1.5 rounded-lg text-gray-400 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                      className="p-1.5 rounded-lg text-secondary hover:text-red-400 hover:bg-red-900/30 transition-colors"
                       title="Delete task"
                     >
                       <XIcon size={14} />
@@ -249,19 +252,19 @@ export default function TaskList({
 
                 {/* Subtasks Checklist rendered inside Card */}
                 {hasSubtasks && (
-                  <div className="mt-2.5 pt-2 border-t border-gray-700/40 space-y-1 pl-1">
+                  <div className="mt-2.5 pt-2 border-t border-border space-y-1 pl-1">
                     {task.subtasks?.map((st) => (
                       <label
                         key={st.id}
-                        className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none hover:text-gray-100"
+                        className="flex items-center gap-2 text-xs text-primary cursor-pointer select-none hover:text-primary"
                       >
                         <input
                           type="checkbox"
                           checked={st.completed}
                           onChange={() => handleSubtaskCheck(st.id)}
-                          className="rounded bg-gray-700 border-gray-600 accent-blue-500"
+                          className="rounded bg-card-hover border-border-subtle accent-blue-500"
                         />
-                        <span className={st.completed ? "line-through text-gray-500" : ""}>
+                        <span className={st.completed ? "line-through text-muted" : ""}>
                           {st.title}
                         </span>
                       </label>

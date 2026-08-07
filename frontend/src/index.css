@@ -78,7 +78,7 @@ body {
 }
 
 .glass-heavy {
-  background: rgba(3, 7, 18, 0.95);
+  background: color-mix(in srgb, var(--color-surface) 95%, transparent);
   border: 1px solid var(--color-border);
 }
 

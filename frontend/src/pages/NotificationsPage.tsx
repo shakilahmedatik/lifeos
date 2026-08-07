@@ -14,7 +14,9 @@ import Badge from "../components/ui/Badge.js";
 import Button from "../components/ui/Button.js";
 import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
+import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
+import ModalFooter from "../components/ui/ModalFooter.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Select } from "../components/ui/Select.js";
 import { api } from "../lib/api.js";
@@ -218,7 +220,7 @@ export default function NotificationsPage() {
       {loading ? (
         <div className="space-y-3">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-gray-800/60 rounded-xl animate-pulse" />
+            <div key={i} className="h-16 bg-card rounded-xl animate-pulse" />
           ))}
         </div>
       ) : (
@@ -238,7 +240,7 @@ export default function NotificationsPage() {
                 reminders.map((r) => (
                   <div
                     key={r.id}
-                    className="flex items-center justify-between py-2.5 px-2 border-b border-gray-800/50 last:border-0 hover:bg-gray-800/30 rounded-lg transition-colors"
+                    className="flex items-center justify-between py-2.5 px-2 border-b border-border/50 last:border-0 hover:bg-card-solid/30 rounded-lg transition-colors"
                   >
                     <div className="flex items-center gap-3">
                       <button
@@ -247,7 +249,7 @@ export default function NotificationsPage() {
                         className={`p-1 rounded-full border transition-colors ${
                           r.completed
                             ? "bg-emerald-950/60 border-emerald-700 text-emerald-400"
-                            : "border-gray-600 text-gray-500 hover:text-amber-400"
+                            : "border-border-subtle text-muted hover:text-amber-400"
                         }`}
                       >
                         <CheckCircle2 size={14} />
@@ -255,7 +257,7 @@ export default function NotificationsPage() {
                       <div>
                         <div className="flex items-center gap-2">
                           <span
-                            className={`text-sm font-medium ${r.completed ? "line-through text-gray-500" : "text-gray-200"}`}
+                            className={`text-sm font-medium ${r.completed ? "line-through text-muted" : "text-primary"}`}
                           >
                             {r.title}
                           </span>
@@ -263,7 +265,7 @@ export default function NotificationsPage() {
                             {r.kind}
                           </Badge>
                         </div>
-                        <p className="text-xs font-mono text-gray-500 mt-0.5">
+                        <p className="text-xs font-mono text-muted mt-0.5">
                           Time: {r.time} {r.date ? `· Date: ${r.date}` : "· Daily"}
                         </p>
                       </div>
@@ -272,7 +274,7 @@ export default function NotificationsPage() {
                     <button
                       type="button"
                       onClick={() => handleDeleteReminder(r.id)}
-                      className="p-1 text-gray-500 hover:text-red-400 transition-colors"
+                      className="p-1 text-muted hover:text-red-400 transition-colors"
                       title="Delete item"
                     >
                       <Trash2 size={14} />
@@ -302,18 +304,18 @@ export default function NotificationsPage() {
                     return (
                       <div
                         key={r.taskId}
-                        className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0"
+                        className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
                       >
                         <div>
-                          <p className="text-sm font-medium text-gray-200">{task.title}</p>
-                          <p className="text-xs text-gray-500">
+                          <p className="text-sm font-medium text-primary">{task.title}</p>
+                          <p className="text-xs text-muted">
                             {r.minutesBefore} min before · Sound: {r.sound}
                           </p>
                         </div>
                         <button
                           type="button"
                           onClick={() => handleRemoveTaskReminder(r.taskId)}
-                          className="px-2 py-1 rounded text-xs text-gray-500 hover:text-red-400 hover:bg-red-900/30 transition-colors"
+                          className="px-2 py-1 rounded text-xs text-muted hover:text-red-400 hover:bg-red-900/30 transition-colors"
                         >
                           Remove
                         </button>
@@ -335,7 +337,7 @@ export default function NotificationsPage() {
                   tasks.map((t) => (
                     <div
                       key={t.id}
-                      className="flex items-center justify-between py-2 border-b border-gray-800/50 last:border-0"
+                      className="flex items-center justify-between py-2 border-b border-border/50 last:border-0"
                     >
                       <div className="flex items-center gap-2">
                         <Badge
@@ -350,9 +352,9 @@ export default function NotificationsPage() {
                         >
                           {t.status}
                         </Badge>
-                        <span className="text-sm text-gray-200">{t.title}</span>
+                        <span className="text-sm text-primary">{t.title}</span>
                       </div>
-                      <span className="text-xs text-gray-500 font-mono">{t.startTime}</span>
+                      <span className="text-xs text-muted font-mono">{t.startTime}</span>
                     </div>
                   ))
                 )}
@@ -414,12 +416,12 @@ export default function NotificationsPage() {
               />
             </div>
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <ModalFooter>
             <Button variant="secondary" type="button" onClick={() => setShowReminderForm(false)}>
               Cancel
             </Button>
             <Button type="submit">Save</Button>
-          </div>
+          </ModalFooter>
         </form>
       </Modal>
 
@@ -468,12 +470,12 @@ export default function NotificationsPage() {
               ]}
             />
           </div>
-          <div className="flex justify-end gap-2 pt-2">
+          <ModalFooter>
             <Button variant="secondary" type="button" onClick={() => setShowTaskForm(false)}>
               Cancel
             </Button>
             <Button type="submit">Set Alert</Button>
-          </div>
+          </ModalFooter>
         </form>
       </Modal>
     </div>

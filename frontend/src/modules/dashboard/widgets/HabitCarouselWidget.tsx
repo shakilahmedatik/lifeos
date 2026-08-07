@@ -59,14 +59,14 @@ export function HabitCarouselWidget({ habits, onLog, onUnlog }: HabitCarouselWid
         {/* Card stack wrapper */}
         <div className="relative w-full flex-1 flex items-center justify-center min-h-37.5">
           {/* Peek cards behind */}
-          <div className="absolute w-[86%] h-[82%] rounded-xl bg-gray-900/40 border border-gray-700/30 translate-y-2 scale-[0.95] pointer-events-none" />
-          <div className="absolute w-[92%] h-[88%] rounded-xl bg-gray-900/60 border border-gray-700/40 translate-y-1 scale-[0.975] pointer-events-none" />
+          <div className="absolute w-[86%] h-[82%] rounded-xl bg-surface border border-border translate-y-2 scale-[0.95] pointer-events-none" />
+          <div className="absolute w-[92%] h-[88%] rounded-xl bg-surface border border-border translate-y-1 scale-[0.975] pointer-events-none" />
 
           {/* Active front card */}
-          <div className="relative w-full h-[94%] rounded-xl bg-gray-900/90 border border-gray-700/60 flex flex-col items-center justify-between p-3 shadow-lg">
+          <div className="relative w-full h-[94%] rounded-xl bg-surface border border-border flex flex-col items-center justify-between p-3 shadow-lg">
             {/* Header info */}
             <div className="w-full flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-100 truncate max-w-35">
+              <span className="text-xs font-semibold text-primary truncate max-w-35">
                 {habit.name}
               </span>
               {habit.currentStreak > 0 && (
@@ -174,7 +174,7 @@ export function HabitCarouselWidget({ habits, onLog, onUnlog }: HabitCarouselWid
                   type="button"
                   onClick={() => onUnlog(lastLog.id)}
                   title="Undo last log"
-                  className="flex items-center justify-center text-xs text-gray-400 hover:text-red-300 bg-gray-800/60 hover:bg-red-950/60 border border-gray-700/60 p-1 rounded-lg transition-all"
+                  className="flex items-center justify-center text-xs text-secondary hover:text-red-300 bg-card hover:bg-red-950/60 border border-border p-1 rounded-lg transition-all"
                 >
                   <RotateCcw size={12} />
                 </button>

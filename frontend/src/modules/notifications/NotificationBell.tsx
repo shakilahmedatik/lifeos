@@ -27,7 +27,7 @@ export function NotificationBell({ onClick }: NotificationBellProps) {
     <button
       type="button"
       onClick={onClick}
-      className="relative p-2 text-gray-600 hover:text-gray-800"
+      className="relative p-2 text-muted hover:text-muted"
       aria-label="Notifications"
     >
       <svg

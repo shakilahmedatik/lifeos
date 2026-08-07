@@ -20,7 +20,7 @@ export function VideoPlayer({ url, isRunning }: VideoPlayerProps) {
 
   if (!url) {
     return (
-      <div className="w-full h-full min-h-75 flex items-center justify-center rounded-xl bg-gray-800/40 border border-gray-700/50 text-gray-500">
+      <div className="w-full h-full min-h-75 flex items-center justify-center rounded-xl bg-surface-elevated border border-border text-muted">
         No video reference available
       </div>
     );
@@ -41,7 +41,7 @@ export function VideoPlayer({ url, isRunning }: VideoPlayerProps) {
     if (!videoId) return <div className="text-red-400">Invalid YouTube URL</div>;
 
     return (
-      <div className="w-full aspect-video rounded-xl overflow-hidden border border-gray-700/50 shadow-lg">
+      <div className="w-full aspect-video rounded-xl overflow-hidden border border-border shadow-lg">
         <iframe
           width="100%"
           height="100%"
@@ -56,7 +56,7 @@ export function VideoPlayer({ url, isRunning }: VideoPlayerProps) {
   }
 
   return (
-    <div className="w-full aspect-video rounded-xl overflow-hidden border border-gray-700/50 shadow-lg bg-black flex items-center justify-center">
+    <div className="w-full aspect-video rounded-xl overflow-hidden border border-border shadow-lg bg-black flex items-center justify-center">
       <video ref={videoRef} src={url} controls className="w-full h-full object-contain" playsInline>
         <track kind="captions" />
       </video>

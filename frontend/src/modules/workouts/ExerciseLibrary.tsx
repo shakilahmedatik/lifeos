@@ -13,9 +13,12 @@ import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent } from "../../components/ui/Card.js";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
+import { EmptyState } from "../../components/ui/EmptyState.js";
 import { Input } from "../../components/ui/Input.js";
 import Modal from "../../components/ui/Modal.js";
+import ModalFooter from "../../components/ui/ModalFooter.js";
 import { Select } from "../../components/ui/Select.js";
+import { Skeleton } from "../../components/ui/Skeleton.js";
 import { useExercises } from "./useWorkouts.js";
 
 const MUSCLE_GROUPS: (MuscleGroup | "all")[] = [
@@ -124,7 +127,7 @@ export function ExerciseLibrary() {
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
         <div className="relative flex-1 max-w-md">
-          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted">
             <SearchIcon className="w-5 h-5" />
           </div>
           <Input
@@ -156,36 +159,32 @@ export function ExerciseLibrary() {
       {loading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i} className="animate-pulse">
-              <CardContent className="h-32 bg-gray-800/60"></CardContent>
-            </Card>
+            <Skeleton key={i} className="h-40 w-full rounded-xl" />
           ))}
         </div>
       ) : error ? (
         <div className="p-4 bg-red-500/10 text-red-400 rounded-lg">{error}</div>
       ) : filteredExercises.length === 0 ? (
-        <div className="py-12 text-center text-gray-500">
-          <p>No exercises found.</p>
-        </div>
+        <EmptyState title="No exercises found." className="py-12" />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredExercises.map((ex) => (
-            <Card key={ex.id} className="group hover:border-gray-600 transition-colors">
+            <Card key={ex.id} className="group hover:border-border-subtle transition-colors">
               <CardContent className="p-4">
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="text-lg font-medium text-gray-100">{ex.name}</h3>
+                  <h3 className="text-lg font-medium text-primary">{ex.name}</h3>
                   <div className="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button
                       type="button"
                       onClick={() => handleOpenEdit(ex)}
-                      className="text-gray-400 hover:text-blue-400"
+                      className="text-secondary hover:text-blue-400"
                     >
                       <EditIcon className="w-4 h-4" />
                     </button>
                     <button
                       type="button"
                       onClick={() => setDeletingExerciseId(ex.id)}
-                      className="text-gray-400 hover:text-red-400"
+                      className="text-secondary hover:text-red-400"
                     >
                       <TrashIcon className="w-4 h-4" />
                     </button>
@@ -220,7 +219,7 @@ export function ExerciseLibrary() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">Name</label>
+            <label className="block text-sm font-medium text-secondary mb-1">Name</label>
             <Input
               value={formData.name}
               onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -229,7 +228,7 @@ export function ExerciseLibrary() {
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Muscle Group</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Muscle Group</label>
               <Select
                 value={formData.muscleGroup || "chest"}
                 onChange={(e) =>
@@ -242,7 +241,7 @@ export function ExerciseLibrary() {
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-400 mb-1">Equipment</label>
+              <label className="block text-sm font-medium text-secondary mb-1">Equipment</label>
               <Select
                 value={formData.equipment || "dumbbell"}
                 onChange={(e) =>
@@ -253,7 +252,7 @@ export function ExerciseLibrary() {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-400 mb-1">
+            <label className="block text-sm font-medium text-secondary mb-1">
               Video URL (optional)
             </label>
             <Input
@@ -262,14 +261,14 @@ export function ExerciseLibrary() {
               onChange={(e) => setFormData({ ...formData, videoUrl: e.target.value })}
             />
           </div>
-          <div className="flex justify-end gap-3 mt-6">
+          <ModalFooter>
             <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
               Cancel
             </Button>
             <Button type="submit" variant="primary">
               Save Exercise
             </Button>
-          </div>
+          </ModalFooter>
         </form>
       </Modal>
 

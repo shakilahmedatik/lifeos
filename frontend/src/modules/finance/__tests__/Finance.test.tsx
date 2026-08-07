@@ -5,7 +5,6 @@ import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../../../components/Toast.js";
 import { AccountList } from "../AccountList.js";
 import * as financeApi from "../api.js";
-import { BackupPanel } from "../BackupPanel.js";
 import { CategoryList } from "../CategoryList.js";
 import { FinanceWidget } from "../FinanceWidget.js";
 import { MonthlyView } from "../MonthlyView.js";
@@ -319,17 +318,5 @@ describe("Finance Frontend Components", () => {
 
     expect(screen.getAllByText("BDT 10,000.00").length).toBeGreaterThanOrEqual(1);
     expect(screen.getAllByText("BDT 4,000.00").length).toBeGreaterThanOrEqual(1);
-  });
-
-  it("BackupPanel renders CSV and JSON export options", () => {
-    render(
-      <ToastProvider>
-        <BackupPanel />
-      </ToastProvider>,
-    );
-
-    expect(screen.getByText("Export Transactions (CSV)")).toBeDefined();
-    expect(screen.getByText("Export Full Backup (JSON)")).toBeDefined();
-    expect(screen.getByText("Restore Data from JSON Backup")).toBeDefined();
   });
 });

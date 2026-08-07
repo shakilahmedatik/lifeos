@@ -47,12 +47,12 @@ export function ScheduleWidget({ previous, now, next, onNavigate }: ScheduleWidg
     <DashboardPanel title="Schedule" subtitle="routine">
       <div className="flex flex-col gap-2 justify-between h-full py-0.5">
         {/* Previous Card */}
-        <div className="rounded-lg border border-gray-700/40 bg-gray-900/40 px-3 py-1.5 opacity-60 flex items-center justify-between shrink-0">
+        <div className="rounded-lg border border-border bg-surface px-3 py-1.5 opacity-60 flex items-center justify-between shrink-0">
           <div>
             <div className="font-mono text-[9px] uppercase tracking-widest text-muted">
               Previous
             </div>
-            <div className="text-xs text-gray-400 line-through truncate max-w-[220px]">
+            <div className="text-xs text-secondary line-through truncate max-w-[220px]">
               {previous ? previous.title : "No previous task"}
             </div>
           </div>
@@ -64,7 +64,7 @@ export function ScheduleWidget({ previous, now, next, onNavigate }: ScheduleWidg
         </div>
 
         {/* Now Card */}
-        <div className="rounded-lg border-l-3 border-accent border border-gray-700/60 bg-gray-900/80 px-3 py-2 flex-1 flex flex-col justify-between shadow-inner">
+        <div className="rounded-lg border-l-3 border-accent border border-border bg-surface px-3 py-2 flex-1 flex flex-col justify-between shadow-inner">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-1.5">
               <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
@@ -92,7 +92,7 @@ export function ScheduleWidget({ previous, now, next, onNavigate }: ScheduleWidg
           </div>
 
           <div>
-            <div className="text-sm font-semibold text-gray-100 truncate">
+            <div className="text-sm font-semibold text-primary truncate">
               {now ? now.title : "No active task"}
             </div>
             {now && (
@@ -140,10 +140,10 @@ export function ScheduleWidget({ previous, now, next, onNavigate }: ScheduleWidg
         </div>
 
         {/* Next Card */}
-        <div className="rounded-lg border border-gray-700/40 bg-gray-900/40 px-3 py-1.5 opacity-80 flex items-center justify-between shrink-0">
+        <div className="rounded-lg border border-border bg-surface px-3 py-1.5 opacity-80 flex items-center justify-between shrink-0">
           <div>
             <div className="font-mono text-[9px] uppercase tracking-widest text-muted">Next</div>
-            <div className="text-xs font-medium text-gray-300 truncate max-w-[220px]">
+            <div className="text-xs font-medium text-primary truncate max-w-[220px]">
               {next ? next.title : "No upcoming tasks"}
             </div>
           </div>

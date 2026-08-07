@@ -24,15 +24,15 @@ export default function SessionCard({ log, resource, onEdit, onDelete }: Session
     <Card padding="sm" className="flex items-center gap-3">
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-medium text-gray-200">{log.minutesSpent} min</span>
+          <span className="text-sm font-medium text-primary">{log.minutesSpent} min</span>
           {resource && (
             <span className="px-2 py-0.5 text-xs bg-blue-600/20 text-blue-400 rounded-full border border-blue-500/20">
               {resource.title}
             </span>
           )}
         </div>
-        {log.notes && <p className="text-xs text-gray-500 mt-0.5 truncate">{log.notes}</p>}
-        <p className="text-xs text-gray-600 mt-0.5">{formatDate(log.date)}</p>
+        {log.notes && <p className="text-xs text-muted mt-0.5 truncate">{log.notes}</p>}
+        <p className="text-xs text-muted mt-0.5">{formatDate(log.date)}</p>
       </div>
       <div className="flex gap-1">
         <Button
