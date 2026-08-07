@@ -98,8 +98,8 @@ modules/<name>/
   ports/               TypeScript interfaces only (e.g. TaskRepository).
                       These are the seam between business logic and storage.
   adapters/sqlite/     Concrete implementation of each port using
-                      better-sqlite3. This is the only layer allowed to
-                      import the SQLite driver.
+                       @libsql/client. This is the only layer allowed to
+                       import the SQLite driver.
   api/                Express router. Translates HTTP <-> use-case calls.
                       Validates input (zod). Contains NO business logic —
                       if a route handler needs an `if`, ask whether that
@@ -225,7 +225,7 @@ corruption. Examples:
 ### Explicit non-goals (do not introduce these without a new decision record)
 
 - No authentication / user accounts / multi-tenancy.
-- No ORM (raw SQL via `better-sqlite3`).
+- No ORM (raw SQL / Kysely via `@libsql/client`).
 - No domain event bus / pub-sub between modules.
 - No CQRS.
 - No microservices — single backend process, single SQLite file.
@@ -241,7 +241,7 @@ corruption. Examples:
 | Backend runtime         | Node.js (TypeScript, ESM)                               | `tsx` for dev, `tsc` for build                                                                                  |
 | Backend framework       | Express                                                 | Thin HTTP layer only                                                                                            |
 | Validation              | Zod                                                     | At the API boundary only                                                                                        |
-| Database                | SQLite via `better-sqlite3`                             | Single local file, WAL mode                                                                                     |
+| Database                | SQLite via `@libsql/client`                             | Single local/embedded LibSQL SQLite database                                                                    |
 | Frontend build          | Vite                                                    | React + TypeScript template                                                                                     |
 | Frontend framework      | React                                                   | Function components, hooks only                                                                                 |
 | Styling                 | Tailwind CSS v4                                         | Dark theme by default (always-on monitor use)                                                                   |
@@ -1128,7 +1128,7 @@ same network can call the unauthenticated API.
 ### Existing good choices
 
 - Local SQLite eliminates network latency.
-- `better-sqlite3` is fast for small local workloads.
+- `@libsql/client` is fast for small local workloads.
 - 30-second dashboard polling is reasonable.
 - The live Now-card countdown is client-side.
 - SSE avoids unnecessary WebSocket infrastructure for reminders.

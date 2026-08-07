@@ -13,7 +13,7 @@
 |-------|------------|-------------|
 | **Frontend** | React 19, Vite 6, Tailwind CSS 4 | SPA client with modern dark cockpit theme |
 | **Backend** | Node.js (ESM), Express 4.21, SQLite | RESTful API server with modular domain architecture |
-| **Database** | SQLite (`better-sqlite3`) | Local WAL mode with automated SQL migrations |
+| **Database** | SQLite (`@libsql/client`) | Remote (Turso) SQLite/LibSQL database with automated SQL migrations |
 | **Validation** | Zod 3.24 | Shared type boundary schemas across client and server |
 | **Shared** | `@lifeos/contracts` | Monorepo contract package for domain entity interfaces |
 | **Tooling** | pnpm, Biome 1.9, Vitest 4 | Fast monorepo management, linting, and unit testing |
