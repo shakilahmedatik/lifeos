@@ -3,11 +3,11 @@
   "rewrites": [
     {
       "source": "/api/(.*)",
-      "destination": "/api"
+      "destination": "/api/server.ts"
     }
   ],
   "functions": {
-    "api/index.ts": {
+    "api/server.ts": {
       "includeFiles": "backend/src/shared/migrations/*.sql"
     }
   }
