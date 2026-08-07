@@ -10,7 +10,6 @@ export function createRemindersRouter(reminderService: ReminderService): Router 
 
   router.get("/", async (req: AuthenticatedRequest, res) => {
     const userId = req.user?.id || (req.query.userId as string) || "default";
-    await reminderService.processDueRemindersForUser(userId);
     const { date } = req.query;
     if (typeof date === "string") {
       res.json(await reminderService.getByDate(date, userId));

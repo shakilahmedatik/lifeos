@@ -20,7 +20,10 @@ export class ReminderService {
 
   async getUpcomingToday(today: string, userId: string, limit = 4): Promise<Reminder[]> {
     const todayReminders = await this.repo.getTodayReminders(today, userId);
-    return todayReminders.slice(0, limit);
+    const nowTime = nowIsoInTimezone().slice(11, 16);
+    const upcoming = todayReminders.filter((r) => r.time >= nowTime);
+    const past = todayReminders.filter((r) => r.time < nowTime);
+    return [...upcoming, ...past].slice(0, limit);
   }
 
   async getById(id: string, userId: string): Promise<Reminder | undefined> {

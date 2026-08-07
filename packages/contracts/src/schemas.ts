@@ -376,10 +376,14 @@ export const NewReminderSchema = z.object({
   title: z.string().min(1, "Title is required"),
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)"),
   date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
-    .nullable()
-    .optional(),
+    .preprocess(
+      (val) => (val === "" ? null : val),
+      z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
+        .nullable()
+        .optional(),
+    ),
   kind: z.enum(["reminder", "event"]).optional(),
 });
 
@@ -390,10 +394,14 @@ export const UpdateReminderSchema = z.object({
     .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)")
     .optional(),
   date: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
-    .nullable()
-    .optional(),
+    .preprocess(
+      (val) => (val === "" ? null : val),
+      z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
+        .nullable()
+        .optional(),
+    ),
   kind: z.enum(["reminder", "event"]).optional(),
   completed: z.boolean().optional(),
 });

@@ -10,12 +10,10 @@ const TIMEZONE_OFFSET_MINUTES = (() => {
 })();
 
 function formatIsoWithOffset(input: Date, offsetMinutes: number): string {
-  const targetMs = input.getTime() + offsetMinutes * 60000;
-  const d = new Date(targetMs);
   const pad = (n: number) => String(n).padStart(2, "0");
   const sign = offsetMinutes >= 0 ? "+" : "-";
   const abs = Math.abs(offsetMinutes);
-  return `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}T${pad(d.getUTCHours())}:${pad(d.getUTCMinutes())}:${pad(d.getUTCSeconds())}${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
+  return `${input.getUTCFullYear()}-${pad(input.getUTCMonth() + 1)}-${pad(input.getUTCDate())}T${pad(input.getUTCHours())}:${pad(input.getUTCMinutes())}:${pad(input.getUTCSeconds())}${sign}${pad(Math.floor(abs / 60))}:${pad(abs % 60)}`;
 }
 
 export function nowInTimezone(): Date {

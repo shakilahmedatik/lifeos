@@ -10,7 +10,7 @@ import { DashboardPanel } from "../components/DashboardPanel.js";
 interface RemindersWidgetProps {
   reminders: Reminder[];
   onComplete: (id: string) => void;
-  onAdd: (input: NewReminderInput) => void;
+  onAdd: (input: NewReminderInput) => Promise<void> | void;
 }
 
 function getCurrentTimeStr(): string {
@@ -24,6 +24,7 @@ export function RemindersWidget({ reminders, onComplete, onAdd }: RemindersWidge
   const [time, setTime] = useState(getCurrentTimeStr);
   const [date, setDate] = useState(getClientDateString);
   const [kind, setKind] = useState<"reminder" | "event">("reminder");
+  const [submitting, setSubmitting] = useState(false);
 
   const openModal = () => {
     setTime(getCurrentTimeStr());
@@ -31,12 +32,19 @@ export function RemindersWidget({ reminders, onComplete, onAdd }: RemindersWidge
     setShowModal(true);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title.trim()) return;
-    onAdd({ title: title.trim(), time, date: date || null, kind });
-    setTitle("");
-    setShowModal(false);
+    if (!title.trim() || submitting) return;
+    try {
+      setSubmitting(true);
+      await onAdd({ title: title.trim(), time, date: date || null, kind });
+      setTitle("");
+      setShowModal(false);
+    } catch {
+      // Keep modal open so user input is preserved on error
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -144,7 +152,9 @@ export function RemindersWidget({ reminders, onComplete, onAdd }: RemindersWidge
             <Button variant="secondary" type="button" onClick={() => setShowModal(false)}>
               Cancel
             </Button>
-            <Button type="submit">Save</Button>
+            <Button type="submit" disabled={submitting}>
+              {submitting ? "Saving..." : "Save"}
+            </Button>
           </div>
         </form>
       </Modal>
