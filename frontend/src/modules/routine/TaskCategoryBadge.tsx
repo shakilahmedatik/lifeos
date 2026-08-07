@@ -39,6 +39,24 @@ export const CATEGORY_COLORS: Record<
     border: "border-pink-500/20",
     borderLeft: "border-l-pink-500",
   },
+  routine: {
+    bg: "bg-teal-500/10",
+    text: "text-teal-400",
+    border: "border-teal-500/20",
+    borderLeft: "border-l-teal-500",
+  },
+  must_do: {
+    bg: "bg-red-600/10",
+    text: "text-red-300",
+    border: "border-red-600/20",
+    borderLeft: "border-l-red-600",
+  },
+  flex: {
+    bg: "bg-indigo-500/10",
+    text: "text-indigo-400",
+    border: "border-indigo-500/20",
+    borderLeft: "border-l-indigo-500",
+  },
   general: {
     bg: "bg-gray-500/10",
     text: "text-gray-400",

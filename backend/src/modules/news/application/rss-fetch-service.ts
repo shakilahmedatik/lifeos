@@ -94,7 +94,10 @@ export function createRssFetchService(
 
 function sanitizeSummary(str?: string): string | undefined {
   if (!str) return undefined;
-  const clean = str.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+  const clean = str
+    .replace(/<[^>]*>/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
   return clean.length > 0 ? clean : undefined;
 }
 
@@ -104,4 +107,3 @@ function parseValidDate(dateStr?: string): string | undefined {
   if (Number.isNaN(timestamp)) return undefined;
   return new Date(timestamp).toISOString();
 }
-

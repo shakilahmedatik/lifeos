@@ -20,7 +20,9 @@ import type {
   NotificationSoundType,
   NotificationWithTask,
   Reminder,
+  RoutineStats,
   Task,
+  TaskHistoryQuery,
   Transaction,
   UpdateReminderInput,
   WeeklySummary,
@@ -73,6 +75,17 @@ export const api = {
       body: JSON.stringify(patch),
     }),
   deleteTask: (id: string) => request<void>(`/api/routine/tasks/${id}`, { method: "DELETE" }),
+  getTaskHistory: (query?: TaskHistoryQuery) => {
+    const params = new URLSearchParams();
+    if (query?.startDate) params.set("startDate", query.startDate);
+    if (query?.endDate) params.set("endDate", query.endDate);
+    if (query?.category) params.set("category", query.category);
+    if (query?.status) params.set("status", query.status);
+    if (query?.search) params.set("search", query.search);
+    const qs = params.toString();
+    return request<Task[]>(`/api/routine/tasks/history${qs ? `?${qs}` : ""}`);
+  },
+  getRoutineStats: () => request<RoutineStats>("/api/routine/stats"),
 
   // Habits
   getHabits: () => request<HabitDefinition[]>("/api/habits"),

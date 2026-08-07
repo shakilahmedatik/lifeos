@@ -15,12 +15,17 @@ export class NotificationScheduler {
   constructor(private notificationService: NotificationService) {}
 
   start(intervalMs = 10000): void {
-    logger.info("Notification scheduler enabled (lazy request-driven execution + background timer)", { intervalMs });
+    logger.info(
+      "Notification scheduler enabled (lazy request-driven execution + background timer)",
+      { intervalMs },
+    );
     this.checkAndSendNotificationsLazy();
     if (this.timer) clearInterval(this.timer);
     this.timer = setInterval(() => {
       this.checkAndSendNotificationsLazy().catch((err) => {
-        logger.error("Error in background notification scheduler timer", { error: (err as Error).message });
+        logger.error("Error in background notification scheduler timer", {
+          error: (err as Error).message,
+        });
       });
     }, intervalMs);
   }

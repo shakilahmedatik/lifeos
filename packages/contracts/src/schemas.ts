@@ -80,6 +80,14 @@ export const UpdateStatusSchema = z.object({
   status: TaskStatusSchema,
 });
 
+export const TaskHistoryQuerySchema = z.object({
+  startDate: StrictDateSchema.optional(),
+  endDate: StrictDateSchema.optional(),
+  category: z.union([TaskCategorySchema, z.literal("all")]).optional(),
+  status: z.union([TaskStatusSchema, z.literal("all")]).optional(),
+  search: z.string().optional(),
+});
+
 export const HabitCategorySchema = z.enum([
   "health",
   "learning",
@@ -375,15 +383,14 @@ export const UpdateSkillAreaInputSchema = z.object({
 export const NewReminderSchema = z.object({
   title: z.string().min(1, "Title is required"),
   time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)"),
-  date: z
-    .preprocess(
-      (val) => (val === "" ? null : val),
-      z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
-        .nullable()
-        .optional(),
-    ),
+  date: z.preprocess(
+    (val) => (val === "" ? null : val),
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
+      .nullable()
+      .optional(),
+  ),
   kind: z.enum(["reminder", "event"]).optional(),
 });
 
@@ -393,15 +400,14 @@ export const UpdateReminderSchema = z.object({
     .string()
     .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)")
     .optional(),
-  date: z
-    .preprocess(
-      (val) => (val === "" ? null : val),
-      z
-        .string()
-        .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
-        .nullable()
-        .optional(),
-    ),
+  date: z.preprocess(
+    (val) => (val === "" ? null : val),
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
+      .nullable()
+      .optional(),
+  ),
   kind: z.enum(["reminder", "event"]).optional(),
   completed: z.boolean().optional(),
 });

@@ -1,6 +1,7 @@
 import type {
   NewNotificationInput,
   NewTaskInput,
+  RoutineStats,
   Task,
   TaskStatus,
   TaskSubtask,
@@ -8,6 +9,8 @@ import type {
 import { getClientDateString } from "@lifeos/contracts";
 import {
   Calendar as CalendarIcon,
+  ChevronLeft as ChevronLeftIcon,
+  ChevronRight as ChevronRightIcon,
   Plus as PlusIcon,
   RefreshCw as RefreshCwIcon,
 } from "lucide-react";
@@ -16,42 +19,70 @@ import { useAppToast } from "../components/Toast.js";
 import Button from "../components/ui/Button.js";
 import { Input } from "../components/ui/Input.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
-import { Tabs, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { api } from "../lib/api.js";
 import DeleteConfirmModal from "../modules/routine/DeleteConfirmModal.js";
+import { RoutineHistory } from "../modules/routine/RoutineHistory.js";
+import { RoutineOverview } from "../modules/routine/RoutineOverview.js";
+import TaskCreateModal from "../modules/routine/TaskCreateModal.js";
 import TaskDetailModal from "../modules/routine/TaskDetailModal.js";
 import TaskEditModal from "../modules/routine/TaskEditModal.js";
-import TaskForm from "../modules/routine/TaskForm.js";
 import TaskList from "../modules/routine/TaskList.js";
 import TaskTimelineView from "../modules/routine/TaskTimelineView.js";
 
+type Tab = "overview" | "schedule" | "history";
 type ViewMode = "list" | "timeline";
 
 export default function RoutinePage() {
   const today = getClientDateString();
+  const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loadingTasks, setLoadingTasks] = useState(true);
   const [date, setDate] = useState(today);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
-  const [showForm, setShowForm] = useState(false);
+
+  // Overview Stats state
+  const [stats, setStats] = useState<RoutineStats | null>(null);
+  const [loadingStats, setLoadingStats] = useState(true);
+
+  // Modals state
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
+
   const pausedRef = useRef(false);
   const toast = useAppToast();
 
+  const fetchStats = useCallback(async () => {
+    try {
+      setLoadingStats(true);
+      const res = await api.getRoutineStats();
+      setStats(res);
+    } catch {
+      console.error("Failed to load routine statistics");
+    } finally {
+      setLoadingStats(false);
+    }
+  }, []);
+
   const fetchTasks = useCallback(async () => {
     try {
+      setLoadingTasks(true);
       const data = await api.getTasks(date);
       setTasks(data);
     } catch {
       toast.error("Failed to load tasks schedule");
     } finally {
-      setLoading(false);
+      setLoadingTasks(false);
     }
   }, [date, toast]);
 
-  // Polling with FIXED Tab Visibility Leak
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats]);
+
+  // Polling with Fixed Tab Visibility Leak
   useEffect(() => {
     fetchTasks();
     const interval = setInterval(() => {
@@ -67,18 +98,26 @@ export default function RoutinePage() {
       pausedRef.current = document.hidden;
       if (!document.hidden) {
         fetchTasks();
+        fetchStats();
       }
     };
     document.addEventListener("visibilitychange", handler);
     return () => document.removeEventListener("visibilitychange", handler);
-  }, [fetchTasks]);
+  }, [fetchTasks, fetchStats]);
+
+  // Date Navigation Helpers
+  const handleShiftDate = (days: number) => {
+    const d = new Date(`${date}T00:00:00`);
+    d.setDate(d.getDate() + days);
+    setDate(d.toISOString().split("T")[0]);
+  };
 
   // Create Task
   const handleCreateTask = async (input: NewTaskInput) => {
     try {
       const result = await api.createTask(input);
-      setShowForm(false);
       fetchTasks();
+      fetchStats();
       toast.success("Task created successfully");
 
       if (result.overlapsWith && result.overlapsWith.length > 0) {
@@ -122,6 +161,7 @@ export default function RoutinePage() {
 
     try {
       await api.updateTaskStatus(id, newStatus);
+      fetchStats();
     } catch {
       // Rollback on failure
       setTasks(previousTasks);
@@ -134,6 +174,7 @@ export default function RoutinePage() {
     try {
       const result = await api.updateTask(id, patch);
       fetchTasks();
+      fetchStats();
       toast.success("Task updated");
 
       if (result.overlapsWith && result.overlapsWith.length > 0) {
@@ -205,6 +246,7 @@ export default function RoutinePage() {
 
     try {
       await api.deleteTask(idToDelete);
+      fetchStats();
       toast.success("Task deleted");
     } catch {
       // Rollback on failure
@@ -221,84 +263,155 @@ export default function RoutinePage() {
         title="Routine & Schedule"
         description="Plan, schedule, and execute your day structured by time blocks"
         actions={
-          <>
-            <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
-              <TabsList>
-                <TabsTrigger value="list">List</TabsTrigger>
-                <TabsTrigger value="timeline">Timeline</TabsTrigger>
-              </TabsList>
-            </Tabs>
-
-            <Button
-              variant="secondary"
-              size="sm"
-              icon={<RefreshCwIcon size={14} />}
-              onClick={fetchTasks}
-              aria-label="Refresh task schedule"
-            />
-
-            <Button size="sm" icon={<PlusIcon size={14} />} onClick={() => setShowForm(!showForm)}>
-              {showForm ? "Cancel" : "Add Task"}
-            </Button>
-          </>
+          <Button
+            variant="primary"
+            size="sm"
+            icon={<PlusIcon size={14} />}
+            onClick={() => setIsCreateModalOpen(true)}
+          >
+            Add Task
+          </Button>
         }
       />
 
-      {/* Date Selector */}
-      <div className="flex items-center gap-3 bg-gray-800/40 p-3 rounded-xl border border-gray-700/40">
-        <CalendarIcon size={18} className="text-blue-400" />
-        <label htmlFor="routine-date-picker" className="text-xs font-medium text-gray-400 shrink-0">
-          Viewing Schedule For:
-        </label>
-        <div className="w-40">
-          <Input
-            id="routine-date-picker"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as Tab)} variant="underline">
+        <TabsList className="w-full">
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="schedule">Schedule</TabsTrigger>
+          <TabsTrigger value="history">History</TabsTrigger>
+        </TabsList>
+
+        {/* Tab 1: Overview Dashboard */}
+        <TabsContent value="overview">
+          <RoutineOverview
+            stats={stats}
+            loading={loadingStats}
+            onOpenCreateModal={() => setIsCreateModalOpen(true)}
+            onNavigateToSchedule={() => setActiveTab("schedule")}
+            onNavigateToHistory={() => setActiveTab("history")}
           />
-        </div>
-        {date === today && (
-          <span className="text-xs px-2 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-medium">
-            Today
-          </span>
-        )}
-      </div>
+        </TabsContent>
 
-      {/* Task Creation Form */}
-      {showForm && (
-        <TaskForm
-          onSubmit={handleCreateTask}
-          onCancel={() => setShowForm(false)}
-          defaultDate={date}
-        />
-      )}
+        {/* Tab 2: Day Schedule & Timeline Planner */}
+        <TabsContent value="schedule">
+          <div className="space-y-6">
+            {/* Header controls: Date selector + View Mode toggle */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-gray-800/40 p-3.5 rounded-xl border border-gray-700/40">
+              <div className="flex items-center gap-2 flex-wrap">
+                <CalendarIcon size={18} className="text-blue-400 shrink-0" />
+                <span className="text-xs font-medium text-gray-400 shrink-0">
+                  Viewing Schedule:
+                </span>
 
-      {/* Content Area */}
-      {loading ? (
-        <div className="space-y-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-16 bg-gray-800/60 rounded-xl animate-pulse" />
-          ))}
-        </div>
-      ) : viewMode === "list" ? (
-        <TaskList
-          tasks={tasks}
-          onStatusChange={handleStatusChange}
-          onEdit={(task) => setEditingTask(task)}
-          onDelete={(id) => setDeletingTaskId(id)}
-          onToggleSubtask={handleToggleSubtask}
-        />
-      ) : (
-        <TaskTimelineView
-          tasks={tasks}
-          selectedDate={date}
-          todayDate={today}
-          onViewTask={(task) => setViewingTask(task)}
-        />
-      )}
+                <div className="flex items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => handleShiftDate(-1)}
+                    className="p-1 rounded-lg bg-gray-700/50 hover:bg-gray-700 text-gray-300 transition-colors"
+                    title="Previous Day"
+                  >
+                    <ChevronLeftIcon size={16} />
+                  </button>
 
-      {/* Detail Modal */}
+                  <div className="w-36">
+                    <Input
+                      id="routine-date-picker"
+                      type="date"
+                      value={date}
+                      onChange={(e) => setDate(e.target.value)}
+                    />
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => handleShiftDate(1)}
+                    className="p-1 rounded-lg bg-gray-700/50 hover:bg-gray-700 text-gray-300 transition-colors"
+                    title="Next Day"
+                  >
+                    <ChevronRightIcon size={16} />
+                  </button>
+                </div>
+
+                <div className="flex items-center gap-1.5 ml-1">
+                  {date !== today && (
+                    <button
+                      type="button"
+                      onClick={() => setDate(today)}
+                      className="text-xs px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/30 hover:bg-blue-500/30 transition-colors font-medium"
+                    >
+                      Jump to Today
+                    </button>
+                  )}
+                  {date === today && (
+                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-blue-500/20 text-blue-300 font-medium border border-blue-500/30">
+                      Today
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3 justify-between sm:justify-end">
+                <Tabs value={viewMode} onValueChange={(v) => setViewMode(v as ViewMode)}>
+                  <TabsList>
+                    <TabsTrigger value="list">List View</TabsTrigger>
+                    <TabsTrigger value="timeline">Timeline</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  icon={<RefreshCwIcon size={14} />}
+                  onClick={fetchTasks}
+                  aria-label="Refresh task schedule"
+                />
+              </div>
+            </div>
+
+            {/* Content View Area */}
+            {loadingTasks ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="h-16 bg-gray-800/60 rounded-xl animate-pulse" />
+                ))}
+              </div>
+            ) : viewMode === "list" ? (
+              <TaskList
+                tasks={tasks}
+                onStatusChange={handleStatusChange}
+                onEdit={(task) => setEditingTask(task)}
+                onDelete={(id) => setDeletingTaskId(id)}
+                onToggleSubtask={handleToggleSubtask}
+              />
+            ) : (
+              <TaskTimelineView
+                tasks={tasks}
+                selectedDate={date}
+                todayDate={today}
+                onViewTask={(task) => setViewingTask(task)}
+              />
+            )}
+          </div>
+        </TabsContent>
+
+        {/* Tab 3: History & Task Archive */}
+        <TabsContent value="history">
+          <RoutineHistory
+            onViewTask={(task) => setViewingTask(task)}
+            onEditTask={(task) => setEditingTask(task)}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* Task Creation Modal */}
+      <TaskCreateModal
+        open={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        onSubmit={handleCreateTask}
+        defaultDate={date}
+      />
+
+      {/* Task Detail Modal */}
       {viewingTask && (
         <TaskDetailModal
           task={viewingTask}
@@ -310,7 +423,7 @@ export default function RoutinePage() {
         />
       )}
 
-      {/* Edit Modal */}
+      {/* Task Edit Modal */}
       {editingTask && (
         <TaskEditModal
           task={editingTask}

@@ -113,7 +113,7 @@ export default function NotificationsPage() {
           reminderDateObj = new Date();
         }
 
-        if (isNaN(reminderDateObj.getTime())) {
+        if (Number.isNaN(reminderDateObj.getTime())) {
           reminderDateObj = new Date();
         }
 

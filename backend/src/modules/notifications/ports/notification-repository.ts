@@ -18,4 +18,3 @@ export interface NotificationRepository {
   getSoundPreference(userId: string): Promise<string | null>;
   setSoundPreference(userId: string, soundType: string): Promise<void>;
 }
-

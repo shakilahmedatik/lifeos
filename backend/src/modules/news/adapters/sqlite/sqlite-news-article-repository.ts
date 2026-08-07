@@ -42,12 +42,7 @@ export function createSqliteNewsArticleRepository(client: Client): NewsArticleRe
       return rows.map(mapRowToNewsArticle);
     },
 
-    async search(
-      query: string,
-      feedId?: string,
-      limit = 20,
-      offset = 0,
-    ): Promise<NewsArticle[]> {
+    async search(query: string, feedId?: string, limit = 20, offset = 0): Promise<NewsArticle[]> {
       const sanitizedQuery = query.replace(/[%_]/g, "\\$&").trim();
       if (!sanitizedQuery) {
         if (feedId) return this.getByFeedId(feedId, limit, offset);

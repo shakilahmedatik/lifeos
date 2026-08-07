@@ -61,7 +61,11 @@ export function SoundSettings() {
     <div className="p-4 bg-gray-800/40 border border-gray-700/40 rounded-xl">
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-lg font-semibold text-gray-100">Sound Settings</h2>
-        {savedMessage && <span className="text-xs text-emerald-400 font-medium animate-fade-in">{savedMessage}</span>}
+        {savedMessage && (
+          <span className="text-xs text-emerald-400 font-medium animate-fade-in">
+            {savedMessage}
+          </span>
+        )}
       </div>
       <div className="space-y-2.5">
         {SOUND_PRESET_OPTIONS.map((option) => (

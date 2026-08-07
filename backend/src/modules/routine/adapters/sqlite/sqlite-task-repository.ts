@@ -111,6 +111,71 @@ export class SqliteTaskRepository implements TaskRepository {
     return tasks.sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
+  async getByDateRange(startDate: string, endDate: string, userId: string): Promise<Task[]> {
+    const directRes = await this.client.execute({
+      sql: "SELECT * FROM tasks WHERE date >= ? AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      args: [startDate, endDate, userId],
+    });
+    const directRows = directRes.rows as unknown as TaskRow[];
+
+    const taskMap = new Map<string, Task>();
+    for (const r of directRows) {
+      taskMap.set(`${r.id}_${r.date}`, rowToTask(r));
+    }
+
+    const recurringRes = await this.client.execute({
+      sql: "SELECT * FROM tasks WHERE recurrence != 'none' AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      args: [endDate, userId],
+    });
+    const recurringRows = recurringRes.rows as unknown as TaskRow[];
+
+    // Iterate through dates in date range to find matching recurring tasks
+    const start = new Date(`${startDate}T00:00:00Z`);
+    const end = new Date(`${endDate}T00:00:00Z`);
+    const curr = new Date(start);
+
+    while (curr <= end) {
+      const dateStr = curr.toISOString().split("T")[0];
+      const targetDayIndex = getDayOfWeekIndex(dateStr);
+      const targetIsWeekday = isWeekday(dateStr, "bd");
+
+      for (const r of recurringRows) {
+        if (r.date > dateStr) continue;
+        const mapKey = `${r.id}_${dateStr}`;
+        if (taskMap.has(mapKey)) continue;
+
+        let matches = false;
+        if (r.recurrence === "daily") {
+          matches = true;
+        } else if (r.recurrence === "weekdays") {
+          matches = targetIsWeekday;
+        } else if (r.recurrence === "weekly") {
+          matches = getDayOfWeekIndex(r.date) === targetDayIndex;
+        }
+
+        if (matches) {
+          taskMap.set(mapKey, rowToTask(r, dateStr));
+        }
+      }
+
+      curr.setDate(curr.getDate() + 1);
+    }
+
+    const tasks = Array.from(taskMap.values());
+    return tasks.sort(
+      (a, b) => b.date.localeCompare(a.date) || a.startTime.localeCompare(b.startTime),
+    );
+  }
+
+  async getAll(userId: string): Promise<Task[]> {
+    const res = await this.client.execute({
+      sql: "SELECT * FROM tasks WHERE user_id = ? OR user_id = '' OR user_id IS NULL ORDER BY date DESC, start_time ASC",
+      args: [userId],
+    });
+    const rows = res.rows as unknown as TaskRow[];
+    return rows.map((r) => rowToTask(r));
+  }
+
   async create(id: string, input: NewTaskInput, userId: string): Promise<Task> {
     const now = new Date().toISOString();
     const subtasksJson = JSON.stringify(input.subtasks ?? []);

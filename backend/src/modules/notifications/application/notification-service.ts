@@ -52,7 +52,11 @@ export class NotificationService {
     const pending = await this.notificationRepo.findPendingNotifications();
     const processed: NotificationWithTask[] = [];
     for (const notification of pending) {
-      if (notification.userId === userId || userId === "default" || notification.userId === "default") {
+      if (
+        notification.userId === userId ||
+        userId === "default" ||
+        notification.userId === "default"
+      ) {
         await this.markNotificationAsSent(notification.id);
         processed.push(notification);
       }
@@ -69,4 +73,3 @@ export class NotificationService {
     await this.notificationRepo.setSoundPreference(userId, soundType);
   }
 }
-

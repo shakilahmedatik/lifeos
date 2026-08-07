@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { api } from "../../lib/api.js";
-import { NotificationToast } from "../../modules/notifications/NotificationToast.js";
 import { showBrowserNotification } from "../../modules/notifications/browser-notifications.js";
+import { NotificationToast } from "../../modules/notifications/NotificationToast.js";
 import { playNotificationSound } from "../../modules/notifications/sound-player.js";
 import type { SoundPreset } from "../../modules/notifications/sound-presets.js";
 import { ToastProvider } from "../Toast.js";

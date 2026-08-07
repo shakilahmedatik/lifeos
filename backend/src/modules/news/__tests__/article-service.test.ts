@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { createArticleService } from "../application/article-service.js";
-import type { NewsArticle, RssFeed } from "../domain/types.js";
+import type { NewsArticle } from "../domain/types.js";
 import type { NewsArticleRepository, RssFeedRepository } from "../ports/repositories.js";
 
 function createMockArticleRepository(): NewsArticleRepository {
@@ -26,7 +26,8 @@ function createMockArticleRepository(): NewsArticleRepository {
       const q = query.toLowerCase();
       return Array.from(articles.values())
         .filter((a) => {
-          const matchesQuery = a.title.toLowerCase().includes(q) || (a.summary && a.summary.toLowerCase().includes(q));
+          const matchesQuery =
+            a.title.toLowerCase().includes(q) || a.summary?.toLowerCase().includes(q);
           const matchesFeed = feedId ? a.feedId === feedId : true;
           return matchesQuery && matchesFeed;
         })

@@ -86,7 +86,10 @@ describe("Reminders Module", () => {
 
   it("should retrieve reminders by specific date or null date", async () => {
     await service.create({ title: "Daily Workout", time: "07:00", date: null }, "user1");
-    await service.create({ title: "Doctor Appointment", time: "11:00", date: "2026-08-10" }, "user1");
+    await service.create(
+      { title: "Doctor Appointment", time: "11:00", date: "2026-08-10" },
+      "user1",
+    );
     await service.create({ title: "Other Date", time: "12:00", date: "2026-08-15" }, "user1");
 
     const aug10Reminders = await service.getByDate("2026-08-10", "user1");
@@ -105,7 +108,7 @@ describe("Reminders Module", () => {
 
   it("should isolate user data between different userIds", async () => {
     const r1 = await service.create({ title: "User 1 Item", time: "10:00" }, "user1");
-    const r2 = await service.create({ title: "User 2 Item", time: "11:00" }, "user2");
+    const _r2 = await service.create({ title: "User 2 Item", time: "11:00" }, "user2");
 
     const user1Items = await service.getAll("user1");
     expect(user1Items).toHaveLength(1);

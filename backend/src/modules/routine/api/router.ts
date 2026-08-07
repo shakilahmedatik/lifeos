@@ -12,6 +12,8 @@ import {
   createTask,
   deleteTask,
   getDaySchedule,
+  getRoutineStats,
+  getTaskHistory,
   setTaskStatus,
   updateTask,
 } from "../application/use-cases.js";
@@ -32,6 +34,36 @@ export function createRoutineRouter(repo: TaskRepository): Router {
       res.json(tasks);
     } catch (_err) {
       res.status(500).json({ error: "Failed to retrieve schedule" });
+    }
+  });
+
+  router.get("/tasks/history", async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    try {
+      const tasks = await getTaskHistory(
+        repo,
+        {
+          startDate: req.query.startDate as string | undefined,
+          endDate: req.query.endDate as string | undefined,
+          category: req.query.category as import("@lifeos/contracts").TaskCategory | undefined,
+          status: req.query.status as import("@lifeos/contracts").TaskStatus | undefined,
+          search: req.query.search as string | undefined,
+        },
+        userId,
+      );
+      res.json(tasks);
+    } catch (_err) {
+      res.status(500).json({ error: "Failed to retrieve task history" });
+    }
+  });
+
+  router.get("/stats", async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    try {
+      const stats = await getRoutineStats(repo, userId);
+      res.json(stats);
+    } catch (_err) {
+      res.status(500).json({ error: "Failed to calculate routine stats" });
     }
   });
 

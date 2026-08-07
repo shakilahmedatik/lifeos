@@ -1,4 +1,8 @@
-import { NewNotificationInputSchema, NotificationSoundTypeSchema, UpdateNotificationInputSchema } from "@lifeos/contracts";
+import {
+  NewNotificationInputSchema,
+  NotificationSoundTypeSchema,
+  UpdateNotificationInputSchema,
+} from "@lifeos/contracts";
 import { Router } from "express";
 import { z } from "zod";
 import { validateBody } from "../../../shared/validate.js";
@@ -54,15 +58,19 @@ export function createNotificationsRouter(notificationService: NotificationServi
     }
   });
 
-  router.put("/settings/sound", validateBody(SoundSettingInputSchema), async (req: AuthenticatedRequest, res, next) => {
-    try {
-      const userId = req.user?.id || (req.query.userId as string) || "default";
-      await notificationService.setSoundPreference(userId, req.body.soundType);
-      res.json({ soundType: req.body.soundType });
-    } catch (error) {
-      next(error);
-    }
-  });
+  router.put(
+    "/settings/sound",
+    validateBody(SoundSettingInputSchema),
+    async (req: AuthenticatedRequest, res, next) => {
+      try {
+        const userId = req.user?.id || (req.query.userId as string) || "default";
+        await notificationService.setSoundPreference(userId, req.body.soundType);
+        res.json({ soundType: req.body.soundType });
+      } catch (error) {
+        next(error);
+      }
+    },
+  );
 
   router.get("/:id", async (req, res, next) => {
     try {
@@ -77,20 +85,24 @@ export function createNotificationsRouter(notificationService: NotificationServi
     }
   });
 
-  router.post("/", validateBody(NewNotificationInputSchema), async (req: AuthenticatedRequest, res, next) => {
-    try {
-      const userId = req.user?.id || req.body.userId || "default";
-      const input = { ...req.body, userId };
-      const notification = await notificationService.createNotification(input);
-      res.status(201).json(notification);
-    } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-        return;
+  router.post(
+    "/",
+    validateBody(NewNotificationInputSchema),
+    async (req: AuthenticatedRequest, res, next) => {
+      try {
+        const userId = req.user?.id || req.body.userId || "default";
+        const input = { ...req.body, userId };
+        const notification = await notificationService.createNotification(input);
+        res.status(201).json(notification);
+      } catch (error) {
+        if (error instanceof Error) {
+          res.status(400).json({ error: error.message });
+          return;
+        }
+        next(error);
       }
-      next(error);
-    }
-  });
+    },
+  );
 
   router.patch("/:id", validateBody(UpdateNotificationInputSchema), async (req, res, next) => {
     try {

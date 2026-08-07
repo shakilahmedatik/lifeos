@@ -171,10 +171,11 @@ export default function NewsPage() {
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setFilterFeedId("")}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${!filterFeedId
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                !filterFeedId
                   ? "bg-blue-600/20 text-blue-400 border border-blue-500/20"
                   : "bg-gray-800/60 text-gray-400 border border-gray-700/50 hover:text-gray-200"
-                }`}
+              }`}
             >
               All Feeds
             </button>
@@ -182,10 +183,11 @@ export default function NewsPage() {
               <button
                 key={f.id}
                 onClick={() => setFilterFeedId(f.id)}
-                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${filterFeedId === f.id
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+                  filterFeedId === f.id
                     ? "bg-blue-600/20 text-blue-400 border border-blue-500/20"
                     : "bg-gray-800/60 text-gray-400 border border-gray-700/50 hover:text-gray-200"
-                  }`}
+                }`}
               >
                 {f.title}
               </button>
@@ -194,7 +196,10 @@ export default function NewsPage() {
         )}
 
         <div className="relative min-w-50">
-          <SearchIcon size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
+          <SearchIcon
+            size={14}
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500"
+          />
           <input
             type="text"
             value={searchQuery}
@@ -286,10 +291,11 @@ export default function NewsPage() {
                       <div className="flex items-center gap-1 shrink-0">
                         <button
                           onClick={() => handleToggleFeed(f.id)}
-                          className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${f.status === "active"
+                          className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
+                            f.status === "active"
                               ? "bg-emerald-900/40 text-emerald-400 hover:bg-emerald-900/60"
                               : "bg-gray-800 text-gray-500 hover:bg-gray-700"
-                            }`}
+                          }`}
                         >
                           {f.status}
                         </button>
@@ -380,4 +386,3 @@ export default function NewsPage() {
     </div>
   );
 }
-

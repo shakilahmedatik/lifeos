@@ -61,6 +61,37 @@ export interface NewTaskInput {
   referenceId?: string;
 }
 
+export interface CategoryTimeDistribution {
+  category: TaskCategory;
+  taskCount: number;
+  totalMinutes: number;
+  completedMinutes: number;
+}
+
+export interface RoutineStats {
+  totalTasks: number;
+  completedTasks: number;
+  plannedTasks: number;
+  inProgressTasks: number;
+  skippedTasks: number;
+  completionRate: number;
+  totalScheduledMinutes: number;
+  completedMinutes: number;
+  completedTodayCount: number;
+  totalTodayCount: number;
+  todayCompletionRate: number;
+  categoryDistribution: CategoryTimeDistribution[];
+  weeklyTrends: { date: string; total: number; completed: number }[];
+}
+
+export interface TaskHistoryQuery {
+  startDate?: string;
+  endDate?: string;
+  category?: TaskCategory | "all";
+  status?: TaskStatus | "all";
+  search?: string;
+}
+
 export type HabitType = "water" | "walking" | "prayer" | "timed" | "boolean";
 
 export type HabitCategory =

@@ -3,6 +3,7 @@ import type { Task } from "@lifeos/contracts";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it, vi } from "vitest";
+import { RoutineOverview } from "../RoutineOverview.js";
 import TaskCategoryBadge from "../TaskCategoryBadge.js";
 import TaskList, { computeDurationMins } from "../TaskList.js";
 
@@ -59,5 +60,41 @@ describe("Routine Component Unit Tests", () => {
     expect(deleteBtn).toBeDefined();
     fireEvent.click(deleteBtn);
     expect(handleDelete).toHaveBeenCalledWith("task-1");
+  });
+
+  it("renders RoutineOverview dashboard with statistics", () => {
+    const sampleStats = {
+      totalTasks: 10,
+      completedTasks: 8,
+      plannedTasks: 1,
+      inProgressTasks: 1,
+      skippedTasks: 0,
+      completionRate: 80,
+      totalScheduledMinutes: 600,
+      completedMinutes: 480,
+      completedTodayCount: 3,
+      totalTodayCount: 4,
+      todayCompletionRate: 75,
+      categoryDistribution: [
+        { category: "workout" as const, taskCount: 4, totalMinutes: 240, completedMinutes: 240 },
+      ],
+      weeklyTrends: [{ date: "2026-08-01", total: 2, completed: 2 }],
+    };
+
+    render(
+      <MemoryRouter>
+        <RoutineOverview
+          stats={sampleStats}
+          loading={false}
+          onOpenCreateModal={vi.fn()}
+          onNavigateToSchedule={vi.fn()}
+          onNavigateToHistory={vi.fn()}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(screen.getByText("80%")).toBeDefined();
+    expect(screen.getByText("3/4")).toBeDefined();
+    expect(screen.getByText("Category Distribution")).toBeDefined();
   });
 });

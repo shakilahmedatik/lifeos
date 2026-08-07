@@ -14,7 +14,8 @@ export function TimedWidget({ progress, onLog, onUnlog }: TimedWidgetProps) {
   const currentValue = progress.currentValue || 0;
   const targetValue = progress.targetValue || 30;
   const percentage = Math.min(100, Math.max(0, Math.round((currentValue / targetValue) * 100)));
-  const lastLog = progress.logs && progress.logs.length > 0 ? progress.logs[progress.logs.length - 1] : null;
+  const lastLog =
+    progress.logs && progress.logs.length > 0 ? progress.logs[progress.logs.length - 1] : null;
 
   return (
     <Card className="bg-gray-900/60 border border-gray-800 hover:border-gray-700/80 transition-all">
