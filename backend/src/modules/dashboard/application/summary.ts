@@ -103,7 +103,7 @@ export async function getDashboardSummary(
     for (const habit of activeHabits) {
       const stats = await deps.habitStatsService.getAnalytics(habit.id, "week", userId);
       if (stats) {
-        const days = stats.dailyValues.map((d) =>
+        const days = stats.dailyValues.map((d: { value: number; target: number }) =>
           d.target > 0 ? Math.min(100, Math.round((d.value / d.target) * 100)) : 0,
         );
         habitConsistency.push({

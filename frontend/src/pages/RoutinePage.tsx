@@ -213,7 +213,7 @@ export default function RoutinePage() {
       current.map((t) => (t.id === taskId ? { ...t, subtasks: updatedSubtasks } : t)),
     );
     if (viewingTask?.id === taskId) {
-      setViewingTask((prev) => (prev ? { ...prev, subtasks: updatedSubtasks } : null));
+      setViewingTask((prev: Task | null) => (prev ? { ...prev, subtasks: updatedSubtasks } : null));
     }
 
     try {

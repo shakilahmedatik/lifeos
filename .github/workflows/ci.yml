@@ -31,6 +31,9 @@ jobs:
       - name: Check code formatting and linting
         run: pnpm check
 
+      - name: Build contracts package
+        run: pnpm --filter @lifeos/contracts build
+
       - name: Typecheck TypeScript packages
         run: pnpm -r exec tsc --noEmit
 
