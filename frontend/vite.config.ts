@@ -6,7 +6,7 @@ import { defineConfig, loadEnv } from "vite";
 export default defineConfig(({ mode }) => {
   const rootDir = path.resolve(__dirname, "..");
   const env = { ...loadEnv(mode, rootDir, ""), ...loadEnv(mode, process.cwd(), "") };
-  const backendPort = env.BACKEND_PORT || 3000;
+  const targetUrl = env.VITE_API_URL || `http://127.0.0.1:${env.BACKEND_PORT || 3000}`;
 
   return {
     plugins: [react(), tailwindcss()],
@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
       port: Number(env.FRONTEND_PORT || 5173),
       proxy: {
         "/api": {
-          target: `http://127.0.0.1:${backendPort}`,
+          target: targetUrl,
           changeOrigin: true,
         },
       },

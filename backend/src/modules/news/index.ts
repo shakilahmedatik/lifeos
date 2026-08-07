@@ -11,7 +11,7 @@ export function initNewsModule(client: Client) {
   const rssFetchService = createRssFetchService(rssFeedRepo, newsArticleRepo);
   const newsScheduler = createNewsScheduler(rssFetchService);
 
-  const router = createNewsRouter(rssFeedRepo, newsArticleRepo, rssFetchService);
+  const router = createNewsRouter(rssFeedRepo, newsArticleRepo, newsScheduler, rssFetchService);
 
   return {
     rssFeedRepo,

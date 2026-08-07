@@ -36,15 +36,8 @@ export function createApp(container: Container): Express {
   app.use(express.json());
   app.use("/api", apiRateLimiter);
 
-  // Lazy background jobs execution on API requests
-  app.use("/api", (_req, _res, next) => {
-    container.triggerLazyJobs().catch(() => {});
-    next();
-  });
-
-  // Auth & Cron & Health public routes
+  // Auth & Health public routes
   app.use("/api/auth", modules.auth.router);
-  app.use("/api/cron", modules.cron.router);
   app.use("/api/health", modules.health.router);
 
   // Authenticated domain routes

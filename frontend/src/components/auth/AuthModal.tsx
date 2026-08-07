@@ -24,8 +24,9 @@ export const AuthModal: FC = () => {
     try {
       const endpoint = mode === "login" ? "/api/auth/sign-in/email" : "/api/auth/sign-up/email";
       const payload = mode === "login" ? { email, password } : { email, password, name };
-
-      const res = await fetch(endpoint, {
+      const API_BASE_URL = import.meta.env.DEV ? "" : (import.meta.env.VITE_API_URL || "");
+      
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -38,7 +39,7 @@ export const AuthModal: FC = () => {
       }
 
       const data = await res.json();
-      const sessionToken = data.token || data.session?.token || "session-token";
+      const sessionToken = data.token || data.session?.token || null;
       const userData = data.user || { id: "user-1", name: name || email.split("@")[0], email };
 
       login(sessionToken, userData);

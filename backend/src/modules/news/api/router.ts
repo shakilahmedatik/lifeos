@@ -5,15 +5,18 @@ import type { NewsArticleRepository, RssFeedRepository } from "../ports/reposito
 import { createArticlesRouter } from "./articles-router.js";
 import { createFeedsRouter } from "./feeds-router.js";
 
+import type { createNewsScheduler } from "../application/news-scheduler.js";
+
 export function createNewsRouter(
   feedRepository: RssFeedRepository,
   articleRepository: NewsArticleRepository,
+  newsScheduler?: ReturnType<typeof createNewsScheduler>,
   rssFetchService?: ReturnType<typeof createRssFetchService>,
 ): Router {
   const router = Router();
 
   router.use("/feeds", createFeedsRouter(feedRepository, rssFetchService));
-  router.use("/articles", createArticlesRouter(articleRepository, feedRepository));
+  router.use("/articles", createArticlesRouter(articleRepository, feedRepository, newsScheduler));
 
   return router;
 }

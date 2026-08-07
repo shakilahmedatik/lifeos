@@ -28,15 +28,28 @@ import type {
   WeeklySummary,
 } from "@lifeos/contracts";
 
+const API_BASE_URL = import.meta.env.DEV ? "" : (import.meta.env.VITE_API_URL || "");
+
 export async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const token =
+  let token =
     typeof localStorage !== "undefined" ? localStorage.getItem("lifeos_session_token") : null;
+  
+  if (token) {
+    try {
+      token = JSON.parse(token);
+    } catch {
+      // Keep raw token if parsing fails
+    }
+  }
+
   const headers = new Headers(options?.headers);
   if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const res = await fetch(url, {
+  const fullUrl = url.startsWith("/api/") ? `${API_BASE_URL}${url}` : url;
+
+  const res = await fetch(fullUrl, {
     credentials: "include",
     ...options,
     headers,
@@ -250,7 +263,7 @@ export const api = {
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
 
-    const res = await fetch("/api/backup/export", {
+    const res = await fetch(`${API_BASE_URL}/api/backup/export`, {
       headers,
       credentials: "include",
     });

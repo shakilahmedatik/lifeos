@@ -3,7 +3,6 @@ import type { Client } from "@libsql/client";
 import type { AppConfig } from "./config.js";
 import { initAuthModule } from "./modules/auth/index.js";
 import { initBackupModule } from "./modules/backup/index.js";
-import { initCronModule } from "./modules/cron/index.js";
 import { initDashboardModule } from "./modules/dashboard/index.js";
 import { initFinanceModule } from "./modules/finance/index.js";
 import { initHabitsModule } from "./modules/habits/index.js";
@@ -25,7 +24,6 @@ export interface Container {
   modules: {
     auth: ReturnType<typeof initAuthModule>;
     backup: ReturnType<typeof initBackupModule>;
-    cron: ReturnType<typeof initCronModule>;
     dashboard: ReturnType<typeof initDashboardModule>;
     finance: ReturnType<typeof initFinanceModule>;
     habits: ReturnType<typeof initHabitsModule>;
@@ -38,7 +36,6 @@ export interface Container {
     skills: ReturnType<typeof initSkillsModule>;
     workouts: ReturnType<typeof initWorkoutsModule>;
   };
-  triggerLazyJobs: () => Promise<void>;
   startBackgroundJobs: () => void;
   stopBackgroundJobs: () => void;
 }
@@ -58,8 +55,6 @@ export async function createContainer(config: AppConfig): Promise<Container> {
   const news = initNewsModule(db);
   const skills = initSkillsModule(db);
   const settings = initSettingsModule(db);
-  const cron = initCronModule(news.rssFetchService, config);
-
   const dashboard = initDashboardModule({
     taskRepo: routine.taskRepo,
     habitLogService: habits.habitLogService,
@@ -85,14 +80,6 @@ export async function createContainer(config: AppConfig): Promise<Container> {
 
   const health = initHealthModule(db, getSchedulerStatus);
 
-  const triggerLazyJobs = async () => {
-    try {
-      await notifications.notificationScheduler.checkAndSendNotificationsLazy();
-      await news.newsScheduler.runFetchCycleIfNeeded();
-    } catch {
-      // Lazy background execution errors handled internally in schedulers
-    }
-  };
 
   const startBackgroundJobs = () => {
     news.newsScheduler.start();
@@ -110,7 +97,6 @@ export async function createContainer(config: AppConfig): Promise<Container> {
     modules: {
       auth,
       backup,
-      cron,
       dashboard,
       finance,
       habits,
@@ -123,7 +109,6 @@ export async function createContainer(config: AppConfig): Promise<Container> {
       skills,
       workouts,
     },
-    triggerLazyJobs,
     startBackgroundJobs,
     stopBackgroundJobs,
   };

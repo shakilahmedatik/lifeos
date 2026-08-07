@@ -28,5 +28,10 @@ export function createAuth(client: Client, config: AppConfig): AuthInstance {
       autoSignIn: true,
     },
     trustedOrigins: config.allowedOrigins,
+    advanced: {
+      defaultBearerTokenHeaderName: "Authorization",
+      useSecureCookies: process.env.NODE_ENV === "production",
+      returnSessionToken: true,
+    },
   }) as unknown as AuthInstance;
 }

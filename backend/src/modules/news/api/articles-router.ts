@@ -3,14 +3,20 @@ import { Router } from "express";
 import { createArticleService } from "../application/article-service.js";
 import type { NewsArticleRepository, RssFeedRepository } from "../ports/repositories.js";
 
+import type { createNewsScheduler } from "../application/news-scheduler.js";
+
 export function createArticlesRouter(
   articleRepository: NewsArticleRepository,
   feedRepository: RssFeedRepository,
+  newsScheduler?: ReturnType<typeof createNewsScheduler>,
 ): Router {
   const router = Router();
   const articleService = createArticleService(articleRepository, feedRepository);
 
   router.get("/", async (req, res) => {
+    if (newsScheduler) {
+      await newsScheduler.runFetchCycleIfNeeded();
+    }
     const { feedId, search, limit, offset } = req.query;
     const parsedLimit = Number.parseInt(limit as string, 10);
     const parsedOffset = Number.parseInt(offset as string, 10);
