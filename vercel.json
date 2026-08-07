@@ -1,13 +1,7 @@
 {
   "version": 2,
-  "rewrites": [
-    {
-      "source": "/api/(.*)",
-      "destination": "/api"
-    }
-  ],
   "functions": {
-    "api/index.ts": {
+    "api/[...catchall].ts": {
       "includeFiles": "backend/src/shared/migrations/*.sql"
     }
   }
