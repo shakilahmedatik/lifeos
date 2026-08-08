@@ -24,6 +24,7 @@ export const habitApi = {
   createHabit: async (data: NewHabitDefinitionInput): Promise<HabitDefinition> => {
     return request<HabitDefinition>(BASE, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
   },
@@ -31,6 +32,7 @@ export const habitApi = {
   updateHabit: async (id: string, data: Partial<HabitDefinition>): Promise<HabitDefinition> => {
     return request<HabitDefinition>(`${BASE}/${id}`, {
       method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
   },
@@ -42,6 +44,7 @@ export const habitApi = {
   toggleArchive: async (id: string, archived: boolean): Promise<void> => {
     return request<void>(`${BASE}/${id}/archive`, {
       method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ archived }),
     });
   },
@@ -49,6 +52,7 @@ export const habitApi = {
   reorderHabits: async (orders: { id: string; sortOrder: number }[]): Promise<void> => {
     return request<void>(`${BASE}/reorder`, {
       method: "PATCH",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orders }),
     });
   },
@@ -59,6 +63,7 @@ export const habitApi = {
   ): Promise<HabitLogEntry> => {
     return request<HabitLogEntry>(`${BASE}/${habitId}/log`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
   },
@@ -94,6 +99,7 @@ export const habitApi = {
   importData: async (data: unknown): Promise<void> => {
     return request<void>(`${BASE}/import`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(data),
     });
   },

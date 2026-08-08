@@ -43,6 +43,9 @@ export async function request<T>(url: string, options?: RequestInit): Promise<T>
   }
 
   const headers = new Headers(options?.headers);
+  if (options?.body && !headers.has("Content-Type")) {
+    headers.set("Content-Type", "application/json");
+  }
   if (token && !headers.has("Authorization")) {
     headers.set("Authorization", `Bearer ${token}`);
   }
