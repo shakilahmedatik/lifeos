@@ -1,3 +1,5 @@
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { lazy, Suspense } from "react";
 import { Link, Route, Routes } from "react-router-dom";
 import { AuthModal } from "./components/auth/AuthModal.js";
@@ -6,6 +8,7 @@ import Layout from "./components/layout/Layout.js";
 import PageSkeleton from "./components/PageSkeleton.js";
 import { AuthProvider, useAuth } from "./context/AuthContext.js";
 import { useTheme } from "./lib/hooks/useTheme.js";
+import { queryClient } from "./lib/queryClient.js";
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage.js"));
 const RoutinePage = lazy(() => import("./pages/RoutinePage.js"));
@@ -63,11 +66,14 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <Suspense fallback={<PageSkeleton />}>
-          <MainContent />
-        </Suspense>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <Suspense fallback={<PageSkeleton />}>
+            <MainContent />
+          </Suspense>
+        </AuthProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

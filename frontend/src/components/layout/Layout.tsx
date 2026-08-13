@@ -1,7 +1,8 @@
-import { useCallback, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router-dom";
-import { api } from "../../lib/api.js";
-import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
+import { getDataSource } from "../../lib/dataSource.js";
+import { queryKeys } from "../../lib/queryKeys.js";
 import { showBrowserNotification } from "../../modules/notifications/browser-notifications.js";
 import { NotificationToast } from "../../modules/notifications/NotificationToast.js";
 import { playNotificationSound } from "../../modules/notifications/sound-player.js";
@@ -17,31 +18,37 @@ export default function Layout() {
     soundType: string;
   } | null>(null);
 
-  const checkDueNotifications = useCallback(async () => {
-    try {
-      const dueList = await api.getDueNotifications();
-      if (dueList && dueList.length > 0) {
-        for (const item of dueList) {
+  const processedIdsRef = useRef<Set<string>>(new Set());
+
+  const ds = getDataSource();
+
+  const { data: dueList } = useQuery({
+    queryKey: queryKeys.notifications.due(),
+    queryFn: () => ds.getDueNotifications(),
+    refetchInterval: 15000,
+  });
+
+  useEffect(() => {
+    if (dueList && dueList.length > 0) {
+      for (const item of dueList) {
+        if (!processedIdsRef.current.has(item.id)) {
+          processedIdsRef.current.add(item.id);
           const sound = (item.soundType as SoundPreset) || "default";
           playNotificationSound(sound);
           showBrowserNotification(item.taskTitle || "Task Reminder", {
             body: `Reminder for ${item.taskTitle || "scheduled task"}`,
           });
         }
-        const last = dueList[dueList.length - 1];
-        setNotification({
-          id: last.id,
-          taskTitle: last.taskTitle || "Task Reminder",
-          reminderTime: last.reminderTime,
-          soundType: last.soundType,
-        });
       }
-    } catch {
-      // Background notification polling silently handles errors
+      const last = dueList[dueList.length - 1];
+      setNotification({
+        id: last.id,
+        taskTitle: last.taskTitle || "Task Reminder",
+        reminderTime: last.reminderTime,
+        soundType: last.soundType,
+      });
     }
-  }, []);
-
-  useVisibilityPolling(checkDueNotifications, 15000);
+  }, [dueList]);
 
   return (
     <ToastProvider>

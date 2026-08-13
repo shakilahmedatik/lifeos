@@ -1,74 +1,46 @@
-import { useCallback, useEffect, useState } from "react";
-import { api } from "../../../lib/api.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getDataSource } from "../../../lib/dataSource.js";
+import { queryKeys } from "../../../lib/queryKeys.js";
 import type { NewSkillAreaInput, SkillArea } from "../types.js";
 
 export function useSkillAreas() {
-  const [areas, setAreas] = useState<SkillArea[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const ds = getDataSource();
 
-  const loadAreas = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await api.getSkillAreas();
-      setAreas(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load skill areas");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const areasQuery = useQuery<SkillArea[]>({
+    queryKey: queryKeys.skills.areas(),
+    queryFn: () => ds.getSkillAreas(),
+  });
 
-  useEffect(() => {
-    loadAreas();
-  }, [loadAreas]);
+  const invalidateAreas = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.skills.areas() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
+  };
 
-  const addArea = useCallback(async (input: NewSkillAreaInput) => {
-    try {
-      setError(null);
-      const newArea = await api.createSkillArea(input);
-      setAreas((prev) => [...prev, newArea]);
-      return newArea;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to create skill area";
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const addAreaMutation = useMutation({
+    mutationFn: (input: NewSkillAreaInput) => ds.createSkillArea(input),
+    onSuccess: () => invalidateAreas(),
+  });
 
-  const editArea = useCallback(async (id: string, patch: Partial<NewSkillAreaInput>) => {
-    try {
-      setError(null);
-      const updated = await api.updateSkillArea(id, patch);
-      setAreas((prev) => prev.map((a) => (a.id === id ? updated : a)));
-      return updated;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to update skill area";
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const editAreaMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<NewSkillAreaInput> }) =>
+      ds.updateSkillArea(id, patch),
+    onSuccess: () => invalidateAreas(),
+  });
 
-  const removeArea = useCallback(async (id: string) => {
-    try {
-      setError(null);
-      await api.deleteSkillArea(id);
-      setAreas((prev) => prev.filter((a) => a.id !== id));
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to delete skill area";
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const removeAreaMutation = useMutation({
+    mutationFn: (id: string) => ds.deleteSkillArea(id),
+    onSuccess: () => invalidateAreas(),
+  });
 
   return {
-    areas,
-    loading,
-    error,
-    addArea,
-    editArea,
-    removeArea,
-    refresh: loadAreas,
+    areas: areasQuery.data ?? [],
+    loading: areasQuery.isLoading,
+    error: areasQuery.error ? (areasQuery.error as Error).message : null,
+    addArea: (input: NewSkillAreaInput) => addAreaMutation.mutateAsync(input),
+    editArea: (id: string, patch: Partial<NewSkillAreaInput>) =>
+      editAreaMutation.mutateAsync({ id, patch }),
+    removeArea: (id: string) => removeAreaMutation.mutateAsync(id),
+    refresh: () => areasQuery.refetch(),
   };
 }

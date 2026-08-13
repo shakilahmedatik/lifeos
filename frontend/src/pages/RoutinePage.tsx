@@ -1,11 +1,4 @@
-import type {
-  NewNotificationInput,
-  NewTaskInput,
-  RoutineStats,
-  Task,
-  TaskStatus,
-  TaskSubtask,
-} from "@lifeos/contracts";
+import type { NewTaskInput, Task, TaskStatus, TaskSubtask } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
 import {
   Calendar as CalendarIcon,
@@ -14,16 +7,16 @@ import {
   Plus as PlusIcon,
   RefreshCw as RefreshCwIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
-import { useAppToast } from "../components/Toast.js";
+import { useState } from "react";
 import Button from "../components/ui/Button.js";
 import { Input } from "../components/ui/Input.js";
 import ListSkeleton from "../components/ui/ListSkeleton.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
-import { api } from "../lib/api.js";
-import { useVisibilityPolling } from "../lib/useVisibilityPolling.js";
 import DeleteConfirmModal from "../modules/routine/DeleteConfirmModal.js";
+
+import { useRoutineStats } from "../modules/routine/hooks/useRoutineStats.js";
+import { useRoutineTasks } from "../modules/routine/hooks/useRoutineTasks.js";
 import { RoutineHistory } from "../modules/routine/RoutineHistory.js";
 import { RoutineOverview } from "../modules/routine/RoutineOverview.js";
 import TaskCreateModal from "../modules/routine/TaskCreateModal.js";
@@ -38,64 +31,27 @@ type ViewMode = "list" | "timeline";
 export default function RoutinePage() {
   const today = getClientDateString();
   const [activeTab, setActiveTab] = useState<Tab>("overview");
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loadingTasks, setLoadingTasks] = useState(true);
   const [date, setDate] = useState(today);
   const [viewMode, setViewMode] = useState<ViewMode>("list");
 
-  // Overview Stats state
-  const [stats, setStats] = useState<RoutineStats | null>(null);
-  const [loadingStats, setLoadingStats] = useState(true);
+  // TanStack Query Hooks
+  const { stats, loading: loadingStats } = useRoutineStats();
+  const {
+    tasks,
+    loading: loadingTasks,
+    refetch: fetchTasks,
+    createTask,
+    updateStatus,
+    updateTask,
+    toggleSubtask,
+    deleteTask,
+  } = useRoutineTasks(date);
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [viewingTask, setViewingTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
-
-  const toast = useAppToast();
-
-  const fetchStats = useCallback(async () => {
-    try {
-      setLoadingStats(true);
-      const res = await api.getRoutineStats();
-      setStats(res);
-    } catch {
-      console.error("Failed to load routine statistics");
-    } finally {
-      setLoadingStats(false);
-    }
-  }, []);
-
-  const fetchTasks = useCallback(async () => {
-    try {
-      setLoadingTasks(true);
-      const data = await api.getTasks(date);
-      setTasks(data);
-    } catch {
-      toast.error("Failed to load tasks schedule");
-    } finally {
-      setLoadingTasks(false);
-    }
-  }, [date, toast]);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
-
-  // Polling tasks
-  useVisibilityPolling(fetchTasks, 30_000);
-
-  // Re-fetch stats when visibility changes since they aren't polled
-  useEffect(() => {
-    const handler = () => {
-      if (!document.hidden) {
-        fetchStats();
-      }
-    };
-    document.addEventListener("visibilitychange", handler);
-    return () => document.removeEventListener("visibilitychange", handler);
-  }, [fetchStats]);
 
   // Date Navigation Helpers
   const handleShiftDate = (days: number) => {
@@ -104,147 +60,36 @@ export default function RoutinePage() {
     setDate(d.toISOString().split("T")[0]);
   };
 
-  // Create Task
   const handleCreateTask = async (input: NewTaskInput) => {
-    try {
-      const result = await api.createTask(input);
-      fetchTasks();
-      fetchStats();
-      toast.success("Task created successfully");
-
-      if (result.overlapsWith && result.overlapsWith.length > 0) {
-        const titles = result.overlapsWith.map((t) => `"${t.title}"`).join(", ");
-        toast.warning(`Note: Task overlaps with ${titles}`);
-      }
-
-      if (input.reminderMinutesBefore) {
-        try {
-          const [y, m, d] = input.date.split("-").map(Number);
-          const [hh, mm] = input.startTime.split(":").map(Number);
-          const dt = new Date(y, m - 1, d, hh, mm);
-          dt.setMinutes(dt.getMinutes() - input.reminderMinutesBefore);
-
-          const soundType = input.reminderSound || (input.reminderSilent ? undefined : "default");
-
-          await api.createNotification({
-            taskId: result.task.id,
-            reminderTime: dt.toISOString(),
-            soundType: soundType as NewNotificationInput["soundType"],
-          });
-        } catch {
-          toast.warning("Task created, but failed to schedule reminder notification");
-        }
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to create task");
-      throw err;
-    }
+    await createTask(input);
   };
 
-  // Optimistic Status Update
   const handleStatusChange = async (id: string, newStatus: TaskStatus) => {
-    const previousTasks = [...tasks];
-
-    // Optimistically update local state
-    setTasks((current) => current.map((t) => (t.id === id ? { ...t, status: newStatus } : t)));
     if (viewingTask?.id === id) {
       setViewingTask((prev) => (prev ? { ...prev, status: newStatus } : null));
     }
-
-    try {
-      await api.updateTaskStatus(id, newStatus);
-      fetchStats();
-    } catch {
-      // Rollback on failure
-      setTasks(previousTasks);
-      toast.error("Failed to update task status");
-    }
+    await updateStatus({ id, status: newStatus });
   };
 
-  // Update Task
   const handleUpdateTask = async (id: string, patch: Partial<Task>) => {
-    try {
-      const result = await api.updateTask(id, patch);
-      fetchTasks();
-      fetchStats();
-      toast.success("Task updated");
-
-      if (result.overlapsWith && result.overlapsWith.length > 0) {
-        const titles = result.overlapsWith.map((t) => `"${t.title}"`).join(", ");
-        toast.warning(`Note: Task overlaps with ${titles}`);
-      }
-
-      // Sync notification if reminder settings or timing changed
-      if (result.task.reminderMinutesBefore) {
-        try {
-          await api.deleteNotificationsByTaskId(id);
-          const [y, m, d] = result.task.date.split("-").map(Number);
-          const [hh, mm] = result.task.startTime.split(":").map(Number);
-          const dt = new Date(y, m - 1, d, hh, mm);
-          dt.setMinutes(dt.getMinutes() - result.task.reminderMinutesBefore);
-
-          const soundType =
-            patch.reminderSound || (result.task.reminderSilent ? undefined : "default");
-
-          await api.createNotification({
-            taskId: result.task.id,
-            reminderTime: dt.toISOString(),
-            soundType: soundType as NewNotificationInput["soundType"],
-          });
-        } catch {
-          // Non-blocking notification sync warning
-        }
-      } else if (patch.reminderMinutesBefore === null) {
-        try {
-          await api.deleteNotificationsByTaskId(id);
-        } catch {
-          // Ignore delete notification failure
-        }
-      }
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update task");
-      throw err;
-    }
+    await updateTask({ id, patch });
   };
 
-  // Optimistic Toggle Subtask
   const handleToggleSubtask = async (taskId: string, updatedSubtasks: TaskSubtask[]) => {
-    setTasks((current) =>
-      current.map((t) => (t.id === taskId ? { ...t, subtasks: updatedSubtasks } : t)),
-    );
     if (viewingTask?.id === taskId) {
-      setViewingTask((prev: Task | null) => (prev ? { ...prev, subtasks: updatedSubtasks } : null));
+      setViewingTask((prev) => (prev ? { ...prev, subtasks: updatedSubtasks } : null));
     }
-
-    try {
-      await api.updateTask(taskId, { subtasks: updatedSubtasks });
-    } catch {
-      fetchTasks();
-    }
+    await toggleSubtask({ taskId, subtasks: updatedSubtasks });
   };
 
-  // Optimistic Delete Task
   const handleConfirmDelete = async () => {
     if (!deletingTaskId) return;
     const idToDelete = deletingTaskId;
-    const previousTasks = [...tasks];
-
-    // Optimistically update local state
-    setTasks((current) => current.filter((t) => t.id !== idToDelete));
     setDeletingTaskId(null);
     if (viewingTask?.id === idToDelete) {
       setViewingTask(null);
     }
-
-    try {
-      await api.deleteTask(idToDelete);
-      fetchStats();
-      toast.success("Task deleted");
-    } catch {
-      // Rollback on failure
-      setTasks(previousTasks);
-      toast.error("Failed to delete task");
-    }
+    await deleteTask(idToDelete);
   };
 
   const taskBeingDeleted = tasks.find((t) => t.id === deletingTaskId);
@@ -354,7 +199,7 @@ export default function RoutinePage() {
                   variant="secondary"
                   size="sm"
                   icon={<RefreshCwIcon size={14} />}
-                  onClick={fetchTasks}
+                  onClick={() => fetchTasks()}
                   aria-label="Refresh task schedule"
                 />
               </div>

@@ -1,5 +1,6 @@
 // @vitest-environment jsdom
 import type { Account, AccountWithBalance, Category, Transaction } from "@lifeos/contracts";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { ToastProvider } from "../../../components/Toast.js";
@@ -10,6 +11,25 @@ import { FinanceWidget } from "../FinanceWidget.js";
 import { MonthlyView } from "../MonthlyView.js";
 import { TransactionList } from "../TransactionList.js";
 import { TransferModal } from "../TransferModal.js";
+
+function createTestQueryClient() {
+  return new QueryClient({
+    defaultOptions: {
+      queries: {
+        retry: false,
+      },
+    },
+  });
+}
+
+function renderWithProviders(ui: React.ReactElement) {
+  const testQueryClient = createTestQueryClient();
+  return render(
+    <QueryClientProvider client={testQueryClient}>
+      <ToastProvider>{ui}</ToastProvider>
+    </QueryClientProvider>,
+  );
+}
 
 beforeAll(() => {
   Object.defineProperty(window, "matchMedia", {
@@ -40,7 +60,14 @@ const mockAccounts: Account[] = [
     createdAt: "",
     updatedAt: "",
   },
-  { id: "acc-2", name: "Cash Wallet", type: "cash", archived: false, createdAt: "", updatedAt: "" },
+  {
+    id: "acc-2",
+    name: "Cash Wallet",
+    type: "cash",
+    archived: false,
+    createdAt: "",
+    updatedAt: "",
+  },
 ];
 
 const mockAccountsWithBalance: AccountWithBalance[] = mockAccounts.map((a) => ({
@@ -109,15 +136,13 @@ describe("Finance Frontend Components", () => {
       to: mockTransactions[0],
     });
 
-    render(
-      <ToastProvider>
-        <TransferModal
-          open={true}
-          onClose={handleClose}
-          onSuccess={handleSuccess}
-          accounts={mockAccounts}
-        />
-      </ToastProvider>,
+    renderWithProviders(
+      <TransferModal
+        open={true}
+        onClose={handleClose}
+        onSuccess={handleSuccess}
+        accounts={mockAccounts}
+      />,
     );
 
     expect(screen.getByText("Transfer Between Accounts")).toBeDefined();
@@ -129,7 +154,9 @@ describe("Finance Frontend Components", () => {
     const amountInput = screen.getByLabelText(/Amount/i);
     fireEvent.change(amountInput, { target: { value: "100" } });
 
-    const submitBtn = screen.getByRole("button", { name: /Complete Transfer/i });
+    const submitBtn = screen.getByRole("button", {
+      name: /Complete Transfer/i,
+    });
     fireEvent.click(submitBtn);
 
     await waitFor(() => {
@@ -149,11 +176,7 @@ describe("Finance Frontend Components", () => {
     vi.spyOn(financeApi, "fetchCategories").mockResolvedValue(mockCategories);
     vi.spyOn(financeApi, "fetchAccounts").mockResolvedValue(mockAccounts);
 
-    render(
-      <ToastProvider>
-        <TransactionList />
-      </ToastProvider>,
-    );
+    renderWithProviders(<TransactionList />);
 
     await waitFor(() => {
       expect(screen.getAllByText(/Income/).length).toBeGreaterThanOrEqual(1);
@@ -181,11 +204,7 @@ describe("Finance Frontend Components", () => {
     vi.spyOn(financeApi, "fetchCategoryBreakdown").mockResolvedValue([]);
     vi.spyOn(financeApi, "fetchAccountBalances").mockResolvedValue([]);
 
-    render(
-      <ToastProvider>
-        <FinanceWidget />
-      </ToastProvider>,
-    );
+    renderWithProviders(<FinanceWidget />);
 
     await waitFor(() => {
       expect(screen.getByText("Finance This Month")).toBeDefined();
@@ -199,11 +218,7 @@ describe("Finance Frontend Components", () => {
   it("AccountList renders with delete and archive buttons", async () => {
     vi.spyOn(financeApi, "fetchAccountBalances").mockResolvedValue(mockAccountsWithBalance);
 
-    render(
-      <ToastProvider>
-        <AccountList />
-      </ToastProvider>,
-    );
+    renderWithProviders(<AccountList />);
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Financial Accounts" })).toBeDefined();
@@ -223,11 +238,7 @@ describe("Finance Frontend Components", () => {
     const deleteSpy = vi.spyOn(financeApi, "deleteAccount").mockResolvedValue(undefined);
     vi.spyOn(financeApi, "fetchAccountBalances").mockResolvedValue(mockAccountsWithBalance);
 
-    render(
-      <ToastProvider>
-        <AccountList />
-      </ToastProvider>,
-    );
+    renderWithProviders(<AccountList />);
 
     await waitFor(() => {
       expect(screen.getByRole("heading", { name: "Financial Accounts" })).toBeDefined();
@@ -236,7 +247,9 @@ describe("Finance Frontend Components", () => {
     const deleteButtons = screen.getAllByTitle("Delete Account");
     fireEvent.click(deleteButtons[0]);
 
-    const modalDeleteBtn = await screen.findByRole("button", { name: "Delete" });
+    const modalDeleteBtn = await screen.findByRole("button", {
+      name: "Delete",
+    });
     fireEvent.click(modalDeleteBtn);
 
     await waitFor(() => {
@@ -247,11 +260,7 @@ describe("Finance Frontend Components", () => {
   it("CategoryList shows income and expense categories", async () => {
     vi.spyOn(financeApi, "fetchCategories").mockResolvedValue(mockCategories);
 
-    render(
-      <ToastProvider>
-        <CategoryList />
-      </ToastProvider>,
-    );
+    renderWithProviders(<CategoryList />);
 
     await waitFor(() => {
       expect(screen.getByText("Income Categories")).toBeDefined();
@@ -268,11 +277,7 @@ describe("Finance Frontend Components", () => {
   it("CategoryList shows archive/unarchive/delete buttons for active and archived categories", async () => {
     vi.spyOn(financeApi, "fetchCategories").mockResolvedValue(mockCategories);
 
-    render(
-      <ToastProvider>
-        <CategoryList />
-      </ToastProvider>,
-    );
+    renderWithProviders(<CategoryList />);
 
     await waitFor(() => {
       expect(screen.getByText("Income Categories")).toBeDefined();
@@ -296,17 +301,28 @@ describe("Finance Frontend Components", () => {
       net: 600000,
     });
     vi.spyOn(financeApi, "fetchCategoryBreakdown").mockResolvedValue([
-      { categoryId: "cat-uuid-1", categoryName: "Freelance", kind: "income", total: 600000 },
-      { categoryId: "cat-uuid-2", categoryName: "Groceries", kind: "expense", total: 300000 },
-      { categoryId: "cat-uuid-3", categoryName: "Rent", kind: "expense", total: 100000 },
+      {
+        categoryId: "cat-uuid-1",
+        categoryName: "Freelance",
+        kind: "income",
+        total: 600000,
+      },
+      {
+        categoryId: "cat-uuid-2",
+        categoryName: "Groceries",
+        kind: "expense",
+        total: 300000,
+      },
+      {
+        categoryId: "cat-uuid-3",
+        categoryName: "Rent",
+        kind: "expense",
+        total: 100000,
+      },
     ]);
     vi.spyOn(financeApi, "fetchAccountBalances").mockResolvedValue(mockAccountsWithBalance);
 
-    render(
-      <ToastProvider>
-        <MonthlyView />
-      </ToastProvider>,
-    );
+    renderWithProviders(<MonthlyView />);
 
     await waitFor(() => {
       expect(screen.getByText("Monthly Overview")).toBeDefined();

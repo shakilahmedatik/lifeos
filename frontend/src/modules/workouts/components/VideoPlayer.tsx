@@ -9,6 +9,7 @@ export function VideoPlayer({ url }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
 
+  // biome-ignore lint/correctness/useExhaustiveDependencies: re-trigger on url change
   useEffect(() => {
     if (videoRef.current) {
       videoRef.current.volume = 0.5;

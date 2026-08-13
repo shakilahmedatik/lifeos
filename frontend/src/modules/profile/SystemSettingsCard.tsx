@@ -1,10 +1,12 @@
 import type { NotificationSoundType } from "@lifeos/contracts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, Moon, Play, Settings as SettingsIcon, Sun, Volume2 } from "lucide-react";
 import { type FC, useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
-import { api } from "../../lib/api.js";
+import { getDataSource } from "../../lib/dataSource.js";
 import { useTheme } from "../../lib/hooks/useTheme.js";
+import { queryKeys } from "../../lib/queryKeys.js";
 import {
   requestNotificationPermission,
   showBrowserNotification,
@@ -14,6 +16,8 @@ import type { SoundPreset } from "../notifications/sound-presets.js";
 
 export const SystemSettingsCard: FC = () => {
   const { theme, setTheme } = useTheme();
+  const queryClient = useQueryClient();
+  const ds = getDataSource();
 
   const [soundPreset, setSoundPreset] = useState<SoundPreset>("default");
   const [browserNotifEnabled, setBrowserNotifEnabled] = useState<boolean>(() => {
@@ -25,41 +29,44 @@ export const SystemSettingsCard: FC = () => {
   });
   const [message, setMessage] = useState<string | null>(null);
 
+  const { data: settings } = useQuery<Record<string, string>>({
+    queryKey: queryKeys.settings(),
+    queryFn: () => ds.getSettings(),
+  });
+
   useEffect(() => {
-    const loadSettings = async () => {
-      try {
-        const settings = await api.getSettings();
-        if (settings.theme === "light" || settings.theme === "dark") {
-          setTheme(settings.theme);
-        }
-        if (settings.default_sound) {
-          setSoundPreset(settings.default_sound as SoundPreset);
-        }
-      } catch (_err) {
-        // Fallback silently if settings call fails
+    if (settings) {
+      if (settings.theme === "light" || settings.theme === "dark") {
+        setTheme(settings.theme);
       }
-    };
-    loadSettings();
-  }, [setTheme]);
+      if (settings.default_sound) {
+        setSoundPreset(settings.default_sound as SoundPreset);
+      }
+    }
+  }, [settings, setTheme]);
+
+  const updateSettingsMutation = useMutation({
+    mutationFn: (newSettings: Record<string, string>) => ds.updateSettings(newSettings),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.settings() });
+    },
+  });
+
+  const updateSoundMutation = useMutation({
+    mutationFn: (preset: SoundPreset) =>
+      ds.updateSoundSettings(preset as unknown as NotificationSoundType),
+  });
 
   const handleThemeChange = async (newTheme: "dark" | "light") => {
     setTheme(newTheme);
-    try {
-      await api.updateSettings({ theme: newTheme });
-    } catch (_err) {
-      // Ignore network errors on theme toggle
-    }
+    updateSettingsMutation.mutate({ theme: newTheme });
   };
 
   const handleSoundChange = async (preset: SoundPreset) => {
     setSoundPreset(preset);
     playNotificationSound(preset);
-    try {
-      await api.updateSoundSettings(preset as unknown as NotificationSoundType);
-      await api.updateSettings({ default_sound: preset });
-    } catch (_err) {
-      // Ignore network errors
-    }
+    updateSoundMutation.mutate(preset);
+    updateSettingsMutation.mutate({ default_sound: preset });
   };
 
   const handleEnableNotifications = async () => {

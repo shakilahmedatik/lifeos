@@ -1,36 +1,46 @@
 import {
   getClientDateString,
-  type HabitDailyProgress,
+  type HabitWithStreak,
   type PrayerHabitConfig,
   type WaterHabitConfig,
 } from "@lifeos/contracts";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { habitApi } from "../api.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useRef } from "react";
+import { getDataSource } from "../../../lib/dataSource.js";
+import { queryKeys } from "../../../lib/queryKeys.js";
 
 export function useHabitProgress() {
-  const [progresses, setProgresses] = useState<HabitDailyProgress[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const ds = getDataSource();
   const notifiedSetRef = useRef<Set<string>>(new Set());
 
-  const fetchProgress = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await habitApi.getTodayProgress();
-      setProgresses(data);
-      setError(null);
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Failed to fetch today's progress");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const progressQuery = useQuery<HabitWithStreak[]>({
+    queryKey: queryKeys.habits.today(),
+    queryFn: () => ds.getTodayHabits(),
+  });
 
-  useEffect(() => {
-    fetchProgress();
-  }, [fetchProgress]);
+  const invalidateProgress = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.habits.today() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.habits.all() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
+  };
 
-  // Handle habit reminder notifications (Prayer time alerts & Water reminders)
+  const addLogMutation = useMutation({
+    mutationFn: ({ habitId, value, meta }: { habitId: string; value: number; meta?: string }) => {
+      const date = getClientDateString();
+      return ds.logHabit(habitId, date, value, meta);
+    },
+    onSuccess: () => invalidateProgress(),
+  });
+
+  const removeLogMutation = useMutation({
+    mutationFn: (logId: string) => ds.unlogHabitByLogId(logId),
+    onSuccess: () => invalidateProgress(),
+  });
+
+  const progresses = progressQuery.data ?? [];
+
+  // Notification alerts logic for prayer / water habits
   useEffect(() => {
     if (typeof window === "undefined" || !("Notification" in window)) return;
 
@@ -46,16 +56,14 @@ export function useHabitProgress() {
       const todayStr = getClientDateString();
 
       for (const prog of progresses) {
-        const habit = prog.habit;
-        if (!habit) continue;
+        if (!prog) continue;
 
-        // Prayer habit reminder
-        if (habit.type === "prayer") {
-          const config = habit.config as PrayerHabitConfig;
+        if (prog.type === "prayer") {
+          const config = prog.config as PrayerHabitConfig;
           if (config?.prayers) {
             for (const prayer of config.prayers) {
               if (prayer.time === currentHHMM) {
-                const key = `${todayStr}-${habit.id}-${prayer.name}`;
+                const key = `${todayStr}-${prog.id}-${prayer.name}`;
                 if (!notifiedSetRef.current.has(key)) {
                   notifiedSetRef.current.add(key);
                   new Notification(`🕌 Time for ${prayer.name} Salah`, {
@@ -68,19 +76,14 @@ export function useHabitProgress() {
           }
         }
 
-        // Water habit reminder
-        if (habit.type === "water") {
-          const config = habit.config as WaterHabitConfig;
+        if (prog.type === "water") {
+          const config = prog.config as WaterHabitConfig;
           const intervalMins = config?.reminderIntervalMin || 120;
           const target = config?.dailyGoalMl || 2000;
-          const current =
-            prog.currentValue ??
-            ("todayValue" in prog ? (prog as { todayValue?: number }).todayValue : undefined) ??
-            0;
+          const current = prog.todayValue ?? 0;
 
           if (current < target) {
-            const key = `${todayStr}-${habit.id}-water-${currentHHMM}`;
-            // Remind every intervalMins on the hour or matching minute
+            const key = `${todayStr}-${prog.id}-water-${currentHHMM}`;
             if (
               now.getMinutes() === 0 &&
               now.getHours() % Math.max(1, Math.floor(intervalMins / 60)) === 0
@@ -101,16 +104,13 @@ export function useHabitProgress() {
     return () => clearInterval(interval);
   }, [progresses]);
 
-  const addLog = async (habitId: string, value: number, meta?: string) => {
-    const date = getClientDateString();
-    await habitApi.addLog(habitId, { date, value, meta });
-    await fetchProgress();
+  return {
+    progresses,
+    loading: progressQuery.isLoading,
+    error: progressQuery.error ? (progressQuery.error as Error).message : null,
+    addLog: (habitId: string, value = 1, meta?: string) =>
+      addLogMutation.mutateAsync({ habitId, value, meta }),
+    removeLog: (logId: string) => removeLogMutation.mutateAsync(logId),
+    refresh: () => progressQuery.refetch(),
   };
-
-  const removeLog = async (logId: string) => {
-    await habitApi.removeLog(logId);
-    await fetchProgress();
-  };
-
-  return { progresses, loading, error, addLog, removeLog, refresh: fetchProgress };
 }

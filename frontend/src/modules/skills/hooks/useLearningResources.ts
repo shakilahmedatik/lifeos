@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { api } from "../../../lib/api.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getDataSource } from "../../../lib/dataSource.js";
+import { queryKeys } from "../../../lib/queryKeys.js";
 import type {
   LearningResource,
   NewLearningResourceInput,
@@ -8,81 +9,52 @@ import type {
 } from "../types.js";
 
 export function useLearningResources() {
-  const [resources, setResources] = useState<LearningResource[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const ds = getDataSource();
 
-  const loadResources = useCallback(async () => {
+  const resourcesQuery = useQuery<LearningResource[]>({
+    queryKey: queryKeys.skills.resources(),
+    queryFn: () => ds.getLearningResources(),
+  });
+
+  const invalidateResources = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.skills.resources() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
+  };
+
+  const addResourceMutation = useMutation({
+    mutationFn: (input: NewLearningResourceInput) => ds.createLearningResource(input),
+    onSuccess: () => invalidateResources(),
+  });
+
+  const editResourceMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateLearningResourceInput }) =>
+      ds.updateLearningResource(id, patch),
+    onSuccess: () => invalidateResources(),
+  });
+
+  const removeResourceMutation = useMutation({
+    mutationFn: (id: string) => ds.deleteLearningResource(id),
+    onSuccess: () => invalidateResources(),
+  });
+
+  const getProgress = async (id: string): Promise<ResourceWithProgress | null> => {
     try {
-      setLoading(true);
-      setError(null);
-      const data = await api.getLearningResources();
-      setResources(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load resources");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    loadResources();
-  }, [loadResources]);
-
-  const addResource = useCallback(async (input: NewLearningResourceInput) => {
-    try {
-      setError(null);
-      const newResource = await api.createLearningResource(input);
-      setResources((prev) => [...prev, newResource]);
-      return newResource;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to create resource";
-      setError(msg);
-      throw err;
-    }
-  }, []);
-
-  const editResource = useCallback(async (id: string, patch: UpdateLearningResourceInput) => {
-    try {
-      setError(null);
-      const updated = await api.updateLearningResource(id, patch);
-      setResources((prev) => prev.map((r) => (r.id === id ? updated : r)));
-      return updated;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to update resource";
-      setError(msg);
-      throw err;
-    }
-  }, []);
-
-  const removeResource = useCallback(async (id: string) => {
-    try {
-      setError(null);
-      await api.deleteLearningResource(id);
-      setResources((prev) => prev.filter((r) => r.id !== id));
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to delete resource";
-      setError(msg);
-      throw err;
-    }
-  }, []);
-
-  const getProgress = useCallback(async (id: string): Promise<ResourceWithProgress | null> => {
-    try {
-      return await api.getResourceProgress(id);
+      return await ds.getResourceProgress(id);
     } catch {
       return null;
     }
-  }, []);
+  };
 
   return {
-    resources,
-    loading,
-    error,
-    addResource,
-    editResource,
-    removeResource,
+    resources: resourcesQuery.data ?? [],
+    loading: resourcesQuery.isLoading,
+    error: resourcesQuery.error ? (resourcesQuery.error as Error).message : null,
+    addResource: (input: NewLearningResourceInput) => addResourceMutation.mutateAsync(input),
+    editResource: (id: string, patch: UpdateLearningResourceInput) =>
+      editResourceMutation.mutateAsync({ id, patch }),
+    removeResource: (id: string) => removeResourceMutation.mutateAsync(id),
     getProgress,
-    refresh: loadResources,
+    refresh: () => resourcesQuery.refetch(),
   };
 }

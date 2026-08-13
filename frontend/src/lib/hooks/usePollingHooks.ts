@@ -1,51 +1,51 @@
-import type { Notification, Reminder } from "@lifeos/contracts";
-import { useCallback, useState } from "react";
-import { api } from "../api.js";
-import { useVisibilityPolling } from "../useVisibilityPolling.js";
+import type { NotificationWithTask, Reminder } from "@lifeos/contracts";
+import { useQuery } from "@tanstack/react-query";
+import { getDataSource } from "../dataSource.js";
+import { queryKeys } from "../queryKeys.js";
 
 export function useNotifications(pollIntervalMs = 30000) {
-  const [notifications, setNotifications] = useState<Notification[]>([]);
-  const [unreadCount, setUnreadCount] = useState<number>(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const ds = getDataSource();
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const data = await api.getNotifications();
-      setNotifications(data);
-      const countData = await api.getUnreadCount();
-      setUnreadCount(countData.count);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch notifications");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const notificationsQuery = useQuery<NotificationWithTask[]>({
+    queryKey: queryKeys.notifications.all(),
+    queryFn: () => ds.getNotifications(),
+    refetchInterval: pollIntervalMs,
+  });
 
-  useVisibilityPolling(fetchNotifications, pollIntervalMs);
+  const unreadCountQuery = useQuery<{ count: number }>({
+    queryKey: queryKeys.notifications.unreadCount(),
+    queryFn: () => ds.getUnreadCount(),
+    refetchInterval: pollIntervalMs,
+  });
 
-  return { notifications, unreadCount, loading, error, refresh: fetchNotifications };
+  return {
+    notifications: notificationsQuery.data ?? [],
+    unreadCount: unreadCountQuery.data?.count ?? 0,
+    loading: notificationsQuery.isLoading || unreadCountQuery.isLoading,
+    error: notificationsQuery.error
+      ? (notificationsQuery.error as Error).message
+      : unreadCountQuery.error
+        ? (unreadCountQuery.error as Error).message
+        : null,
+    refresh: async () => {
+      await Promise.all([notificationsQuery.refetch(), unreadCountQuery.refetch()]);
+    },
+  };
 }
 
-export function useReminders(pollIntervalMs = 30000) {
-  const [reminders, setReminders] = useState<Reminder[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+export function useReminders(pollIntervalMs = 30000, date?: string) {
+  const ds = getDataSource();
 
-  const fetchReminders = useCallback(async () => {
-    try {
-      const data = await api.getReminders();
-      setReminders(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch reminders");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const remindersQuery = useQuery<Reminder[]>({
+    queryKey: queryKeys.reminders.all(date),
+    queryFn: () => ds.getReminders(date),
+    refetchInterval: pollIntervalMs,
+  });
 
-  useVisibilityPolling(fetchReminders, pollIntervalMs);
-
-  return { reminders, loading, error, refresh: fetchReminders };
+  return {
+    reminders: remindersQuery.data ?? [],
+    loading: remindersQuery.isLoading,
+    error: remindersQuery.error ? (remindersQuery.error as Error).message : null,
+    refresh: () => remindersQuery.refetch(),
+  };
 }

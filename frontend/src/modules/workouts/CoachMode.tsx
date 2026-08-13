@@ -283,10 +283,16 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
         <div className="flex items-center gap-2 sm:gap-3 min-w-0">
           <CardTitle className="text-base sm:text-lg md:text-xl truncate">{workout.name}</CardTitle>
           <span className="text-[11px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-surface border border-border text-secondary shrink-0">
-            Ex {currentExerciseIndex + 1}/{workout.exercises.length} • Set {currentSet}/{currentExercise.sets}
+            Ex {currentExerciseIndex + 1}/{workout.exercises.length} • Set {currentSet}/
+            {currentExercise.sets}
           </span>
         </div>
-        <Button onClick={handleExitClick} variant="secondary" size="sm" className="shrink-0 text-xs sm:text-sm">
+        <Button
+          onClick={handleExitClick}
+          variant="secondary"
+          size="sm"
+          className="shrink-0 text-xs sm:text-sm"
+        >
           Exit
         </Button>
       </CardHeader>
@@ -309,7 +315,6 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
       <CardContent className="p-2 sm:p-4 md:p-6 flex-1 min-h-0 overflow-hidden flex flex-col lg:grid lg:grid-cols-12 lg:gap-6">
         {/* Left Column on Desktop / Bottom on Mobile: Exercise details + Inputs + Timer */}
         <div className="order-2 lg:order-1 lg:col-span-6 xl:col-span-7 flex flex-col justify-between min-h-0 flex-1 gap-2 sm:gap-4">
-          
           {/* Compact Exercise Name & Inputs Bar */}
           <div className="bg-surface p-2.5 sm:p-4 rounded-xl border border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shrink-0">
             <div className="min-w-0">
@@ -336,7 +341,9 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
                 />
               </div>
               <div className="flex-1 sm:w-28">
-                <label className="block text-[10px] font-medium text-secondary mb-0.5">Weight (kg)</label>
+                <label className="block text-[10px] font-medium text-secondary mb-0.5">
+                  Weight (kg)
+                </label>
                 <Input
                   type="number"
                   min="0"

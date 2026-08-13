@@ -1,24 +1,21 @@
-import { useCallback, useState } from "react";
-import { api } from "../../lib/api.js";
-import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
+import { useQuery } from "@tanstack/react-query";
+import { getDataSource } from "../../lib/dataSource.js";
+import { queryKeys } from "../../lib/queryKeys.js";
 
 interface NotificationBellProps {
   onClick: () => void;
 }
 
 export function NotificationBell({ onClick }: NotificationBellProps) {
-  const [unreadCount, setUnreadCount] = useState(0);
+  const ds = getDataSource();
 
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const data = await api.getUnreadCount();
-      setUnreadCount(data.count);
-    } catch (error) {
-      console.error("Error fetching unread count:", error);
-    }
-  }, []);
+  const { data } = useQuery<{ count: number }>({
+    queryKey: queryKeys.notifications.unreadCount(),
+    queryFn: () => ds.getUnreadCount(),
+    refetchInterval: 30000,
+  });
 
-  useVisibilityPolling(fetchUnreadCount, 30000);
+  const unreadCount = data?.count ?? 0;
 
   return (
     <button

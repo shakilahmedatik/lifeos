@@ -1,4 +1,5 @@
 import type { NewsArticle, RssFeed } from "@lifeos/contracts";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Edit2 as EditIcon,
   Newspaper as NewspaperIcon,
@@ -6,7 +7,7 @@ import {
   RefreshCw as RefreshCwIcon,
   Trash2 as TrashIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useState } from "react";
 import PageSkeleton from "../components/PageSkeleton.js";
 import { useAppToast } from "../components/Toast.js";
 import Button from "../components/ui/Button.js";
@@ -18,13 +19,13 @@ import Modal from "../components/ui/Modal.js";
 import ModalFooter from "../components/ui/ModalFooter.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { SearchInput } from "../components/ui/SearchInput.js";
+import { queryKeys } from "../lib/queryKeys.js";
 import * as newsApi from "../modules/news/api.js";
 
 export default function NewsPage() {
-  const [feeds, setFeeds] = useState<RssFeed[]>([]);
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const queryClient = useQueryClient();
+  const toast = useAppToast();
+
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingFeed, setEditingFeed] = useState<RssFeed | null>(null);
 
@@ -35,109 +36,126 @@ export default function NewsPage() {
 
   const [filterFeedId, setFilterFeedId] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
-  const toast = useAppToast();
 
-  const fetchData = useCallback(async () => {
-    try {
-      const [fds, arts] = await Promise.all([
-        newsApi.fetchFeeds(),
-        newsApi.fetchArticles({
-          feedId: filterFeedId || undefined,
-          search: searchQuery || undefined,
-          limit: 50,
-        }),
-      ]);
-      setFeeds(fds);
-      setArticles(arts);
-    } catch {
-      toast.error("Failed to load news");
-    } finally {
-      setLoading(false);
-    }
-  }, [filterFeedId, searchQuery, toast]);
+  const feedsQuery = useQuery<RssFeed[]>({
+    queryKey: queryKeys.news.feeds(),
+    queryFn: () => newsApi.fetchFeeds(),
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, [fetchData]);
+  const articlesQuery = useQuery<NewsArticle[]>({
+    queryKey: queryKeys.news.articles(filterFeedId, searchQuery),
+    queryFn: () =>
+      newsApi.fetchArticles({
+        feedId: filterFeedId || undefined,
+        search: searchQuery || undefined,
+        limit: 50,
+      }),
+  });
 
-  const handleRefreshAll = async () => {
-    try {
-      setRefreshing(true);
-      const res = await newsApi.refreshAllFeeds();
-      await fetchData();
+  const invalidateNews = () => {
+    queryClient.invalidateQueries({ queryKey: ["news"] });
+  };
+
+  const refreshAllMutation = useMutation({
+    mutationFn: () => newsApi.refreshAllFeeds(),
+    onSuccess: (res) => {
+      invalidateNews();
       if (res.newArticles > 0) {
         toast.success(`Feeds updated! Fetched ${res.newArticles} new article(s).`);
       } else {
         toast.success("Feeds are up to date.");
       }
-    } catch {
-      toast.error("Failed to refresh news feeds");
-    } finally {
-      setRefreshing(false);
-    }
-  };
+    },
+    onError: () => toast.error("Failed to refresh news feeds"),
+  });
 
-  const handleAddFeed = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!feedUrl.trim()) return;
-    try {
-      await newsApi.createFeed({
-        title: feedTitle.trim() || feedUrl.trim(),
-        url: feedUrl.trim(),
-      });
+  const addFeedMutation = useMutation({
+    mutationFn: ({ title, url }: { title: string; url: string }) =>
+      newsApi.createFeed({ title, url }),
+    onSuccess: () => {
       setFeedTitle("");
       setFeedUrl("");
       setShowAddForm(false);
       toast.success("Feed added successfully!");
-      fetchData();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to add feed");
-    }
-  };
+      invalidateNews();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to add feed"),
+  });
 
-  const handleUpdateFeed = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!editingFeed || !editUrl.trim()) return;
-    try {
-      await newsApi.updateFeed(editingFeed.id, {
-        title: editTitle.trim() || editUrl.trim(),
-        url: editUrl.trim(),
-      });
+  const updateFeedMutation = useMutation({
+    mutationFn: ({ id, title, url }: { id: string; title: string; url: string }) =>
+      newsApi.updateFeed(id, { title, url }),
+    onSuccess: () => {
       setEditingFeed(null);
       toast.success("Feed updated successfully!");
-      fetchData();
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : "Failed to update feed");
-    }
-  };
+      invalidateNews();
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to update feed"),
+  });
 
-  const handleToggleFeed = async (id: string) => {
-    try {
-      await newsApi.toggleFeedStatus(id);
-      fetchData();
-    } catch {
-      toast.error("Failed to update feed status");
-    }
-  };
+  const toggleFeedMutation = useMutation({
+    mutationFn: (id: string) => newsApi.toggleFeedStatus(id),
+    onSuccess: () => invalidateNews(),
+    onError: () => toast.error("Failed to update feed status"),
+  });
 
-  const handleDeleteFeed = async (id: string) => {
-    try {
-      await newsApi.deleteFeed(id);
+  const deleteFeedMutation = useMutation({
+    mutationFn: (id: string) => newsApi.deleteFeed(id),
+    onSuccess: (_, id) => {
       if (filterFeedId === id) setFilterFeedId("");
       toast.success("Feed deleted");
-      fetchData();
-    } catch {
-      toast.error("Failed to delete feed");
-    }
+      invalidateNews();
+    },
+    onError: () => toast.error("Failed to delete feed"),
+  });
+
+  const markReadMutation = useMutation({
+    mutationFn: (id: string) => newsApi.markArticleAsRead(id),
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({
+        queryKey: queryKeys.news.articles(filterFeedId, searchQuery),
+      });
+      const previous = queryClient.getQueryData<NewsArticle[]>(
+        queryKeys.news.articles(filterFeedId, searchQuery),
+      );
+      queryClient.setQueryData<NewsArticle[]>(
+        queryKeys.news.articles(filterFeedId, searchQuery),
+        (old = []) => old.map((a) => (a.id === id ? { ...a, isRead: true } : a)),
+      );
+      return { previous };
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(
+          queryKeys.news.articles(filterFeedId, searchQuery),
+          context.previous,
+        );
+      }
+      toast.error("Failed to mark article as read");
+    },
+  });
+
+  const feeds = feedsQuery.data ?? [];
+  const articles = articlesQuery.data ?? [];
+  const loading = feedsQuery.isLoading || articlesQuery.isLoading;
+
+  const handleAddFeed = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!feedUrl.trim()) return;
+    addFeedMutation.mutate({
+      title: feedTitle.trim() || feedUrl.trim(),
+      url: feedUrl.trim(),
+    });
   };
 
-  const handleMarkRead = async (id: string) => {
-    setArticles((prev) => prev.map((a) => (a.id === id ? { ...a, isRead: true } : a)));
-    try {
-      await newsApi.markArticleAsRead(id);
-    } catch {
-      toast.error("Failed to mark article as read");
-    }
+  const handleUpdateFeed = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingFeed || !editUrl.trim()) return;
+    updateFeedMutation.mutate({
+      id: editingFeed.id,
+      title: editTitle.trim() || editUrl.trim(),
+      url: editUrl.trim(),
+    });
   };
 
   const startEdit = (feed: RssFeed) => {
@@ -156,9 +174,14 @@ export default function NewsPage() {
             <Button
               variant="secondary"
               size="sm"
-              loading={refreshing}
-              icon={<RefreshCwIcon size={14} className={refreshing ? "animate-spin" : ""} />}
-              onClick={handleRefreshAll}
+              loading={refreshAllMutation.isPending}
+              icon={
+                <RefreshCwIcon
+                  size={14}
+                  className={refreshAllMutation.isPending ? "animate-spin" : ""}
+                />
+              }
+              onClick={() => refreshAllMutation.mutate()}
             >
               Refresh
             </Button>
@@ -220,7 +243,7 @@ export default function NewsPage() {
                   hover
                   className={`cursor-pointer transition-opacity ${a.isRead ? "opacity-60" : ""}`}
                   onClick={() => {
-                    if (!a.isRead) handleMarkRead(a.id);
+                    if (!a.isRead) markReadMutation.mutate(a.id);
                     window.open(a.url, "_blank", "noopener,noreferrer");
                   }}
                 >
@@ -263,7 +286,7 @@ export default function NewsPage() {
                       className="flex items-center justify-between py-1.5 border-b border-border/60 last:border-0"
                     >
                       <div className="flex-1 min-w-0 pr-2">
-                        <p className="text-sm text-primary truncate">{f.title}</p>
+                        <p className="text-sm text-primary truncate font-medium">{f.title}</p>
                         <p className="text-xs text-muted truncate">{f.url}</p>
                         {f.lastFetchError && (
                           <p className="text-[10px] text-red-400 truncate mt-0.5">
@@ -273,7 +296,8 @@ export default function NewsPage() {
                       </div>
                       <div className="flex items-center gap-1 shrink-0">
                         <button
-                          onClick={() => handleToggleFeed(f.id)}
+                          type="button"
+                          onClick={() => toggleFeedMutation.mutate(f.id)}
                           className={`px-2 py-0.5 rounded text-xs font-medium transition-colors ${
                             f.status === "active"
                               ? "bg-emerald-900/40 text-emerald-400 hover:bg-emerald-900/60"
@@ -283,6 +307,7 @@ export default function NewsPage() {
                           {f.status}
                         </button>
                         <button
+                          type="button"
                           onClick={() => startEdit(f)}
                           className="p-1 rounded text-muted hover:text-blue-400 transition-colors"
                           title="Edit Feed"
@@ -290,7 +315,8 @@ export default function NewsPage() {
                           <EditIcon size={12} />
                         </button>
                         <button
-                          onClick={() => handleDeleteFeed(f.id)}
+                          type="button"
+                          onClick={() => deleteFeedMutation.mutate(f.id)}
                           className="p-1 rounded text-muted hover:text-red-400 transition-colors"
                           title="Delete Feed"
                         >

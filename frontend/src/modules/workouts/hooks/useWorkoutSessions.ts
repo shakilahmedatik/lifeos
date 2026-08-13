@@ -1,93 +1,47 @@
 import type { WorkoutSession, WorkoutSessionWithLogs, WorkoutStats } from "@lifeos/contracts";
-import { useCallback, useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "../../../lib/queryKeys.js";
 import * as api from "../api.js";
 
 export function useWorkoutSessions() {
-  const [sessions, setSessions] = useState<WorkoutSession[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchSessions = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.fetchSessions();
-      setSessions(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch sessions");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchSessions();
-  }, [fetchSessions]);
+  const query = useQuery<WorkoutSession[]>({
+    queryKey: queryKeys.workouts.sessions(),
+    queryFn: () => api.fetchSessions(),
+  });
 
   return {
-    sessions,
-    loading,
-    error,
-    refresh: fetchSessions,
+    sessions: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error ? (query.error as Error).message : null,
+    refresh: () => query.refetch(),
   };
 }
 
 export function useWorkoutSession(id: string) {
-  const [session, setSession] = useState<WorkoutSessionWithLogs | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchSession = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.fetchSession(id);
-      setSession(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch session");
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
-
-  useEffect(() => {
-    fetchSession();
-  }, [fetchSession]);
+  const query = useQuery<WorkoutSessionWithLogs>({
+    queryKey: queryKeys.workouts.session(id),
+    queryFn: () => api.fetchSession(id),
+    enabled: !!id,
+  });
 
   return {
-    session,
-    loading,
-    error,
-    refresh: fetchSession,
+    session: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error ? (query.error as Error).message : null,
+    refresh: () => query.refetch(),
   };
 }
 
 export function useWorkoutStats() {
-  const [stats, setStats] = useState<WorkoutStats | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchStats = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.fetchWorkoutStats();
-      setStats(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch stats");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchStats();
-  }, [fetchStats]);
+  const query = useQuery<WorkoutStats>({
+    queryKey: queryKeys.workouts.stats(),
+    queryFn: () => api.fetchWorkoutStats(),
+  });
 
   return {
-    stats,
-    loading,
-    error,
-    refresh: fetchStats,
+    stats: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error ? (query.error as Error).message : null,
+    refresh: () => query.refetch(),
   };
 }

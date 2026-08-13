@@ -1,100 +1,43 @@
 import type { Account, AccountWithBalance } from "@lifeos/contracts";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAppToast } from "../../../components/Toast.js";
+import { useQuery } from "@tanstack/react-query";
+import { queryKeys } from "../../../lib/queryKeys.js";
 import * as api from "../api.js";
 
 export function useAccounts() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
-  const toast = useAppToast();
-  const mountedRef = useRef(true);
+  const query = useQuery<Account[]>({
+    queryKey: queryKeys.finance.accounts(),
+    queryFn: () => api.fetchAccounts(),
+  });
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await api.fetchAccounts();
-      if (mountedRef.current) setAccounts(data);
-    } catch {
-      toast.error("Failed to load accounts");
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  return { accounts, loading, refresh: load };
+  return {
+    accounts: query.data ?? [],
+    loading: query.isLoading,
+    refresh: () => query.refetch(),
+  };
 }
 
 export function useActiveAccounts() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
-  const toast = useAppToast();
-  const mountedRef = useRef(true);
+  const query = useQuery<Account[]>({
+    queryKey: queryKeys.finance.activeAccounts(),
+    queryFn: () => api.fetchActiveAccounts(),
+  });
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await api.fetchActiveAccounts();
-      if (mountedRef.current) setAccounts(data);
-    } catch {
-      toast.error("Failed to load accounts");
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  return { accounts, loading, refresh: load };
+  return {
+    accounts: query.data ?? [],
+    loading: query.isLoading,
+    refresh: () => query.refetch(),
+  };
 }
 
 export function useAccountBalances() {
-  const [accounts, setAccounts] = useState<AccountWithBalance[]>([]);
-  const [loading, setLoading] = useState(true);
-  const toast = useAppToast();
-  const mountedRef = useRef(true);
+  const query = useQuery<AccountWithBalance[]>({
+    queryKey: queryKeys.finance.balances(),
+    queryFn: () => api.fetchAccountBalances(),
+  });
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
-
-  const load = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await api.fetchAccountBalances();
-      if (mountedRef.current) setAccounts(data);
-    } catch {
-      toast.error("Failed to load account balances");
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, [toast]);
-
-  useEffect(() => {
-    load();
-  }, [load]);
-
-  return { accounts, loading, refresh: load };
+  return {
+    accounts: query.data ?? [],
+    loading: query.isLoading,
+    refresh: () => query.refetch(),
+  };
 }

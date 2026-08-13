@@ -1,78 +1,88 @@
 import type { HabitDefinition, NewHabitDefinitionInput } from "@lifeos/contracts";
-import { useCallback, useEffect, useState } from "react";
-import { habitApi } from "../api.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getDataSource } from "../../../lib/dataSource.js";
+import { queryKeys } from "../../../lib/queryKeys.js";
 
 export function useHabitBuilder() {
-  const [habits, setHabits] = useState<HabitDefinition[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const ds = getDataSource();
 
-  const fetchHabits = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await habitApi.getHabits();
-      setHabits(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch habits");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const habitsQuery = useQuery<HabitDefinition[]>({
+    queryKey: queryKeys.habits.all(),
+    queryFn: () => ds.getHabits(),
+  });
 
-  useEffect(() => {
-    fetchHabits();
-  }, [fetchHabits]);
-
-  const createHabit = async (data: NewHabitDefinitionInput) => {
-    const newHabit = await habitApi.createHabit(data);
-    setHabits((prev) => [...prev, newHabit]);
-    return newHabit;
+  const invalidateHabits = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.habits.all() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.habits.today() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
   };
 
-  const updateHabit = async (id: string, data: Partial<HabitDefinition>) => {
-    const updated = await habitApi.updateHabit(id, data);
-    setHabits((prev) => prev.map((h) => (h.id === id ? updated : h)));
-    return updated;
-  };
+  const createMutation = useMutation({
+    mutationFn: (data: NewHabitDefinitionInput) => ds.createHabit(data),
+    onSuccess: () => invalidateHabits(),
+  });
 
-  const deleteHabit = async (id: string) => {
-    await habitApi.deleteHabit(id);
-    setHabits((prev) => prev.filter((h) => h.id !== id));
-  };
+  const updateMutation = useMutation({
+    mutationFn: ({ id, data }: { id: string; data: Partial<HabitDefinition> }) =>
+      ds.updateHabit(id, data),
+    onSuccess: () => invalidateHabits(),
+  });
 
-  const toggleArchive = async (id: string) => {
-    const target = habits.find((h) => h.id === id);
-    if (!target) return;
-    const newArchivedState = !target.archived;
-    await habitApi.toggleArchive(id, newArchivedState);
-    setHabits((prev) => prev.map((h) => (h.id === id ? { ...h, archived: newArchivedState } : h)));
-  };
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => ds.deleteHabit(id),
+    onSuccess: () => invalidateHabits(),
+  });
 
-  const reorderHabits = async (ids: string[]) => {
-    setHabits((prev) => {
-      const map = new Map(prev.map((h) => [h.id, h]));
-      const result: HabitDefinition[] = [];
-      for (const id of ids) {
-        const item = map.get(id);
-        if (item) result.push(item);
+  const toggleArchiveMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const habits = queryClient.getQueryData<HabitDefinition[]>(queryKeys.habits.all());
+      const target = habits?.find((h) => h.id === id);
+      if (!target) return;
+      return ds.updateHabit(id, { archived: target.archived ? 0 : 1 });
+    },
+    onSuccess: () => invalidateHabits(),
+  });
+
+  const reorderMutation = useMutation({
+    mutationFn: async (ids: string[]) => {
+      // update sortOrder for each habit
+      for (let i = 0; i < ids.length; i++) {
+        await ds.updateHabit(ids[i], { sortOrder: i });
       }
-      return result;
-    });
-
-    const orders = ids.map((id, index) => ({ id, sortOrder: index }));
-    await habitApi.reorderHabits(orders);
-  };
+    },
+    onMutate: async (ids) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.habits.all() });
+      const previous = queryClient.getQueryData<HabitDefinition[]>(queryKeys.habits.all());
+      if (previous) {
+        const map = new Map(previous.map((h) => [h.id, h]));
+        const reordered: HabitDefinition[] = [];
+        for (const id of ids) {
+          const item = map.get(id);
+          if (item) reordered.push(item);
+        }
+        queryClient.setQueryData(queryKeys.habits.all(), reordered);
+      }
+      return { previous };
+    },
+    onError: (_err, _variables, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.habits.all(), context.previous);
+      }
+    },
+    onSettled: () => invalidateHabits(),
+  });
 
   return {
-    habits,
-    loading,
-    error,
-    createHabit,
-    updateHabit,
-    deleteHabit,
-    toggleArchive,
-    reorderHabits,
-    refresh: fetchHabits,
+    habits: habitsQuery.data ?? [],
+    loading: habitsQuery.isLoading,
+    error: habitsQuery.error ? (habitsQuery.error as Error).message : null,
+    createHabit: (data: NewHabitDefinitionInput) => createMutation.mutateAsync(data),
+    updateHabit: (id: string, data: Partial<HabitDefinition>) =>
+      updateMutation.mutateAsync({ id, data }),
+    deleteHabit: (id: string) => deleteMutation.mutateAsync(id),
+    toggleArchive: (id: string) => toggleArchiveMutation.mutateAsync(id),
+    reorderHabits: (ids: string[]) => reorderMutation.mutateAsync(ids),
+    refresh: () => habitsQuery.refetch(),
   };
 }

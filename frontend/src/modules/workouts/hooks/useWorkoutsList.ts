@@ -1,106 +1,87 @@
 import type { NewWorkoutInput, Workout, WorkoutWithExercises } from "@lifeos/contracts";
-import { useCallback, useEffect, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../../lib/queryKeys.js";
 import * as api from "../api.js";
 
 export function useWorkouts() {
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchWorkouts = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.fetchWorkouts();
-      setWorkouts(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch workouts");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  const workoutsQuery = useQuery<Workout[]>({
+    queryKey: queryKeys.workouts.all(),
+    queryFn: () => api.fetchWorkouts(),
+  });
 
-  useEffect(() => {
-    fetchWorkouts();
-  }, [fetchWorkouts]);
+  const invalidateWorkouts = () => {
+    queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all() });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
+  };
 
-  const createWorkout = useCallback(async (input: NewWorkoutInput) => {
-    const workout = await api.createWorkout(input);
-    setWorkouts((prev) => [workout, ...prev]);
-    return workout;
-  }, []);
+  const createMutation = useMutation({
+    mutationFn: (input: NewWorkoutInput) => api.createWorkout(input),
+    onSuccess: () => invalidateWorkouts(),
+  });
 
-  const updateWorkout = useCallback(async (id: string, patch: Partial<NewWorkoutInput>) => {
-    const workout = await api.updateWorkout(id, patch);
-    setWorkouts((prev) => prev.map((w) => (w.id === id ? workout : w)));
-    return workout;
-  }, []);
+  const updateMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<NewWorkoutInput> }) =>
+      api.updateWorkout(id, patch),
+    onSuccess: () => invalidateWorkouts(),
+  });
 
-  const deleteWorkout = useCallback(async (id: string) => {
-    await api.deleteWorkout(id);
-    setWorkouts((prev) => prev.filter((w) => w.id !== id));
-  }, []);
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => api.deleteWorkout(id),
+    onSuccess: () => invalidateWorkouts(),
+  });
 
   return {
-    workouts,
-    loading,
-    error,
-    createWorkout,
-    updateWorkout,
-    deleteWorkout,
-    refresh: fetchWorkouts,
+    workouts: workoutsQuery.data ?? [],
+    loading: workoutsQuery.isLoading,
+    error: workoutsQuery.error ? (workoutsQuery.error as Error).message : null,
+    createWorkout: (input: NewWorkoutInput) => createMutation.mutateAsync(input),
+    updateWorkout: (id: string, patch: Partial<NewWorkoutInput>) =>
+      updateMutation.mutateAsync({ id, patch }),
+    deleteWorkout: (id: string) => deleteMutation.mutateAsync(id),
+    refresh: () => workoutsQuery.refetch(),
   };
 }
 
 export function useWorkout(id: string) {
-  const [workout, setWorkout] = useState<WorkoutWithExercises | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const fetchWorkout = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.fetchWorkout(id);
-      setWorkout(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to fetch workout");
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
+  const workoutQuery = useQuery<WorkoutWithExercises>({
+    queryKey: ["workouts", "detail", id],
+    queryFn: () => api.fetchWorkout(id),
+    enabled: !!id,
+  });
 
-  useEffect(() => {
-    fetchWorkout();
-  }, [fetchWorkout]);
+  const invalidateDetail = () => {
+    queryClient.invalidateQueries({ queryKey: ["workouts", "detail", id] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all() });
+  };
 
-  const reorderExercises = useCallback(
-    async (exerciseIds: string[]) => {
-      await api.reorderWorkoutExercises(id, exerciseIds);
-      await fetchWorkout();
+  const reorderMutation = useMutation({
+    mutationFn: (exerciseIds: string[]) => api.reorderWorkoutExercises(id, exerciseIds),
+    onSuccess: () => invalidateDetail(),
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: (patch: Partial<NewWorkoutInput>) => api.updateWorkout(id, patch),
+    onSuccess: () => invalidateDetail(),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: () => api.deleteWorkout(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.workouts.all() });
     },
-    [id, fetchWorkout],
-  );
-
-  const updateWorkout = useCallback(
-    async (patch: Partial<NewWorkoutInput>) => {
-      await api.updateWorkout(id, patch);
-      await fetchWorkout();
-    },
-    [id, fetchWorkout],
-  );
-
-  const deleteWorkout = useCallback(async () => {
-    await api.deleteWorkout(id);
-  }, [id]);
+  });
 
   return {
-    workout,
-    loading,
-    error,
-    refresh: fetchWorkout,
-    reorderExercises,
-    updateWorkout,
-    deleteWorkout,
+    workout: workoutQuery.data ?? null,
+    loading: workoutQuery.isLoading,
+    error: workoutQuery.error ? (workoutQuery.error as Error).message : null,
+    refresh: () => workoutQuery.refetch(),
+    reorderExercises: (exerciseIds: string[]) => reorderMutation.mutateAsync(exerciseIds),
+    updateWorkout: (patch: Partial<NewWorkoutInput>) => updateMutation.mutateAsync(patch),
+    deleteWorkout: () => deleteMutation.mutateAsync(),
   };
 }

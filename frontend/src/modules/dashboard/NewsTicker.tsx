@@ -1,28 +1,19 @@
-import { useCallback, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { RelativeTime } from "../../components/ui/RelativeTime.js";
-import { useVisibilityPolling } from "../../lib/useVisibilityPolling.js";
-
+import { queryKeys } from "../../lib/queryKeys.js";
 import type { NewsArticle } from "../news/api.ts";
 import { fetchTickerArticles } from "../news/api.ts";
 
 export function NewsTicker() {
-  const [articles, setArticles] = useState<NewsArticle[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const loadArticles = useCallback(async () => {
-    try {
-      const data = await fetchTickerArticles();
-      setArticles(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load news");
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useVisibilityPolling(loadArticles, 60000);
+  const {
+    data: articles = [],
+    isLoading: loading,
+    error,
+  } = useQuery<NewsArticle[]>({
+    queryKey: queryKeys.news.ticker(),
+    queryFn: fetchTickerArticles,
+    refetchInterval: 60_000,
+  });
 
   const handleArticleClick = (article: NewsArticle) => {
     window.open(article.url, "_blank");
@@ -39,7 +30,9 @@ export function NewsTicker() {
   if (error) {
     return (
       <div className="rounded border bg-card p-3">
-        <div className="text-sm text-red-500">{error}</div>
+        <div className="text-sm text-red-500">
+          {error instanceof Error ? error.message : "Failed to load news"}
+        </div>
       </div>
     );
   }
