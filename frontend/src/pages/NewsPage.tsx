@@ -17,6 +17,7 @@ import { FilterPills } from "../components/ui/FilterPills.js";
 import { Input } from "../components/ui/Input.js";
 import Modal from "../components/ui/Modal.js";
 import ModalFooter from "../components/ui/ModalFooter.js";
+import { OnlineOnlyBanner } from "../components/ui/OnlineOnlyBanner.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { SearchInput } from "../components/ui/SearchInput.js";
 import { queryKeys } from "../lib/queryKeys.js";
@@ -191,6 +192,8 @@ export default function NewsPage() {
           </>
         }
       />
+
+      <OnlineOnlyBanner moduleName="News & RSS Feeds" />
 
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         {feeds.length > 0 && (

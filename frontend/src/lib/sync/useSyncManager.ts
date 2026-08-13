@@ -8,24 +8,32 @@ export function useSyncManager() {
   const [syncState, setSyncState] = useState<"idle" | "syncing" | "error">("idle");
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isInitialSyncing, setIsInitialSyncing] = useState<boolean>(false);
 
   const triggerSync = useCallback(async () => {
     if (!isTauri()) return;
     setSyncState("syncing");
     setErrorMessage(null);
 
-    const res = await syncEngine.sync();
-    if (res.status === "success") {
-      setSyncState("idle");
-      setLastSyncAt(new Date().toLocaleTimeString());
-      queryClient.invalidateQueries();
-    } else if (res.status === "error") {
-      setSyncState("error");
-      setErrorMessage(res.error || "Sync failed");
-    } else {
-      setSyncState("idle");
+    const isFirstTime = lastSyncAt === null;
+    if (isFirstTime) setIsInitialSyncing(true);
+
+    try {
+      const res = await syncEngine.sync();
+      if (res.status === "success") {
+        setSyncState("idle");
+        setLastSyncAt(new Date().toLocaleTimeString());
+        queryClient.invalidateQueries();
+      } else if (res.status === "error") {
+        setSyncState("error");
+        setErrorMessage(res.error || "Sync failed");
+      } else {
+        setSyncState("idle");
+      }
+    } finally {
+      setIsInitialSyncing(false);
     }
-  }, [queryClient]);
+  }, [queryClient, lastSyncAt]);
 
   // Sync on app launch
   useEffect(() => {
@@ -46,6 +54,7 @@ export function useSyncManager() {
     syncState,
     lastSyncAt,
     errorMessage,
+    isInitialSyncing,
     triggerSync,
   };
 }

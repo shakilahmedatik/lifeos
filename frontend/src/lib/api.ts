@@ -111,7 +111,7 @@ export const api = {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
-  updateHabit: (id: string, patch: Partial<NewHabitDefinitionInput>) =>
+  updateHabit: (id: string, patch: Partial<HabitDefinition>) =>
     request<HabitDefinition>(`/api/habits/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },

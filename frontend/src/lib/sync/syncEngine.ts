@@ -1,5 +1,5 @@
 import type Database from "@tauri-apps/plugin-sql";
-import { api } from "../api.js";
+import { request } from "../api.js";
 import { isTauri } from "../dataSource.js";
 import { getLocalDb } from "../local-db/index.js";
 
@@ -64,7 +64,7 @@ export class SyncEngine {
       }
 
       // 3. Send bulk sync payload to backend
-      const response = await api.request<{
+      const response = await request<{
         serverChanges: Record<string, Record<string, unknown>[]>;
         syncedAt: string;
       }>("/api/sync", {
@@ -81,9 +81,11 @@ export class SyncEngine {
       if (response.serverChanges) {
         for (const [table, rows] of Object.entries(response.serverChanges)) {
           if (!SYNCABLE_TABLES.includes(table as SyncableTableName)) continue;
-          for (const row of rows) {
-            await this.upsertRemoteRow(db, table, row);
-            pulledCount++;
+          if (Array.isArray(rows)) {
+            for (const row of rows) {
+              await this.upsertRemoteRow(db, table, row);
+              pulledCount++;
+            }
           }
         }
       }

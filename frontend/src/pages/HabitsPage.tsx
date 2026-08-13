@@ -60,7 +60,9 @@ export default function HabitsPage() {
             onCreate={createHabit}
             onUpdate={updateHabit}
             onDelete={deleteHabit}
-            onArchive={toggleArchive}
+            onArchive={async (id) => {
+              await toggleArchive(id);
+            }}
             onReorder={reorderHabits}
           />
         </TabsContent>

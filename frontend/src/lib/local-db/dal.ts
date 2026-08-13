@@ -1,8 +1,10 @@
 import type {
   Account,
+  AccountType,
   AccountWithBalance,
   Category,
   CategoryBreakdown,
+  CategoryKind,
   DashboardSummary,
   FinanceDashboardWidget,
   HabitDefinition,
@@ -11,6 +13,7 @@ import type {
   HabitWithStreak,
   LearningLog,
   LearningResource,
+  LearningUnit,
   MonthlySummary,
   NewAccountInput,
   NewCategoryInput,
@@ -45,19 +48,6 @@ import { getLocalDb } from "./index.js";
 
 type SqliteRow = Record<string, unknown>;
 
-function getCurrentUserId(): string {
-  try {
-    const raw = localStorage.getItem("lifeos_session_user");
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      return parsed.id || "";
-    }
-  } catch {
-    // fallback
-  }
-  return "";
-}
-
 export const localDal = {
   // --- Routine ---
   getTasks: async (date: string): Promise<Task[]> => {
@@ -68,7 +58,6 @@ export const localDal = {
     );
     return rows.map((r) => ({
       id: String(r.id),
-      userId: String(r.user_id),
       title: String(r.title),
       category: r.category as TaskCategory,
       date: String(r.date),
@@ -76,10 +65,11 @@ export const localDal = {
       endTime: String(r.end_time),
       status: r.status as TaskStatus,
       notes: r.notes ? String(r.notes) : undefined,
-      subtasks: typeof r.subtasks === "string" ? JSON.parse(r.subtasks) : [],
       reminderMinutesBefore:
-        typeof r.reminder_minutes_before === "number" ? r.reminder_minutes_before : undefined,
-      reminderSound: typeof r.reminder_sound === "number" ? r.reminder_sound : 1,
+        typeof r.reminder_minutes_before === "number" ? r.reminder_minutes_before : null,
+      reminderSilent: Boolean(r.reminder_silent),
+      reminderSound: (r.reminder_sound as NotificationSoundType) || "default",
+      subtasks: typeof r.subtasks === "string" ? JSON.parse(r.subtasks) : [],
       referenceId: r.reference_id ? String(r.reference_id) : undefined,
       recurrence: (r.recurrence as Task["recurrence"]) || "none",
       createdAt: String(r.created_at),
@@ -91,20 +81,19 @@ export const localDal = {
     const db = await getLocalDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const userId = getCurrentUserId();
 
     const task: Task = {
       id,
-      userId,
       title: input.title,
-      category: input.category,
+      category: input.category ?? "general",
       date: input.date,
       startTime: input.startTime,
       endTime: input.endTime,
       status: "planned",
       notes: input.notes,
-      reminderMinutesBefore: input.reminderMinutesBefore,
-      reminderSound: input.reminderSound ?? 1,
+      reminderMinutesBefore: input.reminderMinutesBefore ?? null,
+      reminderSilent: input.reminderSilent ?? false,
+      reminderSound: input.reminderSound ?? "default",
       recurrence: input.recurrence ?? "none",
       subtasks: input.subtasks ?? [],
       referenceId: input.referenceId,
@@ -114,10 +103,9 @@ export const localDal = {
 
     await db.execute(
       `INSERT INTO tasks (id, user_id, title, category, date, start_time, end_time, status, notes, reminder_minutes_before, reminder_sound, recurrence, subtasks, reference_id, created_at, updated_at, _sync_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+       VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
       [
         task.id,
-        task.userId,
         task.title,
         task.category,
         task.date,
@@ -166,7 +154,7 @@ export const localDal = {
       date: patch.date ?? String(existing.date),
       startTime: patch.startTime ?? String(existing.start_time),
       endTime: patch.endTime ?? String(existing.end_time),
-      status: patch.status ?? (existing.status as TaskStatus),
+      status: (existing.status as TaskStatus) || "planned",
       notes: patch.notes ?? (existing.notes ? String(existing.notes) : undefined),
       subtasks: patch.subtasks ? JSON.stringify(patch.subtasks) : String(existing.subtasks || "[]"),
       updated_at: now,
@@ -190,7 +178,6 @@ export const localDal = {
 
     const task: Task = {
       id,
-      userId: String(existing.user_id),
       title: updated.title,
       category: updated.category,
       date: updated.date,
@@ -198,6 +185,7 @@ export const localDal = {
       endTime: updated.endTime,
       status: updated.status,
       notes: updated.notes,
+      reminderSilent: Boolean(existing.reminder_silent),
       subtasks: typeof updated.subtasks === "string" ? JSON.parse(updated.subtasks) : [],
       createdAt: String(existing.created_at),
       updatedAt: now,
@@ -241,7 +229,6 @@ export const localDal = {
     const rows = await db.select<SqliteRow[]>(sql, args);
     return rows.map((r) => ({
       id: String(r.id),
-      userId: String(r.user_id),
       title: String(r.title),
       category: r.category as TaskCategory,
       date: String(r.date),
@@ -249,10 +236,11 @@ export const localDal = {
       endTime: String(r.end_time),
       status: r.status as TaskStatus,
       notes: r.notes ? String(r.notes) : undefined,
-      subtasks: typeof r.subtasks === "string" ? JSON.parse(r.subtasks) : [],
       reminderMinutesBefore:
-        typeof r.reminder_minutes_before === "number" ? r.reminder_minutes_before : undefined,
-      reminderSound: typeof r.reminder_sound === "number" ? r.reminder_sound : 1,
+        typeof r.reminder_minutes_before === "number" ? r.reminder_minutes_before : null,
+      reminderSilent: Boolean(r.reminder_silent),
+      reminderSound: (r.reminder_sound as NotificationSoundType) || "default",
+      subtasks: typeof r.subtasks === "string" ? JSON.parse(r.subtasks) : [],
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
     }));
@@ -271,7 +259,21 @@ export const localDal = {
     const completedTasks = doneRes[0]?.count || 0;
     const completionRate = totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0;
 
-    return { totalTasks, completedTasks, completionRate };
+    return {
+      totalTasks,
+      completedTasks,
+      plannedTasks: totalTasks - completedTasks,
+      inProgressTasks: 0,
+      skippedTasks: 0,
+      completionRate,
+      totalScheduledMinutes: 0,
+      completedMinutes: 0,
+      completedTodayCount: completedTasks,
+      totalTodayCount: totalTasks,
+      todayCompletionRate: completionRate,
+      categoryDistribution: [],
+      weeklyTrends: [],
+    };
   },
 
   // --- Habits ---
@@ -282,16 +284,13 @@ export const localDal = {
     );
     return rows.map((r) => ({
       id: String(r.id),
-      userId: String(r.user_id),
       name: String(r.name),
-      frequency: String(r.frequency),
-      targetDaysPerWeek: Number(r.target_days_per_week),
       type: r.type as HabitDefinition["type"],
-      category: String(r.category),
+      category: (r.category as HabitDefinition["category"]) || "general",
       config: typeof r.config === "string" ? JSON.parse(r.config) : r.config,
       icon: r.icon ? String(r.icon) : undefined,
       color: r.color ? String(r.color) : undefined,
-      archived: Number(r.archived),
+      archived: Boolean(r.archived),
       sortOrder: Number(r.sort_order),
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
@@ -302,20 +301,16 @@ export const localDal = {
     const db = await getLocalDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const userId = getCurrentUserId();
 
     const habit: HabitDefinition = {
       id,
-      userId,
       name: input.name,
-      frequency: input.frequency ?? "daily",
-      targetDaysPerWeek: input.targetDaysPerWeek ?? 7,
-      type: input.type ?? "boolean",
+      type: input.type,
       category: input.category ?? "general",
-      config: input.config ?? { type: input.type ?? "boolean" },
+      config: input.config,
       icon: input.icon,
       color: input.color,
-      archived: 0,
+      archived: false,
       sortOrder: 0,
       createdAt: now,
       updatedAt: now,
@@ -323,13 +318,10 @@ export const localDal = {
 
     await db.execute(
       `INSERT INTO habits (id, user_id, name, frequency, target_days_per_week, type, category, config, icon, color, archived, sort_order, created_at, updated_at, _sync_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0, 0, ?, ?, 'pending')`,
+       VALUES (?, '', ?, 'daily', 7, ?, ?, ?, ?, ?, 0, 0, ?, ?, 'pending')`,
       [
         habit.id,
-        habit.userId,
         habit.name,
-        habit.frequency,
-        habit.targetDaysPerWeek,
         habit.type,
         habit.category,
         JSON.stringify(habit.config),
@@ -355,8 +347,8 @@ export const localDal = {
     const updated = {
       name: patch.name ?? String(existing.name),
       config: patch.config ? JSON.stringify(patch.config) : String(existing.config),
-      archived: patch.archived !== undefined ? patch.archived : Number(existing.archived),
-      sort_order: patch.sortOrder !== undefined ? patch.sortOrder : Number(existing.sort_order),
+      archived: existing.archived ? 1 : 0,
+      sort_order: Number(existing.sort_order),
       updated_at: now,
     };
 
@@ -389,11 +381,9 @@ export const localDal = {
     const id = crypto.randomUUID();
     const logDate = date || new Date().toISOString().split("T")[0];
     const now = new Date().toISOString();
-    const userId = getCurrentUserId();
 
     const entry: HabitLogEntry = {
       id,
-      userId,
       habitId,
       date: logDate,
       value,
@@ -403,16 +393,8 @@ export const localDal = {
 
     await db.execute(
       `INSERT INTO habit_logs (id, user_id, habit_id, date, value, meta, logged_at, _sync_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [
-        entry.id,
-        entry.userId,
-        entry.habitId,
-        entry.date,
-        entry.value,
-        entry.meta ?? null,
-        entry.loggedAt,
-      ],
+       VALUES (?, '', ?, ?, ?, ?, ?, 'pending')`,
+      [entry.id, entry.habitId, entry.date, entry.value, entry.meta ?? null, entry.loggedAt],
     );
 
     return entry;
@@ -454,8 +436,10 @@ export const localDal = {
         ...h,
         currentStreak: todayValue > 0 ? 1 : 0,
         longestStreak: 1,
+        loggedToday: todayValue > 0,
+        todayProgress: todayValue > 0 ? 1 : 0,
         todayValue,
-        completedToday: todayValue > 0,
+        todayTarget: 1,
       });
     }
 
@@ -479,10 +463,10 @@ export const localDal = {
 
   getWeeklyReview: async (_weekStart?: string): Promise<WeeklySummary> => {
     return {
-      weekStart: new Date().toISOString().split("T")[0],
-      totalCompletions: 0,
+      habits: [],
+      dailyBreakdown: [],
+      topHabits: [],
       overallCompletionRate: 0,
-      habitSummaries: [],
     };
   },
 
@@ -492,12 +476,7 @@ export const localDal = {
     const rows = await db.select<SqliteRow[]>("SELECT * FROM skill_areas WHERE deleted_at IS NULL");
     return rows.map((r) => ({
       id: String(r.id),
-      userId: String(r.user_id),
       name: String(r.name),
-      category: String(r.category),
-      color: r.color ? String(r.color) : undefined,
-      icon: r.icon ? String(r.icon) : undefined,
-      targetHours: Number(r.target_hours),
       weeklyGoalHours: Number(r.weekly_goal_hours),
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
@@ -508,16 +487,10 @@ export const localDal = {
     const db = await getLocalDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const userId = getCurrentUserId();
 
     const area: SkillArea = {
       id,
-      userId,
       name: input.name,
-      category: input.category ?? "general",
-      color: input.color,
-      icon: input.icon,
-      targetHours: input.targetHours ?? 100,
       weeklyGoalHours: input.weeklyGoalHours ?? 5,
       createdAt: now,
       updatedAt: now,
@@ -525,19 +498,8 @@ export const localDal = {
 
     await db.execute(
       `INSERT INTO skill_areas (id, user_id, name, category, color, icon, target_hours, weekly_goal_hours, created_at, updated_at, _sync_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
-      [
-        area.id,
-        area.userId,
-        area.name,
-        area.category,
-        area.color ?? null,
-        area.icon ?? null,
-        area.targetHours,
-        area.weeklyGoalHours,
-        now,
-        now,
-      ],
+       VALUES (?, '', ?, 'general', null, null, 100, ?, ?, ?, 'pending')`,
+      [area.id, area.name, area.weeklyGoalHours, now, now],
     );
 
     return area;
@@ -569,10 +531,10 @@ export const localDal = {
     const area = areas.find((a) => a.id === areaId);
     if (!area) throw new Error("Area not found");
     return {
-      area,
-      totalHoursLogged: 0,
-      resourcesCount: 0,
-      completedResourcesCount: 0,
+      skillArea: area,
+      totalResources: 0,
+      totalMinutesSpent: 0,
+      totalSessions: 0,
     };
   },
 
@@ -587,7 +549,7 @@ export const localDal = {
       title: String(r.title),
       type: r.type as LearningResource["type"],
       totalUnits: typeof r.total_units === "number" ? r.total_units : undefined,
-      unit: r.unit ? String(r.unit) : undefined,
+      unit: r.unit ? (r.unit as LearningUnit) : undefined,
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
     }));
@@ -665,16 +627,17 @@ export const localDal = {
       "SELECT * FROM learning_logs WHERE resource_id = ? AND deleted_at IS NULL",
       [id],
     );
-    const totalMinutes = logs.reduce((sum, l) => sum + (Number(l.minutes_spent) || 0), 0);
-    const unitsCompleted = logs.reduce((sum, l) => sum + (Number(l.units_completed) || 0), 0);
+    const totalMinutesSpent = logs.reduce((sum, l) => sum + (Number(l.minutes_spent) || 0), 0);
+    const totalUnitsCompleted = logs.reduce((sum, l) => sum + (Number(l.units_completed) || 0), 0);
 
     return {
       ...resource,
-      totalMinutes,
-      unitsCompleted,
-      progressPercentage: resource.totalUnits
-        ? Math.round((unitsCompleted / resource.totalUnits) * 100)
+      totalMinutesSpent,
+      totalUnitsCompleted,
+      completionPercent: resource.totalUnits
+        ? Math.round((totalUnitsCompleted / resource.totalUnits) * 100)
         : 0,
+      skillAreaName: "",
     };
   },
 
@@ -682,11 +645,9 @@ export const localDal = {
     const db = await getLocalDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const userId = getCurrentUserId();
 
     const log: LearningLog = {
       id,
-      userId,
       resourceId: input.resourceId,
       date: input.date,
       minutesSpent: input.minutesSpent,
@@ -698,10 +659,9 @@ export const localDal = {
 
     await db.execute(
       `INSERT INTO learning_logs (id, user_id, resource_id, date, minutes_spent, units_completed, notes, created_at, updated_at, _sync_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+       VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, 'pending')`,
       [
         log.id,
-        log.userId,
         log.resourceId,
         log.date,
         log.minutesSpent,
@@ -745,7 +705,6 @@ export const localDal = {
     );
     return rows.map((r) => ({
       id: String(r.id),
-      userId: String(r.user_id),
       resourceId: String(r.resource_id),
       date: String(r.date),
       minutesSpent: Number(r.minutes_spent),
@@ -764,7 +723,6 @@ export const localDal = {
     );
     return rows.map((r) => ({
       id: String(r.id),
-      userId: String(r.user_id),
       resourceId: String(r.resource_id),
       date: String(r.date),
       minutesSpent: Number(r.minutes_spent),
@@ -795,9 +753,8 @@ export const localDal = {
       const balance = txs.reduce((sum, t) => sum + (Number(t.amount_minor) || 0), 0);
       result.push({
         id: String(a.id),
-        userId: String(a.user_id),
         name: String(a.name),
-        type: String(a.type),
+        type: a.type as AccountType,
         archived: Boolean(a.archived),
         balance,
         createdAt: String(a.created_at),
@@ -812,11 +769,9 @@ export const localDal = {
     const db = await getLocalDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const userId = getCurrentUserId();
 
     const account: Account = {
       id,
-      userId,
       name: input.name,
       type: input.type,
       archived: false,
@@ -826,8 +781,8 @@ export const localDal = {
 
     await db.execute(
       `INSERT INTO accounts (id, user_id, name, type, archived, created_at, updated_at, _sync_status)
-       VALUES (?, ?, ?, ?, 0, ?, ?, 'pending')`,
-      [account.id, account.userId, account.name, account.type, now, now],
+       VALUES (?, '', ?, ?, 0, ?, ?, 'pending')`,
+      [account.id, account.name, account.type, now, now],
     );
 
     return account;
@@ -839,7 +794,7 @@ export const localDal = {
     return rows.map((r) => ({
       id: String(r.id),
       name: String(r.name),
-      kind: r.kind as Category["kind"],
+      kind: r.kind as CategoryKind,
       archived: Boolean(r.archived),
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
@@ -883,7 +838,6 @@ export const localDal = {
     const rows = await db.select<SqliteRow[]>(sql, args);
     return rows.map((r) => ({
       id: String(r.id),
-      userId: String(r.user_id),
       accountId: String(r.account_id),
       categoryId: String(r.category_id),
       date: String(r.date),
@@ -900,11 +854,9 @@ export const localDal = {
     const db = await getLocalDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const userId = getCurrentUserId();
 
     const tx: Transaction = {
       id,
-      userId,
       accountId: input.accountId,
       categoryId: input.categoryId,
       date: input.date,
@@ -918,10 +870,9 @@ export const localDal = {
 
     await db.execute(
       `INSERT INTO transactions (id, user_id, account_id, category_id, date, amount_minor, currency, note, transfer_pair_id, created_at, updated_at, _sync_status)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+       VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
       [
         tx.id,
-        tx.userId,
         tx.accountId,
         tx.categoryId,
         tx.date,
@@ -975,22 +926,19 @@ export const localDal = {
     return rows.map((r) => ({
       categoryId: String(r.categoryId),
       categoryName: String(r.categoryName),
-      kind: r.kind as CategoryBreakdown["kind"],
+      kind: r.kind as CategoryKind,
       total: Number(r.total) || 0,
     }));
   },
 
   getFinanceWidget: async (): Promise<FinanceDashboardWidget> => {
-    const accounts = await localDal.getAccounts();
-    const netWorth = accounts.reduce((sum, a) => sum + a.balance, 0);
     const now = new Date().toISOString().split("T")[0].substring(0, 7);
-    const monthly = await localDal.getMonthlySummary(now);
+    const summary = await localDal.getMonthlySummary(now);
+    const topExpenses = await localDal.getCategoryBreakdown(now);
 
     return {
-      netWorth,
-      monthlyIncome: monthly.totalIncome,
-      monthlyExpense: monthly.totalExpense,
-      currency: "BDT",
+      summary,
+      topExpenses: topExpenses.filter((e) => e.kind === "expense"),
     };
   },
 
@@ -1005,23 +953,25 @@ export const localDal = {
     const completedTasks = tasks.filter((t) => t.status === "done");
 
     return {
-      todayDate: today,
-      scheduleStack: {
-        now: pendingTasks[0] || null,
-        next: pendingTasks[1] || null,
-        previous: completedTasks[completedTasks.length - 1] || null,
-      },
+      now: pendingTasks[0] || null,
+      next: pendingTasks[1] || null,
+      todayCount: tasks.length,
+      todayDoneCount: completedTasks.length,
+      dueHabits: habits,
+      previous: completedTasks[completedTasks.length - 1] || null,
+      upcomingReminders: reminders,
       habitConsistency: habits.map((h) => ({
-        id: h.id,
+        habitId: h.id,
         name: h.name,
-        completedToday: h.completedToday,
+        color: h.color || "#3b82f6",
+        days: [h.loggedToday ? 100 : 0],
         currentStreak: h.currentStreak,
-        last7Days: [h.completedToday],
+        weekAverage: h.loggedToday ? 100 : 0,
       })),
-      weeklyWorkoutHours: [],
+      workoutWeek: [],
+      workoutLabels: [],
       skillsProgress: [],
-      unreadArticlesCount: 0,
-      remindersToday: reminders,
+      newsItems: [],
     };
   },
 
@@ -1039,10 +989,9 @@ export const localDal = {
     const rows = await db.select<SqliteRow[]>(sql, args);
     return rows.map((r) => ({
       id: String(r.id),
-      userId: String(r.user_id),
       title: String(r.title),
       time: String(r.time),
-      date: r.date ? String(r.date) : undefined,
+      date: r.date ? String(r.date) : null,
       kind: (r.kind as Reminder["kind"]) || "reminder",
       completed: Boolean(r.completed),
       createdAt: String(r.created_at),
@@ -1059,33 +1008,22 @@ export const localDal = {
     const db = await getLocalDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const userId = getCurrentUserId();
 
     const reminder: Reminder = {
       id,
-      userId,
       title: input.title,
       time: input.time,
-      date: input.date,
+      date: input.date ?? null,
       kind: input.kind ?? "reminder",
-      completed: 0,
+      completed: false,
       createdAt: now,
       updatedAt: now,
     };
 
     await db.execute(
       `INSERT INTO reminders (id, user_id, title, time, date, kind, completed, created_at, updated_at, _sync_status)
-       VALUES (?, ?, ?, ?, ?, ?, 0, ?, ?, 'pending')`,
-      [
-        reminder.id,
-        reminder.userId,
-        reminder.title,
-        reminder.time,
-        reminder.date ?? null,
-        reminder.kind,
-        now,
-        now,
-      ],
+       VALUES (?, '', ?, ?, ?, ?, 0, ?, ?, 'pending')`,
+      [reminder.id, reminder.title, reminder.time, reminder.date ?? null, reminder.kind, now, now],
     );
 
     return reminder;
@@ -1122,12 +1060,15 @@ export const localDal = {
     return rows.map((r) => ({
       id: String(r.id),
       taskId: String(r.task_id),
-      userId: String(r.user_id),
+      userId: String(r.user_id || ""),
       reminderTime: String(r.reminder_time),
       soundType: r.sound_type as NotificationWithTask["soundType"],
       status: r.status as NotificationWithTask["status"],
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
+      taskTitle: "",
+      taskDate: "",
+      taskStartTime: "",
     }));
   },
 
@@ -1146,12 +1087,11 @@ export const localDal = {
     const db = await getLocalDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
-    const userId = getCurrentUserId();
 
     const notif: Notification = {
       id,
       taskId: input.taskId,
-      userId,
+      userId: input.userId || "",
       reminderTime: input.reminderTime,
       soundType: input.soundType ?? "default",
       status: "scheduled",
@@ -1201,7 +1141,7 @@ export const localDal = {
   // --- Profile & System ---
   updateProfile: async (input: { name?: string; email?: string }) => {
     const raw = localStorage.getItem("lifeos_session_user");
-    let user = { id: getCurrentUserId(), name: "", email: "" };
+    let user = { id: "", name: "", email: "" };
     if (raw) {
       try {
         user = JSON.parse(raw);

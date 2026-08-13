@@ -39,7 +39,7 @@ export function useHabitBuilder() {
       const habits = queryClient.getQueryData<HabitDefinition[]>(queryKeys.habits.all());
       const target = habits?.find((h) => h.id === id);
       if (!target) return;
-      return ds.updateHabit(id, { archived: target.archived ? 0 : 1 });
+      return ds.updateHabit(id, { archived: !target.archived });
     },
     onSuccess: () => invalidateHabits(),
   });

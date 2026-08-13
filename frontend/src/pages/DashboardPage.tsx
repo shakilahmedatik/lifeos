@@ -59,7 +59,9 @@ export default function DashboardPage() {
           <RemindersWidget
             reminders={summary?.upcomingReminders ?? []}
             onComplete={completeReminder}
-            onAdd={createReminder}
+            onAdd={async (input) => {
+              await createReminder(input);
+            }}
           />
         </div>
 

@@ -16,6 +16,7 @@ import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import Modal from "../components/ui/Modal.js";
 import ModalFooter from "../components/ui/ModalFooter.js";
+import { OnlineOnlyBanner } from "../components/ui/OnlineOnlyBanner.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Select } from "../components/ui/Select.js";
 import { api } from "../lib/api.js";
@@ -215,6 +216,8 @@ export default function NotificationsPage() {
           </div>
         }
       />
+
+      <OnlineOnlyBanner moduleName="Notifications & Real-time Alerts" />
 
       {loading ? (
         <div className="space-y-3">
