@@ -277,94 +277,100 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
   }
 
   return (
-    <Card className="animate-fade-in overflow-hidden">
-      <CardHeader className="flex flex-row items-center justify-between border-b border-border pb-4">
-        <CardTitle className="text-xl">{workout.name}</CardTitle>
-        <Button onClick={handleExitClick} variant="secondary" size="sm">
+    <Card className="animate-fade-in overflow-hidden h-full max-h-full flex flex-col shadow-2xl border-border/80 bg-surface-elevated/95">
+      {/* Header */}
+      <CardHeader className="flex flex-row items-center justify-between border-b border-border py-2 px-3 sm:py-3 sm:px-6 shrink-0">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <CardTitle className="text-base sm:text-lg md:text-xl truncate">{workout.name}</CardTitle>
+          <span className="text-[11px] sm:text-xs font-semibold px-2 sm:px-2.5 py-0.5 sm:py-1 rounded-full bg-surface border border-border text-secondary shrink-0">
+            Ex {currentExerciseIndex + 1}/{workout.exercises.length} • Set {currentSet}/{currentExercise.sets}
+          </span>
+        </div>
+        <Button onClick={handleExitClick} variant="secondary" size="sm" className="shrink-0 text-xs sm:text-sm">
           Exit
         </Button>
       </CardHeader>
 
-      <CardContent className="p-0">
-        <div className="grid grid-cols-1 lg:grid-cols-2">
-          {/* Left Column: Controls & Timer */}
-          <div className="p-6 border-b lg:border-b-0 lg:border-r border-border">
-            <div className="mb-8">
-              <div className="flex justify-between items-center mb-2">
-                <span className="text-sm font-medium text-secondary">
-                  Exercise {currentExerciseIndex + 1} of {workout.exercises.length}
+      {/* Progress Bar */}
+      <div className="w-full bg-card-hover h-1 overflow-hidden shrink-0">
+        <div
+          className="bg-linear-to-r from-blue-500 to-emerald-500 h-1 transition-all duration-500"
+          style={{
+            width: `${
+              ((currentExerciseIndex * currentExercise.sets + currentSet) /
+                workout.exercises.reduce((acc, we) => acc + we.sets, 0)) *
+              100
+            }%`,
+          }}
+        />
+      </div>
+
+      {/* Main Content Area */}
+      <CardContent className="p-2 sm:p-4 md:p-6 flex-1 min-h-0 overflow-hidden flex flex-col lg:grid lg:grid-cols-12 lg:gap-6">
+        {/* Left Column on Desktop / Bottom on Mobile: Exercise details + Inputs + Timer */}
+        <div className="order-2 lg:order-1 lg:col-span-6 xl:col-span-7 flex flex-col justify-between min-h-0 flex-1 gap-2 sm:gap-4">
+          
+          {/* Compact Exercise Name & Inputs Bar */}
+          <div className="bg-surface p-2.5 sm:p-4 rounded-xl border border-border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 shrink-0">
+            <div className="min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="text-base sm:text-xl md:text-2xl font-bold text-primary truncate">
+                  {exercise.name}
+                </h3>
+                <span className="text-[10px] sm:text-xs font-semibold px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 uppercase tracking-wider">
+                  {exercise.muscleGroup}
                 </span>
-                <span className="text-sm font-medium text-secondary">
-                  Set {currentSet} of {currentExercise.sets}
-                </span>
-              </div>
-              <div className="w-full bg-card-hover rounded-full h-2 overflow-hidden border border-border">
-                <div
-                  className="bg-linear-to-r from-blue-500 to-emerald-500 h-2 rounded-full transition-all duration-500"
-                  style={{
-                    width: `${
-                      ((currentExerciseIndex * currentExercise.sets + currentSet) /
-                        workout.exercises.reduce((acc, we) => acc + we.sets, 0)) *
-                      100
-                    }%`,
-                  }}
-                />
               </div>
             </div>
 
-            <div className="text-center mb-8">
-              <h3 className="text-4xl font-bold mb-3 text-primary">{exercise.name}</h3>
-              <p className="text-lg font-medium text-secondary mb-4 tracking-wider uppercase">
-                {exercise.muscleGroup}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 mb-8 bg-surface-elevated p-4 rounded-xl border border-border">
-              <div className="space-y-1">
+            {/* Reps and Weight inputs */}
+            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+              <div className="flex-1 sm:w-24">
+                <label className="block text-[10px] font-medium text-secondary mb-0.5">Reps</label>
                 <Input
-                  label="Reps (Actual)"
                   type="number"
                   min="1"
                   value={actualReps}
                   onChange={(e) => setActualReps(Number(e.target.value))}
-                  className="bg-card text-primary"
+                  className="bg-card text-primary h-8 sm:h-9 text-xs sm:text-sm py-1 px-2"
                 />
               </div>
-              <div className="space-y-1">
+              <div className="flex-1 sm:w-28">
+                <label className="block text-[10px] font-medium text-secondary mb-0.5">Weight (kg)</label>
                 <Input
-                  label="Weight (Actual)"
                   type="number"
                   min="0"
                   step="0.5"
                   value={actualWeight}
                   onChange={(e) => setActualWeight(Number(e.target.value))}
-                  className="bg-card text-primary"
+                  className="bg-card text-primary h-8 sm:h-9 text-xs sm:text-sm py-1 px-2"
                 />
               </div>
             </div>
-
-            <RestTimerDisplay
-              timer={timer}
-              currentSet={currentSet}
-              totalSets={currentExercise.sets}
-              actualReps={actualReps}
-              actualWeight={actualWeight}
-              onSkipRest={handleSkipRest}
-              onAddRestTime={handleAddRestTime}
-              onCompleteSet={handleCompleteSet}
-              onToggleTimer={(isRunning) => setTimer((prev) => ({ ...prev, isRunning }))}
-            />
           </div>
 
-          {/* Right Column: Video Player */}
-          <div className="p-6 bg-surface flex flex-col items-center justify-center">
-            <h4 className="text-secondary font-medium mb-4 w-full text-left uppercase tracking-wider text-sm">
-              Reference Video
-            </h4>
+          {/* Rest Timer Display */}
+          <RestTimerDisplay
+            timer={timer}
+            currentSet={currentSet}
+            totalSets={currentExercise.sets}
+            actualReps={actualReps}
+            actualWeight={actualWeight}
+            onSkipRest={handleSkipRest}
+            onAddRestTime={handleAddRestTime}
+            onCompleteSet={handleCompleteSet}
+            onToggleTimer={(isRunning) => setTimer((prev) => ({ ...prev, isRunning }))}
+          />
+        </div>
+
+        {/* Right Column on Desktop / Top on Mobile: Video Player */}
+        <div className="order-1 lg:order-2 lg:col-span-6 xl:col-span-5 flex flex-col justify-center min-h-0 shrink-0 mb-2 lg:mb-0 lg:h-full">
+          <div className="w-full h-36 sm:h-48 lg:h-full lg:max-h-[500px] flex items-center justify-center">
             <VideoPlayer url={exercise.videoUrl} isRunning={timer.isRunning} />
           </div>
         </div>
       </CardContent>
+
       <ConfirmDialog
         open={isExitConfirmOpen}
         title="End Session"
@@ -387,8 +393,8 @@ export function CoachMode(props: CoachModeProps) {
   }, []);
 
   return createPortal(
-    <div className="fixed inset-0 z-50 bg-surface flex flex-col overflow-y-auto w-screen h-screen">
-      <div className="w-full min-h-full max-w-7xl mx-auto p-4 md:p-8 flex flex-col justify-center">
+    <div className="fixed inset-0 z-50 bg-surface flex flex-col h-dvh w-dvw overflow-hidden p-2 sm:p-4 md:p-6">
+      <div className="w-full h-full max-w-7xl mx-auto flex flex-col min-h-0 overflow-hidden">
         <CoachModeInner {...props} />
       </div>
     </div>,
