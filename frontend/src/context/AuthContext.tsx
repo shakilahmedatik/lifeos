@@ -1,4 +1,10 @@
 import { createContext, type FC, type ReactNode, useContext, useEffect, useState } from "react";
+import {
+  clearTauriStoredSession,
+  getTauriStoredSession,
+  setTauriStoredSession,
+} from "../lib/auth/tauriAuth.js";
+import { isTauri } from "../lib/dataSource.js";
 import { useLocalStorage } from "../lib/hooks/useLocalStorage.js";
 
 export interface UserSession {
@@ -30,6 +36,17 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   useEffect(() => {
     let isMounted = true;
     const checkSession = async () => {
+      // In Tauri mode, check persistent store first
+      if (isTauri()) {
+        const stored = await getTauriStoredSession();
+        if (stored?.user && isMounted) {
+          setUser(stored.user);
+          setToken(stored.token);
+          setIsLoadingSession(false);
+          return;
+        }
+      }
+
       try {
         const headers: Record<string, string> = {};
         if (token && token !== "session-token") {
@@ -46,24 +63,24 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
           if (data?.user && isMounted) {
             setUser(data.user);
             const sessionToken = data.session?.token || token;
-            // Only set if we actually have a valid non-fallback token
             if (sessionToken && sessionToken !== "session-token") {
               setToken(sessionToken);
+              if (isTauri()) {
+                setTauriStoredSession({ token: sessionToken, user: data.user });
+              }
             } else {
-              removeToken(); // Rely entirely on cookies
+              removeToken();
             }
           } else if (isMounted) {
-            // Session expired or invalid on backend
             removeUser();
             removeToken();
           }
         } else if (res.status === 401 && isMounted) {
-          // Explicitly unauthorized, meaning session is invalid
           removeUser();
           removeToken();
         }
       } catch (_err) {
-        // Network or fetch error - keep cached local user state if offline
+        // Keep cached local user state if offline
       } finally {
         if (isMounted) {
           setIsLoadingSession(false);
@@ -80,6 +97,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const login = (newToken: string | null, newUser: UserSession) => {
     if (newToken && newToken !== "session-token") {
       setToken(newToken);
+      if (isTauri()) {
+        setTauriStoredSession({ token: newToken, user: newUser });
+      }
     } else {
       removeToken();
     }
@@ -88,6 +108,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const updateUser = (updatedUser: UserSession) => {
     setUser(updatedUser);
+    if (isTauri() && token) {
+      setTauriStoredSession({ token, user: updatedUser });
+    }
   };
 
   const logout = () => {
@@ -98,6 +121,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     }).catch(() => {});
     removeToken();
     removeUser();
+    if (isTauri()) {
+      clearTauriStoredSession();
+    }
   };
 
   return (

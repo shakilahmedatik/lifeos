@@ -15,6 +15,7 @@ describe("Application Composition Root", () => {
     expect(container.modules.finance).toBeDefined();
     expect(container.modules.habits).toBeDefined();
     expect(container.modules.health).toBeDefined();
+    expect(container.modules.sync).toBeDefined();
     expect(app).toBeDefined();
 
     container.db.close();

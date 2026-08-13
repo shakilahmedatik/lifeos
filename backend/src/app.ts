@@ -33,7 +33,7 @@ export function createApp(container: Container): Express {
     }),
   );
 
-  app.use(express.json());
+  app.use(express.json({ limit: "10mb" }));
   app.use("/api", apiRateLimiter);
 
   // Auth & Health public routes
@@ -52,6 +52,7 @@ export function createApp(container: Container): Express {
   app.use("/api/skills", modules.auth.middleware, modules.skills.router);
   app.use("/api/backup", modules.auth.middleware, modules.backup.router);
   app.use("/api/settings", modules.auth.middleware, modules.settings.router);
+  app.use("/api/sync", modules.auth.middleware, modules.sync.router);
 
   // Global error handler
   app.use(

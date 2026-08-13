@@ -14,6 +14,7 @@ import { initRemindersModule } from "./modules/reminders/index.js";
 import { initRoutineModule } from "./modules/routine/index.js";
 import { initSettingsModule } from "./modules/settings/index.js";
 import { initSkillsModule } from "./modules/skills/index.js";
+import { createSyncRouter } from "./modules/sync/router.js";
 import { initWorkoutsModule } from "./modules/workouts/index.js";
 import { createDatabase } from "./shared/db.js";
 import { runMigrations } from "./shared/migrations/runner.js";
@@ -34,6 +35,7 @@ export interface Container {
     routine: ReturnType<typeof initRoutineModule>;
     settings: ReturnType<typeof initSettingsModule>;
     skills: ReturnType<typeof initSkillsModule>;
+    sync: { router: ReturnType<typeof createSyncRouter> };
     workouts: ReturnType<typeof initWorkoutsModule>;
   };
   startBackgroundJobs: () => void;
@@ -55,6 +57,7 @@ export async function createContainer(config: AppConfig): Promise<Container> {
   const news = initNewsModule(db);
   const skills = initSkillsModule(db);
   const settings = initSettingsModule(db);
+  const sync = { router: createSyncRouter(db) };
   const dashboard = initDashboardModule({
     taskRepo: routine.taskRepo,
     habitLogService: habits.habitLogService,
@@ -106,6 +109,7 @@ export async function createContainer(config: AppConfig): Promise<Container> {
       routine,
       settings,
       skills,
+      sync,
       workouts,
     },
     startBackgroundJobs,

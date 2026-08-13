@@ -10,6 +10,7 @@ import {
   Wallet as WalletIcon,
 } from "lucide-react";
 import { NavLink } from "react-router-dom";
+import { SyncButton } from "../SyncButton.js";
 
 const navItems = [
   { to: "/", icon: HomeIcon, label: "Home" },
@@ -50,6 +51,9 @@ export default function Dock() {
             </span>
           </NavLink>
         ))}
+        <div className="ml-1 pl-1 border-l border-border hidden sm:block">
+          <SyncButton />
+        </div>
       </nav>
     </div>
   );
