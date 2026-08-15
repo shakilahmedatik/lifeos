@@ -1,6 +1,7 @@
 import type { HabitWithStreak } from "@lifeos/contracts";
 import { Check, ChevronLeft, ChevronRight, Plus, RotateCcw } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
+import { EmptyState } from "../../../components/ui/EmptyState.js";
 import { DashboardPanel } from "../components/DashboardPanel.js";
 
 interface HabitCarouselWidgetProps {
@@ -38,9 +39,7 @@ export function HabitCarouselWidget({ habits, onLog, onUnlog }: HabitCarouselWid
   if (habits.length === 0) {
     return (
       <DashboardPanel title="Habit Log" subtitle="streaks">
-        <div className="flex-1 flex items-center justify-center text-center text-muted text-xs">
-          No active habits due today
-        </div>
+        <EmptyState title="No active habits due today" className="py-4" />
       </DashboardPanel>
     );
   }

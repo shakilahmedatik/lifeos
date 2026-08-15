@@ -98,7 +98,7 @@ export function HabitConsistencyWidget({ habits }: HabitConsistencyWidgetProps) 
       subtitle="7 days"
       action={<RadialProgress pct={overallAvg} />}
     >
-      <div className="flex flex-col gap-2.5 justify-center h-full overflow-hidden">
+      <div className="flex flex-col gap-2.5 justify-center h-full w-full overflow-hidden">
         {habits.length === 0 ? (
           <EmptyState title="No habit data" className="py-4" />
         ) : (
@@ -119,7 +119,7 @@ export function HabitConsistencyWidget({ habits }: HabitConsistencyWidgetProps) 
               </div>
 
               {/* Sparkline Curve */}
-              <div className="hidden sm:block h-5 flex-1 min-w-[50px] max-w-[90px] px-1">
+              <div className="hidden sm:block h-5 flex-1 min-w-12.5 max-w-22.5 px-1">
                 <Sparkline data={row.days} color={row.color} className="w-full h-full" />
               </div>
 

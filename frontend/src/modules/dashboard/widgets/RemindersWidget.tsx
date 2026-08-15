@@ -64,15 +64,15 @@ export function RemindersWidget({ reminders, onComplete, onAdd }: RemindersWidge
           </button>
         }
       >
-        <div className="flex flex-col h-full overflow-hidden">
-          <div className="flex flex-col overflow-y-auto divide-y divide-border/40">
+        <div className="flex flex-col h-full overflow-hidden justify-center">
+          <div className="flex flex-col overflow-y-auto divide-y divide-border/40 my-auto">
             {reminders.length === 0 ? (
-              <EmptyState title="No upcoming reminders" className="py-6" />
+              <EmptyState title="No upcoming reminders" className="py-4" />
             ) : (
               reminders.slice(0, 4).map((r) => (
                 <div
                   key={r.id}
-                  className="flex items-center justify-between py-2 px-1 hover:bg-card-hover/30 rounded transition-colors group"
+                  className="flex items-center justify-between py-1.5 px-1 hover:bg-card-hover/40 rounded transition-colors group"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
                     <span className="font-mono text-[11px] text-muted w-10 shrink-0">{r.time}</span>

@@ -47,7 +47,7 @@ export default function DashboardPage() {
       <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 gap-3.5 min-h-0 overflow-visible lg:overflow-hidden pb-6 lg:pb-0">
         {/* ROW 1 */}
         {/* Schedule Stack (Spans 2 cols on tablet & desktop) */}
-        <div className="md:col-span-2 lg:col-span-2 min-h-0 flex flex-col">
+        <div className="md:col-span-2 lg:col-span-2 min-h-0 flex flex-col justify-center">
           <ScheduleWidget
             previous={summary?.previous ?? null}
             now={summary?.now ?? null}
@@ -59,7 +59,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Reminders & Events */}
-        <div className="min-h-0 flex flex-col">
+        <div className="min-h-0 flex flex-col justify-center">
           <RemindersWidget
             reminders={summary?.upcomingReminders ?? []}
             onComplete={completeReminder}
@@ -70,7 +70,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Habit Log Carousel */}
-        <div className="min-h-0 flex flex-col">
+        <div className="min-h-0 flex flex-col justify-center">
           <HabitCarouselWidget
             habits={summary?.dueHabits ?? []}
             onLog={logHabit}
@@ -80,12 +80,12 @@ export default function DashboardPage() {
 
         {/* ROW 2 */}
         {/* Habit Consistency Sparklines */}
-        <div className="min-h-0 flex flex-col">
+        <div className="min-h-0 flex flex-col justify-center">
           <HabitConsistencyWidget habits={summary?.habitConsistency ?? []} />
         </div>
 
         {/* Workout Stacked Column Chart */}
-        <div className="min-h-0 flex flex-col">
+        <div className="min-h-0 flex flex-col justify-center">
           <WorkoutChartWidget
             data={summary?.workoutWeek ?? []}
             labels={summary?.workoutLabels ?? []}
@@ -93,12 +93,12 @@ export default function DashboardPage() {
         </div>
 
         {/* Skills Progress */}
-        <div className="min-h-0 flex flex-col">
+        <div className="min-h-0 flex flex-col justify-center">
           <SkillsProgressWidget skills={summary?.skillsProgress ?? []} />
         </div>
 
         {/* Tech News Catch-up */}
-        <div className="min-h-0 flex flex-col">
+        <div className="min-h-0 flex flex-col justify-center">
           <NewsWidget items={summary?.newsItems ?? []} />
         </div>
       </div>

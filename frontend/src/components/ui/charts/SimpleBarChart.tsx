@@ -24,7 +24,7 @@ const DEFAULT_COLORS = [
   "var(--color-secondary)",
 ];
 
-const DEFAULT_PADDING = { top: 10, right: 10, bottom: 24, left: 10 };
+const DEFAULT_PADDING = { top: 10, right: 12, bottom: 24, left: 12 };
 
 export function SimpleBarChart({
   data,
@@ -40,7 +40,12 @@ export function SimpleBarChart({
 }: SimpleBarChartProps) {
   const svgRef = useRef<SVGSVGElement>(null);
   const [tooltip, setTooltip] = useState<TooltipData | null>(null);
-  const PADDING = { ...DEFAULT_PADDING, left: showYAxis ? 40 : DEFAULT_PADDING.left };
+  const PADDING = {
+    top: DEFAULT_PADDING.top,
+    right: DEFAULT_PADDING.right,
+    bottom: showXAxis ? DEFAULT_PADDING.bottom : 6,
+    left: showYAxis ? 40 : DEFAULT_PADDING.left,
+  };
 
   const maxValue = Math.max(...data.map((d) => d.value), 1);
 
@@ -87,11 +92,11 @@ export function SimpleBarChart({
   const labelInterval = data.length <= 7 ? 1 : data.length <= 14 ? 2 : data.length <= 21 ? 3 : 5;
 
   return (
-    <div className={`relative w-full ${className}`} style={{ minHeight: height }}>
+    <div className={`relative w-full ${className}`}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${svgWidth} ${height}`}
-        className="w-full h-full block overflow-visible"
+        className="w-full h-auto block overflow-visible"
         preserveAspectRatio="none"
       >
         {showGrid &&
@@ -114,8 +119,8 @@ export function SimpleBarChart({
         {showYAxis && (
           <>
             <text
-              x={PADDING.left - 4}
-              y={PADDING.top + 4}
+              x={PADDING.left - 6}
+              y={PADDING.top + 2}
               textAnchor="end"
               fill="var(--color-muted)"
               fontSize={10}
@@ -125,7 +130,7 @@ export function SimpleBarChart({
               {formatValue(maxValue)}
             </text>
             <text
-              x={PADDING.left - 4}
+              x={PADDING.left - 6}
               y={PADDING.top + chartHeight}
               textAnchor="end"
               fill="var(--color-muted)"
