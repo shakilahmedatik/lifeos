@@ -983,16 +983,12 @@ export const localDal = {
   getAccounts: async (): Promise<AccountWithBalance[]> => {
     const db = await getLocalDb();
     const accounts = await db.select<SqliteRow[]>(
-      "SELECT * FROM accounts WHERE deleted_at IS NULL",
+      "SELECT * FROM accounts WHERE deleted_at IS NULL ORDER BY name ASC",
     );
     const result: AccountWithBalance[] = [];
 
     for (const a of accounts) {
-      const txs = await db.select<SqliteRow[]>(
-        "SELECT amount_minor FROM transactions WHERE account_id = ? AND deleted_at IS NULL",
-        [a.id],
-      );
-      const balance = txs.reduce((sum, t) => sum + (Number(t.amount_minor) || 0), 0);
+      const balance = await localDal.getAccountBalance(String(a.id));
       result.push({
         id: String(a.id),
         name: String(a.name),
@@ -1005,6 +1001,61 @@ export const localDal = {
     }
 
     return result;
+  },
+
+  getActiveAccounts: async (): Promise<Account[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM accounts WHERE deleted_at IS NULL AND archived = 0 ORDER BY name ASC",
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      name: String(r.name),
+      type: r.type as AccountType,
+      archived: false,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    }));
+  },
+
+  getAccount: async (id: string): Promise<Account | null> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM accounts WHERE id = ? AND deleted_at IS NULL",
+      [id],
+    );
+    if (!rows[0]) return null;
+    const r = rows[0];
+    return {
+      id: String(r.id),
+      name: String(r.name),
+      type: r.type as AccountType,
+      archived: Boolean(r.archived),
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    };
+  },
+
+  getAccountBalance: async (id: string): Promise<number> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      `SELECT COALESCE(SUM(
+         CASE
+           WHEN c.kind = 'income' THEN t.amount_minor
+           WHEN c.kind = 'expense' THEN -t.amount_minor
+           ELSE 0
+         END
+       ), 0) as balance
+       FROM transactions t
+       JOIN categories c ON t.category_id = c.id
+       WHERE t.account_id = ? AND t.deleted_at IS NULL`,
+      [id],
+    );
+    return Number(rows[0]?.balance ?? 0);
+  },
+
+  getAccountBalances: async (): Promise<AccountWithBalance[]> => {
+    return localDal.getAccounts();
   },
 
   createAccount: async (input: NewAccountInput): Promise<Account> => {
@@ -1030,9 +1081,60 @@ export const localDal = {
     return account;
   },
 
+  updateAccount: async (id: string, patch: Partial<NewAccountInput>): Promise<Account> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    const existing = await localDal.getAccount(id);
+    if (!existing) throw new Error("Account not found");
+
+    const name = patch.name ?? existing.name;
+    const type = patch.type ?? existing.type;
+
+    await db.execute(
+      "UPDATE accounts SET name = ?, type = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [name, type, now, id],
+    );
+
+    return {
+      ...existing,
+      name,
+      type,
+      updatedAt: now,
+    };
+  },
+
+  archiveAccount: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE accounts SET archived = 1, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, id],
+    );
+  },
+
+  unarchiveAccount: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE accounts SET archived = 0, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, id],
+    );
+  },
+
+  deleteAccount: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE accounts SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, now, id],
+    );
+  },
+
   getCategories: async (): Promise<Category[]> => {
     const db = await getLocalDb();
-    const rows = await db.select<SqliteRow[]>("SELECT * FROM categories WHERE deleted_at IS NULL");
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM categories WHERE deleted_at IS NULL ORDER BY name ASC",
+    );
     return rows.map((r) => ({
       id: String(r.id),
       name: String(r.name),
@@ -1041,6 +1143,69 @@ export const localDal = {
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
     }));
+  },
+
+  getActiveCategories: async (): Promise<Category[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM categories WHERE deleted_at IS NULL AND archived = 0 ORDER BY name ASC",
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      name: String(r.name),
+      kind: r.kind as CategoryKind,
+      archived: false,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    }));
+  },
+
+  getIncomeCategories: async (): Promise<Category[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM categories WHERE deleted_at IS NULL AND kind = 'income' AND archived = 0 ORDER BY name ASC",
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      name: String(r.name),
+      kind: "income",
+      archived: false,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    }));
+  },
+
+  getExpenseCategories: async (): Promise<Category[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM categories WHERE deleted_at IS NULL AND kind = 'expense' AND archived = 0 ORDER BY name ASC",
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      name: String(r.name),
+      kind: "expense",
+      archived: false,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    }));
+  },
+
+  getCategory: async (id: string): Promise<Category | null> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM categories WHERE id = ? AND deleted_at IS NULL",
+      [id],
+    );
+    if (!rows[0]) return null;
+    const r = rows[0];
+    return {
+      id: String(r.id),
+      name: String(r.name),
+      kind: r.kind as CategoryKind,
+      archived: Boolean(r.archived),
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    };
   },
 
   createCategory: async (input: NewCategoryInput): Promise<Category> => {
@@ -1066,6 +1231,55 @@ export const localDal = {
     return category;
   },
 
+  updateCategory: async (id: string, patch: Partial<NewCategoryInput>): Promise<Category> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    const existing = await localDal.getCategory(id);
+    if (!existing) throw new Error("Category not found");
+
+    const name = patch.name ?? existing.name;
+    const kind = patch.kind ?? existing.kind;
+
+    await db.execute(
+      "UPDATE categories SET name = ?, kind = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [name, kind, now, id],
+    );
+
+    return {
+      ...existing,
+      name,
+      kind,
+      updatedAt: now,
+    };
+  },
+
+  archiveCategory: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE categories SET archived = 1, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, id],
+    );
+  },
+
+  unarchiveCategory: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE categories SET archived = 0, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, id],
+    );
+  },
+
+  deleteCategory: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE categories SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, now, id],
+    );
+  },
+
   getTransactions: async (accountId?: string): Promise<Transaction[]> => {
     const db = await getLocalDb();
     let sql = "SELECT * FROM transactions WHERE deleted_at IS NULL";
@@ -1075,7 +1289,7 @@ export const localDal = {
       sql += " AND account_id = ?";
       args.push(accountId);
     }
-    sql += " ORDER BY date DESC";
+    sql += " ORDER BY date DESC, created_at DESC";
 
     const rows = await db.select<SqliteRow[]>(sql, args);
     return rows.map((r) => ({
@@ -1090,6 +1304,55 @@ export const localDal = {
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
     }));
+  },
+
+  getTransactionsByDateRange: async (
+    startDate: string,
+    endDate: string,
+  ): Promise<Transaction[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM transactions WHERE deleted_at IS NULL AND date >= ? AND date <= ? ORDER BY date DESC, created_at DESC",
+      [startDate, endDate],
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      accountId: String(r.account_id),
+      categoryId: String(r.category_id),
+      date: String(r.date),
+      amountMinor: Number(r.amount_minor),
+      currency: String(r.currency || "BDT"),
+      note: r.note ? String(r.note) : undefined,
+      transferPairId: r.transfer_pair_id ? String(r.transfer_pair_id) : undefined,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    }));
+  },
+
+  getTransactionsByAccount: async (accountId: string): Promise<Transaction[]> => {
+    return localDal.getTransactions(accountId);
+  },
+
+  getTransaction: async (id: string): Promise<Transaction | null> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM transactions WHERE id = ? AND deleted_at IS NULL",
+      [id],
+    );
+    if (!rows[0]) return null;
+    const r = rows[0];
+    return {
+      id: String(r.id),
+      accountId: String(r.account_id),
+      categoryId: String(r.category_id),
+      date: String(r.date),
+      amountMinor: Number(r.amount_minor),
+      currency: String(r.currency || "BDT"),
+      note: r.note ? String(r.note) : undefined,
+      transferPairId: r.transfer_pair_id ? String(r.transfer_pair_id) : undefined,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    };
   },
 
   createTransaction: async (input: NewTransactionInput): Promise<Transaction> => {
@@ -1130,25 +1393,167 @@ export const localDal = {
     return tx;
   },
 
-  getMonthlySummary: async (yearMonth: string): Promise<MonthlySummary> => {
+  updateTransaction: async (
+    id: string,
+    patch: Partial<NewTransactionInput>,
+  ): Promise<Transaction> => {
     const db = await getLocalDb();
-    const rows = await db.select<SqliteRow[]>(
-      `SELECT t.amount_minor, c.kind FROM transactions t
-       JOIN categories c ON t.category_id = c.id
-       WHERE t.date LIKE ? AND t.deleted_at IS NULL`,
-      [`${yearMonth}%`],
+    const now = new Date().toISOString();
+    const existing = await localDal.getTransaction(id);
+    if (!existing) throw new Error("Transaction not found");
+
+    const accountId = patch.accountId ?? existing.accountId;
+    const categoryId = patch.categoryId ?? existing.categoryId;
+    const date = patch.date ?? existing.date;
+    const amountMinor = patch.amountMinor ?? existing.amountMinor;
+    const currency = patch.currency ?? existing.currency;
+    const note = patch.note !== undefined ? patch.note : existing.note;
+    const transferPairId =
+      patch.transferPairId !== undefined ? patch.transferPairId : existing.transferPairId;
+
+    await db.execute(
+      `UPDATE transactions
+       SET account_id = ?, category_id = ?, date = ?, amount_minor = ?, currency = ?, note = ?, transfer_pair_id = ?, updated_at = ?, _sync_status = 'pending'
+       WHERE id = ?`,
+      [
+        accountId,
+        categoryId,
+        date,
+        amountMinor,
+        currency,
+        note ?? null,
+        transferPairId ?? null,
+        now,
+        id,
+      ],
     );
 
-    let totalIncome = 0;
-    let totalExpense = 0;
-    for (const r of rows) {
-      const amount = Number(r.amount_minor) || 0;
-      if (r.kind === "income") totalIncome += amount;
-      else if (r.kind === "expense") totalExpense += amount;
+    return {
+      id,
+      accountId,
+      categoryId,
+      date,
+      amountMinor,
+      currency,
+      note,
+      transferPairId,
+      createdAt: existing.createdAt,
+      updatedAt: now,
+    };
+  },
+
+  deleteTransaction: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT transfer_pair_id FROM transactions WHERE id = ?",
+      [id],
+    );
+    const transferPairId = rows[0]?.transfer_pair_id ? String(rows[0].transfer_pair_id) : null;
+
+    if (transferPairId) {
+      await db.execute(
+        "UPDATE transactions SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ? OR transfer_pair_id = ?",
+        [now, now, id, transferPairId],
+      );
+    } else {
+      await db.execute(
+        "UPDATE transactions SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+        [now, now, id],
+      );
+    }
+  },
+
+  createTransfer: async (
+    fromAccountId: string,
+    toAccountId: string,
+    amountMinor: number,
+    date: string,
+    note?: string,
+  ): Promise<{ from: Transaction; to: Transaction }> => {
+    const db = await getLocalDb();
+    const fromAccount = await localDal.getAccount(fromAccountId);
+    if (!fromAccount) throw new Error("Source account not found");
+    const toAccount = await localDal.getAccount(toAccountId);
+    if (!toAccount) throw new Error("Destination account not found");
+    if (fromAccountId === toAccountId) throw new Error("Cannot transfer to the same account");
+    if (amountMinor <= 0) throw new Error("Amount must be positive");
+
+    const expenseCats = await db.select<SqliteRow[]>(
+      "SELECT id FROM categories WHERE deleted_at IS NULL AND kind = 'expense' AND archived = 0 ORDER BY (name = 'Transfer Out') DESC LIMIT 1",
+    );
+    let expenseCatId = expenseCats[0]?.id ? String(expenseCats[0].id) : "";
+    if (!expenseCatId) {
+      const created = await localDal.createCategory({ name: "Transfer Out", kind: "expense" });
+      expenseCatId = created.id;
     }
 
+    const incomeCats = await db.select<SqliteRow[]>(
+      "SELECT id FROM categories WHERE deleted_at IS NULL AND kind = 'income' AND archived = 0 ORDER BY (name = 'Transfer In') DESC LIMIT 1",
+    );
+    let incomeCatId = incomeCats[0]?.id ? String(incomeCats[0].id) : "";
+    if (!incomeCatId) {
+      const created = await localDal.createCategory({ name: "Transfer In", kind: "income" });
+      incomeCatId = created.id;
+    }
+
+    const transferPairId = crypto.randomUUID();
+
+    const fromTransaction = await localDal.createTransaction({
+      accountId: fromAccountId,
+      categoryId: expenseCatId,
+      date,
+      amountMinor,
+      note: note ? `Transfer to ${toAccount.name}: ${note}` : `Transfer to ${toAccount.name}`,
+      transferPairId,
+    });
+
+    const toTransaction = await localDal.createTransaction({
+      accountId: toAccountId,
+      categoryId: incomeCatId,
+      date,
+      amountMinor,
+      note: note
+        ? `Transfer from ${fromAccount.name}: ${note}`
+        : `Transfer from ${fromAccount.name}`,
+      transferPairId,
+    });
+
+    return { from: fromTransaction, to: toTransaction };
+  },
+
+  getMonthlySummary: async (yearMonth: string): Promise<MonthlySummary> => {
+    const db = await getLocalDb();
+    const valid = /^\d{4}-\d{2}$/.test(yearMonth);
+    const targetYm = valid ? yearMonth : new Date().toISOString().slice(0, 7);
+    const [yearStr, monthStr] = targetYm.split("-");
+    const year = Number.parseInt(yearStr, 10);
+    const month = Number.parseInt(monthStr, 10);
+    const lastDay = new Date(year, month, 0).getDate();
+    const startDate = `${targetYm}-01`;
+    const endDate = `${targetYm}-${String(lastDay).padStart(2, "0")}`;
+
+    const incomeRows = await db.select<SqliteRow[]>(
+      `SELECT COALESCE(SUM(t.amount_minor), 0) as total
+       FROM transactions t
+       JOIN categories c ON t.category_id = c.id
+       WHERE t.date >= ? AND t.date <= ? AND c.kind = 'income' AND t.transfer_pair_id IS NULL AND t.deleted_at IS NULL`,
+      [startDate, endDate],
+    );
+
+    const expenseRows = await db.select<SqliteRow[]>(
+      `SELECT COALESCE(SUM(t.amount_minor), 0) as total
+       FROM transactions t
+       JOIN categories c ON t.category_id = c.id
+       WHERE t.date >= ? AND t.date <= ? AND c.kind = 'expense' AND t.transfer_pair_id IS NULL AND t.deleted_at IS NULL`,
+      [startDate, endDate],
+    );
+
+    const totalIncome = Number(incomeRows[0]?.total ?? 0);
+    const totalExpense = Number(expenseRows[0]?.total ?? 0);
+
     return {
-      yearMonth,
+      yearMonth: targetYm,
       totalIncome,
       totalExpense,
       net: totalIncome - totalExpense,
@@ -1157,13 +1562,23 @@ export const localDal = {
 
   getCategoryBreakdown: async (yearMonth: string): Promise<CategoryBreakdown[]> => {
     const db = await getLocalDb();
+    const valid = /^\d{4}-\d{2}$/.test(yearMonth);
+    const targetYm = valid ? yearMonth : new Date().toISOString().slice(0, 7);
+    const [yearStr, monthStr] = targetYm.split("-");
+    const year = Number.parseInt(yearStr, 10);
+    const month = Number.parseInt(monthStr, 10);
+    const lastDay = new Date(year, month, 0).getDate();
+    const startDate = `${targetYm}-01`;
+    const endDate = `${targetYm}-${String(lastDay).padStart(2, "0")}`;
+
     const rows = await db.select<SqliteRow[]>(
       `SELECT c.id as categoryId, c.name as categoryName, c.kind, SUM(t.amount_minor) as total
        FROM transactions t
        JOIN categories c ON t.category_id = c.id
-       WHERE t.date LIKE ? AND t.deleted_at IS NULL
-       GROUP BY c.id`,
-      [`${yearMonth}%`],
+       WHERE t.date >= ? AND t.date <= ? AND t.transfer_pair_id IS NULL AND t.deleted_at IS NULL
+       GROUP BY c.id, c.name, c.kind
+       ORDER BY total DESC`,
+      [startDate, endDate],
     );
     return rows.map((r) => ({
       categoryId: String(r.categoryId),
@@ -1173,14 +1588,28 @@ export const localDal = {
     }));
   },
 
+  getMonthlyTransactions: async (yearMonth: string): Promise<Transaction[]> => {
+    const valid = /^\d{4}-\d{2}$/.test(yearMonth);
+    const targetYm = valid ? yearMonth : new Date().toISOString().slice(0, 7);
+    const [yearStr, monthStr] = targetYm.split("-");
+    const year = Number.parseInt(yearStr, 10);
+    const month = Number.parseInt(monthStr, 10);
+    const lastDay = new Date(year, month, 0).getDate();
+    const startDate = `${targetYm}-01`;
+    const endDate = `${targetYm}-${String(lastDay).padStart(2, "0")}`;
+    return localDal.getTransactionsByDateRange(startDate, endDate);
+  },
+
   getFinanceWidget: async (): Promise<FinanceDashboardWidget> => {
     const now = new Date().toISOString().split("T")[0].substring(0, 7);
     const summary = await localDal.getMonthlySummary(now);
-    const topExpenses = await localDal.getCategoryBreakdown(now);
+    const topExpenses = (await localDal.getCategoryBreakdown(now)).filter(
+      (e) => e.kind === "expense",
+    );
 
     return {
       summary,
-      topExpenses: topExpenses.filter((e) => e.kind === "expense"),
+      topExpenses,
     };
   },
 

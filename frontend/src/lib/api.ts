@@ -286,34 +286,108 @@ export const api = {
 
   // Finance
   getAccounts: () => request<AccountWithBalance[]>("/api/finance/accounts"),
+  getActiveAccounts: () => request<Account[]>("/api/finance/accounts/active"),
+  getAccount: (id: string) => request<Account>(`/api/finance/accounts/${id}`),
+  getAccountBalance: async (id: string) => {
+    const data = await request<{ balance: number }>(`/api/finance/accounts/${id}/balance`);
+    return data.balance;
+  },
+  getAccountBalances: () => request<AccountWithBalance[]>("/api/finance/balances"),
   createAccount: (input: NewAccountInput) =>
     request<Account>("/api/finance/accounts", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
+  updateAccount: (id: string, patch: Partial<NewAccountInput>) =>
+    request<Account>(`/api/finance/accounts/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  archiveAccount: (id: string) =>
+    request<void>(`/api/finance/accounts/${id}/archive`, { method: "POST" }),
+  unarchiveAccount: (id: string) =>
+    request<void>(`/api/finance/accounts/${id}/unarchive`, { method: "POST" }),
+  deleteAccount: (id: string) => request<void>(`/api/finance/accounts/${id}`, { method: "DELETE" }),
+
   getCategories: () => request<Category[]>("/api/finance/categories"),
+  getActiveCategories: () => request<Category[]>("/api/finance/categories/active"),
+  getIncomeCategories: () => request<Category[]>("/api/finance/categories/income"),
+  getExpenseCategories: () => request<Category[]>("/api/finance/categories/expense"),
+  getCategory: (id: string) => request<Category>(`/api/finance/categories/${id}`),
   createCategory: (input: NewCategoryInput) =>
     request<Category>("/api/finance/categories", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
+  updateCategory: (id: string, patch: Partial<NewCategoryInput>) =>
+    request<Category>(`/api/finance/categories/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  archiveCategory: (id: string) =>
+    request<void>(`/api/finance/categories/${id}/archive`, { method: "POST" }),
+  unarchiveCategory: (id: string) =>
+    request<void>(`/api/finance/categories/${id}/unarchive`, { method: "POST" }),
+  deleteCategory: (id: string) =>
+    request<void>(`/api/finance/categories/${id}`, { method: "DELETE" }),
+
   getTransactions: (accountId?: string) =>
     request<Transaction[]>(
       `/api/finance/transactions${accountId ? `?accountId=${accountId}` : ""}`,
     ),
+  getTransactionsByDateRange: (startDate: string, endDate: string) =>
+    request<Transaction[]>(`/api/finance/transactions?startDate=${startDate}&endDate=${endDate}`),
+  getTransactionsByAccount: (accountId: string) =>
+    request<Transaction[]>(`/api/finance/transactions?accountId=${accountId}`),
+  getTransaction: (id: string) => request<Transaction>(`/api/finance/transactions/${id}`),
   createTransaction: (input: NewTransactionInput) =>
     request<Transaction>("/api/finance/transactions", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
     }),
+  updateTransaction: (id: string, patch: Partial<NewTransactionInput>) =>
+    request<Transaction>(`/api/finance/transactions/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  deleteTransaction: (id: string) =>
+    request<void>(`/api/finance/transactions/${id}`, { method: "DELETE" }),
+  createTransfer: (
+    fromAccountId: string,
+    toAccountId: string,
+    amountMinor: number,
+    date: string,
+    note?: string,
+  ) =>
+    request<{ from: Transaction; to: Transaction }>("/api/finance/transfers", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ fromAccountId, toAccountId, amountMinor, date, note }),
+    }),
+
   getMonthlySummary: (yearMonth: string) =>
-    request<MonthlySummary>(`/api/finance/reports/monthly?yearMonth=${yearMonth}`),
+    request<MonthlySummary>(`/api/finance/monthly/${yearMonth}`),
   getCategoryBreakdown: (yearMonth: string) =>
-    request<CategoryBreakdown[]>(`/api/finance/reports/categories?yearMonth=${yearMonth}`),
-  getFinanceWidget: () => request<FinanceDashboardWidget>("/api/finance/widget"),
+    request<CategoryBreakdown[]>(`/api/finance/monthly/${yearMonth}/breakdown`),
+  getMonthlyTransactions: (yearMonth: string) =>
+    request<Transaction[]>(`/api/finance/monthly/${yearMonth}/transactions`),
+  getFinanceWidget: async (): Promise<FinanceDashboardWidget> => {
+    const now = new Date().toISOString().split("T")[0].substring(0, 7);
+    const [summary, breakdown] = await Promise.all([
+      api.getMonthlySummary(now),
+      api.getCategoryBreakdown(now),
+    ]);
+    return {
+      summary,
+      topExpenses: breakdown.filter((e) => e.kind === "expense"),
+    };
+  },
 
   // Backup
   downloadBackup: () => request<{ filename: string; path: string }>("/api/backup"),
