@@ -33,19 +33,21 @@ export function DonutChart({
 
   const cx = size / 2;
   const cy = size / 2;
-  const r = outerRadius ?? size / 2 - 4;
-  const ir = innerRadius ?? r * 0.6;
-  const total = data.reduce((sum, d) => sum + d.value, 0);
+  const r = outerRadius ?? size / 2 - 6;
+  const ir = innerRadius ?? r * 0.68;
+  const strokeWidth = r - ir;
+  const total = data.reduce((sum, d) => sum + Math.max(0, d.value), 0);
 
   const handleMouseEnter = useCallback(
     (e: React.MouseEvent, d: DonutSegment) => {
       if (!showTooltip || !svgRef.current) return;
       const rect = svgRef.current.getBoundingClientRect();
+      const pct = total > 0 ? Math.round((d.value / total) * 100) : 0;
       setTooltip({
         x: e.clientX - rect.left,
         y: e.clientY - rect.top,
         label: d.label,
-        value: `${formatValue(d.value)} (${total > 0 ? Math.round((d.value / total) * 100) : 0}%)`,
+        value: `${formatValue(d.value)} (${pct}%)`,
         color: d.color,
       });
     },
@@ -57,68 +59,105 @@ export function DonutChart({
     setHoveredIndex(null);
   }, []);
 
-  if (data.length === 0 || total === 0) {
-    return (
-      <div
-        className={`flex items-center justify-center text-muted text-xs ${className}`}
-        style={{ width: size, height: size }}
-      >
-        No data
-      </div>
-    );
-  }
-
-  let cumulativeAngle = -90;
-
-  const segments = data.map((d, i) => {
-    const angle = (d.value / total) * 359.999;
-    const startAngle = cumulativeAngle;
-    const endAngle = cumulativeAngle + angle;
-    cumulativeAngle = endAngle;
-
-    const startRad = (startAngle * Math.PI) / 180;
-    const endRad = (endAngle * Math.PI) / 180;
-
-    const x1 = cx + r * Math.cos(startRad);
-    const y1 = cy + r * Math.sin(startRad);
-    const x2 = cx + r * Math.cos(endRad);
-    const y2 = cy + r * Math.sin(endRad);
-
-    const ix1 = cx + ir * Math.cos(startRad);
-    const iy1 = cy + ir * Math.sin(startRad);
-    const ix2 = cx + ir * Math.cos(endRad);
-    const iy2 = cy + ir * Math.sin(endRad);
-
-    const largeArc = angle > 180 ? 1 : 0;
-
-    const path = [
-      `M ${x1} ${y1}`,
-      `A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`,
-      `L ${ix2} ${iy2}`,
-      `A ${ir} ${ir} 0 ${largeArc} 0 ${ix1} ${iy1}`,
-      "Z",
-    ].join(" ");
-
-    return { path, color: d.color, d, i };
-  });
+  const activeSegments = data.filter((d) => d.value > 0);
 
   return (
-    <div className={`relative inline-block ${className}`}>
-      <svg ref={svgRef} width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-        {segments.map((s) => (
-          <path
-            key={s.i}
-            d={s.path}
-            fill={s.color}
-            opacity={hoveredIndex !== null && hoveredIndex !== s.i ? 0.5 : 1}
-            className="cursor-pointer transition-opacity"
-            onMouseEnter={(e) => {
-              setHoveredIndex(s.i);
-              handleMouseEnter(e, s.d);
-            }}
-            onMouseLeave={handleMouseLeave}
-          />
-        ))}
+    <div className={`relative inline-flex items-center justify-center ${className}`}>
+      <svg
+        ref={svgRef}
+        width={size}
+        height={size}
+        viewBox={`0 0 ${size} ${size}`}
+        className="overflow-visible"
+      >
+        {/* Background Base Ring */}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={(r + ir) / 2}
+          fill="none"
+          stroke="var(--color-border)"
+          strokeWidth={strokeWidth}
+          opacity={0.35}
+        />
+
+        {/* Multi-segment Arcs */}
+        {total > 0 &&
+          (() => {
+            let cumulativeAngle = -90;
+            return activeSegments.map((d, i) => {
+              const fraction = d.value / total;
+              const angle = fraction * 360;
+
+              // If single full 100% segment, render with SVG circle stroke
+              if (fraction >= 0.9999) {
+                const midR = (r + ir) / 2;
+                const circ = 2 * Math.PI * midR;
+                return (
+                  <circle
+                    key={d.label}
+                    cx={cx}
+                    cy={cy}
+                    r={midR}
+                    fill="none"
+                    stroke={d.color}
+                    strokeWidth={strokeWidth}
+                    strokeDasharray={circ}
+                    strokeDashoffset={0}
+                    className="cursor-pointer transition-all duration-300"
+                    opacity={hoveredIndex !== null && hoveredIndex !== i ? 0.6 : 1}
+                    onMouseEnter={(e) => {
+                      setHoveredIndex(i);
+                      handleMouseEnter(e, d);
+                    }}
+                    onMouseLeave={handleMouseLeave}
+                  />
+                );
+              }
+
+              const startAngle = cumulativeAngle;
+              const endAngle = cumulativeAngle + angle;
+              cumulativeAngle = endAngle;
+
+              const startRad = (startAngle * Math.PI) / 180;
+              const endRad = (endAngle * Math.PI) / 180;
+
+              const x1 = cx + r * Math.cos(startRad);
+              const y1 = cy + r * Math.sin(startRad);
+              const x2 = cx + r * Math.cos(endRad);
+              const y2 = cy + r * Math.sin(endRad);
+
+              const ix1 = cx + ir * Math.cos(startRad);
+              const iy1 = cy + ir * Math.sin(startRad);
+              const ix2 = cx + ir * Math.cos(endRad);
+              const iy2 = cy + ir * Math.sin(endRad);
+
+              const largeArc = angle > 180 ? 1 : 0;
+
+              const path = [
+                `M ${x1} ${y1}`,
+                `A ${r} ${r} 0 ${largeArc} 1 ${x2} ${y2}`,
+                `L ${ix2} ${iy2}`,
+                `A ${ir} ${ir} 0 ${largeArc} 0 ${ix1} ${iy1}`,
+                "Z",
+              ].join(" ");
+
+              return (
+                <path
+                  key={d.label}
+                  d={path}
+                  fill={d.color}
+                  opacity={hoveredIndex !== null && hoveredIndex !== i ? 0.6 : 1}
+                  className="cursor-pointer transition-opacity duration-200"
+                  onMouseEnter={(e) => {
+                    setHoveredIndex(i);
+                    handleMouseEnter(e, d);
+                  }}
+                  onMouseLeave={handleMouseLeave}
+                />
+              );
+            });
+          })()}
       </svg>
       {tooltip && <ChartTooltip {...tooltip} />}
     </div>

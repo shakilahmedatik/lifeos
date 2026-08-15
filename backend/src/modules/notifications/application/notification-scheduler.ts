@@ -2,6 +2,8 @@ import { logger } from "../../../shared/logger.js";
 import type { NotificationWithTask } from "../domain/types.js";
 import type { NotificationService } from "./notification-service.js";
 
+const notifLog = logger.child({ module: "notifications" });
+
 export type NotificationCallback = (notification: NotificationWithTask) => void;
 
 export class NotificationScheduler {
@@ -15,7 +17,7 @@ export class NotificationScheduler {
   constructor(private notificationService: NotificationService) {}
 
   start(intervalMs = 10000): void {
-    logger.info(
+    notifLog.info(
       "Notification scheduler enabled (lazy request-driven execution + background timer)",
       { intervalMs },
     );
@@ -23,7 +25,7 @@ export class NotificationScheduler {
     if (this.timer) clearInterval(this.timer);
     this.timer = setInterval(() => {
       this.checkAndSendNotificationsLazy().catch((err) => {
-        logger.error("Error in background notification scheduler timer", {
+        notifLog.error("Error in background notification scheduler timer", {
           error: (err as Error).message,
         });
       });
@@ -31,7 +33,7 @@ export class NotificationScheduler {
   }
 
   stop(): void {
-    logger.info("Notification scheduler disabled");
+    notifLog.info("Notification scheduler disabled");
     if (this.timer) {
       clearInterval(this.timer);
       this.timer = null;
@@ -40,7 +42,7 @@ export class NotificationScheduler {
 
   onNotification(callback: NotificationCallback): () => void {
     if (this.listeners.length >= 50) {
-      logger.warn("High number of notification listeners registered. Check for memory leak.", {
+      notifLog.warn("High number of notification listeners registered. Check for memory leak.", {
         count: this.listeners.length,
       });
     }
@@ -89,7 +91,7 @@ export class NotificationScheduler {
       this.lastRun = new Date(this.lastRunTimestamp).toISOString();
       this.error = undefined;
     } catch (error) {
-      logger.error("Error checking notifications", { error: (error as Error).message });
+      notifLog.error("Error checking notifications", { error: (error as Error).message });
       this.error = (error as Error).message;
       this.lastRunTimestamp = Date.now();
       this.lastRun = new Date(this.lastRunTimestamp).toISOString();
@@ -99,7 +101,7 @@ export class NotificationScheduler {
   }
 
   private async sendNotification(notification: NotificationWithTask): Promise<void> {
-    logger.info("Sending notification", {
+    notifLog.info("Sending notification", {
       taskTitle: notification.taskTitle,
       reminderTime: notification.reminderTime,
     });
@@ -108,7 +110,7 @@ export class NotificationScheduler {
       try {
         listener(notification);
       } catch (error) {
-        logger.error("Error in notification listener", { error: (error as Error).message });
+        notifLog.error("Error in notification listener", { error: (error as Error).message });
       }
     }
   }

@@ -1,4 +1,4 @@
-import { api } from "../../lib/api";
+import { api } from "../../lib/api.js";
 import type { LearningBackup } from "./types";
 
 const BACKUP_VERSION = "1.0.0";

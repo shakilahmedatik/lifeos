@@ -14,6 +14,8 @@ export const queryKeys = {
     all: () => ["habits"] as const,
     today: () => ["habits", "today"] as const,
     stats: (id: string, start: string, end: string) => ["habits", "stats", id, start, end] as const,
+    analytics: (id: string, period = "week", endDate?: string) =>
+      ["habits", "analytics", id, period, endDate] as const,
     weeklyReview: (weekStart?: string) => ["habits", "weekly-review", weekStart] as const,
   },
   // Workouts

@@ -38,7 +38,14 @@ export function getTaskScheduleStack(
     (a, b) => timeToMinutes(a.startTime) - timeToMinutes(b.startTime),
   );
 
+  // 1. First priority for "Now": any task explicitly marked "in_progress" (not done/cancelled/skipped)
+  const inProgressTask = sortedTasks.find((t) => t.status === "in_progress");
+
+  // 2. Second priority for "Now": any task currently active in its time window
+  let timeActiveTask: Task | null = null;
   for (const task of sortedTasks) {
+    if (task.status === "done" || task.status === "cancelled" || task.status === "skipped")
+      continue;
     const start = timeToMinutes(task.startTime);
     const end = timeToMinutes(task.endTime);
     const isOvernight = task.isOvernight || start >= end;
@@ -48,29 +55,71 @@ export function getTaskScheduleStack(
       : currentMinutes >= start && currentMinutes < end;
 
     if (isActive) {
-      nowTask = task;
-    } else if (start > currentMinutes && !nextTask) {
-      nextTask = task;
+      timeActiveTask = task;
+      break;
     }
   }
 
-  // Find previous task: most recent done task before now, or task whose end time passed
-  const passedTasks = sortedTasks.filter((t) => {
+  nowTask = inProgressTask || timeActiveTask || null;
+
+  // 3. Find Next task (earliest upcoming pending/planned task starting >= currentMinutes, not currently 'now')
+  for (const task of sortedTasks) {
+    if (task.status === "done" || task.status === "cancelled" || task.status === "skipped")
+      continue;
+    if (nowTask && task.id === nowTask.id) continue;
+
+    const start = timeToMinutes(task.startTime);
+    if (start >= currentMinutes) {
+      nextTask = task;
+      break;
+    }
+  }
+
+  // 4. Find Previous task: the task whose time crossed most recently before now, or the most recently completed task
+  const candidatePreviousTasks = sortedTasks.filter((t) => {
+    if (nowTask && t.id === nowTask.id) return false;
+    if (nextTask && t.id === nextTask.id) return false;
     const start = timeToMinutes(t.startTime);
     const end = timeToMinutes(t.endTime);
     const isOvernight = t.isOvernight || start >= end;
+
+    if (t.status === "done" || t.status === "skipped") return true;
     if (isOvernight) {
       return currentMinutes >= end && currentMinutes < start;
     }
-    return end <= currentMinutes;
+    return end <= currentMinutes || start <= currentMinutes;
   });
 
-  if (passedTasks.length > 0) {
-    const donePassed = passedTasks.filter((t) => t.status === "done");
-    previousTask =
-      donePassed.length > 0
-        ? donePassed[donePassed.length - 1]
-        : passedTasks[passedTasks.length - 1];
+  if (candidatePreviousTasks.length > 0) {
+    candidatePreviousTasks.sort((a, b) => {
+      const endA = timeToMinutes(a.endTime);
+      const endB = timeToMinutes(b.endTime);
+      const endedPastA = endA <= currentMinutes;
+      const endedPastB = endB <= currentMinutes;
+
+      if (endedPastA && endedPastB) {
+        return endA - endB;
+      }
+      if (endedPastA && !endedPastB) {
+        if (b.status === "done" && b.updatedAt && a.updatedAt) {
+          return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+        }
+        return 1;
+      }
+      if (!endedPastA && endedPastB) {
+        if (a.status === "done" && a.updatedAt && b.updatedAt) {
+          return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+        }
+        return -1;
+      }
+
+      if (a.updatedAt && b.updatedAt) {
+        return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+      }
+      return endA - endB;
+    });
+
+    previousTask = candidatePreviousTasks[candidatePreviousTasks.length - 1];
   }
 
   return { previous: previousTask, now: nowTask, next: nextTask };
@@ -101,18 +150,23 @@ export async function getDashboardSummary(
   if (deps.habitRepo && deps.habitStatsService) {
     const activeHabits = (await deps.habitRepo.getAll(false, userId)).slice(0, 4);
     for (const habit of activeHabits) {
-      const stats = await deps.habitStatsService.getAnalytics(habit.id, "week", userId);
+      const stats = await deps.habitStatsService.getAnalytics(habit.id, "week", userId, today);
       if (stats) {
         const days = stats.dailyValues.map((d: { value: number; target: number }) =>
           d.target > 0 ? Math.min(100, Math.round((d.value / d.target) * 100)) : 0,
         );
+        // Ensure 7 days array
+        while (days.length < 7) days.unshift(0);
+        const sevenDays = days.slice(-7);
+        const weekAverage = Math.round(sevenDays.reduce((a, b) => a + b, 0) / 7);
+
         habitConsistency.push({
           habitId: habit.id,
           name: habit.name,
-          color: habit.color || "#fbbf24",
-          days,
+          color: habit.color || "#10B981",
+          days: sevenDays,
           currentStreak: stats.currentStreak,
-          weekAverage: stats.completionRate,
+          weekAverage,
         });
       }
     }

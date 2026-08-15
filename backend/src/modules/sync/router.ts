@@ -36,6 +36,25 @@ const SYNCABLE_TABLES = [
   "settings",
 ] as const;
 
+const TABLE_TIMESTAMP_COLUMN: Record<string, string> = {
+  tasks: "updated_at",
+  habits: "updated_at",
+  habit_logs: "logged_at",
+  exercises: "updated_at",
+  workouts: "updated_at",
+  workout_exercises: "created_at",
+  workout_sessions: "created_at",
+  exercise_logs: "completed_at",
+  accounts: "updated_at",
+  categories: "updated_at",
+  transactions: "updated_at",
+  skill_areas: "updated_at",
+  learning_resources: "updated_at",
+  learning_logs: "updated_at",
+  reminders: "updated_at",
+  settings: "updated_at",
+};
+
 export function createSyncRouter(client: Client): Router {
   const router = Router();
 
@@ -51,6 +70,7 @@ export function createSyncRouter(client: Client): Router {
           if (!Array.isArray(rows)) continue;
 
           const hasUserId = TABLES_WITH_USER_ID.has(table);
+          const primaryKey = table === "settings" ? "key" : "id";
 
           for (const rawRow of rows) {
             if (!rawRow || typeof rawRow !== "object") continue;
@@ -69,14 +89,13 @@ export function createSyncRouter(client: Client): Router {
             const columns = keys.join(", ");
             const values = keys.map((k) => row[k]);
 
-            // Conflict resolution: ON CONFLICT(id) DO UPDATE SET ... WHERE excluded.updated_at >= table.updated_at
             const updateClause = keys
-              .filter((k) => k !== "id")
+              .filter((k) => k !== primaryKey)
               .map((k) => `${k} = excluded.${k}`)
               .join(", ");
 
-            const sql = keys.includes("id")
-              ? `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) ON CONFLICT(id) DO UPDATE SET ${updateClause}`
+            const sql = keys.includes(primaryKey)
+              ? `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) ON CONFLICT(${primaryKey}) DO UPDATE SET ${updateClause}`
               : `INSERT INTO ${table} (${columns}) VALUES (${placeholders})`;
 
             await client.execute({ sql, args: values });
@@ -90,13 +109,14 @@ export function createSyncRouter(client: Client): Router {
 
       for (const table of SYNCABLE_TABLES) {
         const hasUserId = TABLES_WITH_USER_ID.has(table);
+        const timeCol = TABLE_TIMESTAMP_COLUMN[table] || "updated_at";
 
         let sql = "";
-        const args: unknown[] = [];
+        const args: (string | number | null)[] = [];
 
         if (hasUserId) {
           if (lastSyncAt) {
-            sql = `SELECT * FROM ${table} WHERE user_id = ? AND (updated_at > ? OR (deleted_at IS NOT NULL AND deleted_at > ?))`;
+            sql = `SELECT * FROM ${table} WHERE user_id = ? AND (${timeCol} > ? OR (deleted_at IS NOT NULL AND deleted_at > ?))`;
             args.push(userId, lastSyncAt, lastSyncAt);
           } else {
             sql = `SELECT * FROM ${table} WHERE user_id = ?`;
@@ -104,7 +124,7 @@ export function createSyncRouter(client: Client): Router {
           }
         } else {
           if (lastSyncAt) {
-            sql = `SELECT * FROM ${table} WHERE updated_at > ? OR (deleted_at IS NOT NULL AND deleted_at > ?)`;
+            sql = `SELECT * FROM ${table} WHERE ${timeCol} > ? OR (deleted_at IS NOT NULL AND deleted_at > ?)`;
             args.push(lastSyncAt, lastSyncAt);
           } else {
             sql = `SELECT * FROM ${table}`;

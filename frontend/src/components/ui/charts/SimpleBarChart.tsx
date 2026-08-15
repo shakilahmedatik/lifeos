@@ -28,9 +28,9 @@ const DEFAULT_PADDING = { top: 10, right: 10, bottom: 24, left: 10 };
 
 export function SimpleBarChart({
   data,
-  height = 160,
+  height = 180,
   barRadius = 4,
-  maxBarSize = 40,
+  maxBarSize = 36,
   showGrid = true,
   showXAxis = true,
   showYAxis = false,
@@ -45,7 +45,7 @@ export function SimpleBarChart({
   const maxValue = Math.max(...data.map((d) => d.value), 1);
 
   const handleMouseEnter = useCallback(
-    (e: React.MouseEvent<SVGRectElement>, d: ChartDataPoint, i: number) => {
+    (e: React.MouseEvent<SVGElement>, d: ChartDataPoint, i: number) => {
       const svg = svgRef.current;
       if (!svg) return;
       const rect = svg.getBoundingClientRect();
@@ -73,23 +73,26 @@ export function SimpleBarChart({
     );
   }
 
-  const svgWidth = 300;
+  // Dynamic coordinate width proportional to data points
+  const svgWidth = Math.max(500, data.length * 28);
   const chartWidth = svgWidth - PADDING.left - PADDING.right;
-  const chartHeight = height - PADDING.top - PADDING.bottom;
-  const barWidth = Math.min(maxBarSize, Math.floor(chartWidth / data.length) - 4);
-  const totalBarsWidth = data.length * (barWidth + 4) - 4;
-  const offsetX = PADDING.left + (chartWidth - totalBarsWidth) / 2;
+  const chartHeight = Math.max(height - PADDING.top - PADDING.bottom, 40);
+  const slotWidth = chartWidth / data.length;
+  const barWidth = Math.min(maxBarSize, Math.max(6, slotWidth - 6));
 
-  const gridLines = 4;
+  const gridLines = 3;
   const gridStep = chartHeight / gridLines;
 
+  // Smart label interval for month vs week
+  const labelInterval = data.length <= 7 ? 1 : data.length <= 14 ? 2 : data.length <= 21 ? 3 : 5;
+
   return (
-    <div className={`relative ${className}`} style={{ height }}>
+    <div className={`relative w-full ${className}`} style={{ minHeight: height }}>
       <svg
         ref={svgRef}
         viewBox={`0 0 ${svgWidth} ${height}`}
-        className="w-full h-full"
-        preserveAspectRatio="xMidYMid meet"
+        className="w-full h-full block overflow-visible"
+        preserveAspectRatio="none"
       >
         {showGrid &&
           Array.from({ length: gridLines + 1 }, (_, i) => {
@@ -103,7 +106,7 @@ export function SimpleBarChart({
                 y2={y}
                 stroke="var(--color-border)"
                 strokeDasharray="3 3"
-                opacity={0.5}
+                opacity={0.35}
               />
             );
           })}
@@ -111,21 +114,23 @@ export function SimpleBarChart({
         {showYAxis && (
           <>
             <text
-              x={PADDING.left - 2}
-              y={PADDING.top}
+              x={PADDING.left - 4}
+              y={PADDING.top + 4}
               textAnchor="end"
               fill="var(--color-muted)"
-              fontSize={9}
+              fontSize={10}
+              fontFamily="monospace"
               dominantBaseline="middle"
             >
               {formatValue(maxValue)}
             </text>
             <text
-              x={PADDING.left - 2}
+              x={PADDING.left - 4}
               y={PADDING.top + chartHeight}
               textAnchor="end"
               fill="var(--color-muted)"
-              fontSize={9}
+              fontSize={10}
+              fontFamily="monospace"
               dominantBaseline="middle"
             >
               0
@@ -134,31 +139,53 @@ export function SimpleBarChart({
         )}
 
         {data.map((d, i) => {
-          const barHeight = (d.value / maxValue) * chartHeight;
-          const x = offsetX + i * (barWidth + 4);
+          const barHeight = maxValue > 0 ? (Math.max(0, d.value) / maxValue) * chartHeight : 0;
+          const x = PADDING.left + i * slotWidth + (slotWidth - barWidth) / 2;
           const y = PADDING.top + chartHeight - barHeight;
-          const fill = d.color ?? DEFAULT_COLORS[i % DEFAULT_COLORS.length];
+          const fill = d.color ?? (d.value > 0 ? "var(--color-accent)" : "var(--color-border)");
+          const isLabelVisible = showXAxis && (i % labelInterval === 0 || i === data.length - 1);
 
           return (
-            <g key={i}>
+            <g
+              key={d.label || i}
+              className="cursor-pointer group"
+              onMouseEnter={(e) => handleMouseEnter(e, d, i)}
+              onMouseLeave={handleMouseLeave}
+            >
+              {/* Background Track Bar */}
               <rect
                 x={x}
-                y={y}
+                y={PADDING.top}
                 width={barWidth}
-                height={barHeight}
+                height={chartHeight}
                 rx={barRadius}
-                fill={fill}
-                className="cursor-pointer transition-opacity hover:opacity-80"
-                onMouseEnter={(e) => handleMouseEnter(e, d, i)}
-                onMouseLeave={handleMouseLeave}
+                fill="var(--color-surface-elevated)"
+                opacity={0.3}
+                className="transition-opacity group-hover:opacity-60"
               />
-              {showXAxis && (
+
+              {/* Active Value Bar */}
+              {barHeight > 0 && (
+                <rect
+                  x={x}
+                  y={y}
+                  width={barWidth}
+                  height={barHeight}
+                  rx={barRadius}
+                  fill={fill}
+                  className="transition-all duration-300 group-hover:brightness-110"
+                />
+              )}
+
+              {/* X-axis Label */}
+              {isLabelVisible && (
                 <text
                   x={x + barWidth / 2}
-                  y={PADDING.top + chartHeight + 14}
+                  y={PADDING.top + chartHeight + 16}
                   textAnchor="middle"
                   fill="var(--color-muted)"
                   fontSize={10}
+                  fontFamily="sans-serif"
                 >
                   {formatLabel(d.label)}
                 </text>

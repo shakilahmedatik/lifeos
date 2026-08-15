@@ -1,5 +1,8 @@
 import { Component, type ReactNode } from "react";
+import { log } from "../lib/logger.js";
 import Button from "./ui/Button.js";
+
+const reactLog = log.child("react");
 
 interface Props {
   children: ReactNode;
@@ -22,7 +25,11 @@ export class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("ErrorBoundary caught:", error, errorInfo);
+    reactLog.error("ErrorBoundary caught", {
+      error: error.message,
+      stack: error.stack,
+      componentStack: errorInfo.componentStack ?? undefined,
+    });
   }
 
   render() {

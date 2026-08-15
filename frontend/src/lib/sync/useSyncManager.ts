@@ -1,5 +1,5 @@
 import { useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { isTauri } from "../dataSource.js";
 import { syncEngine } from "./syncEngine.js";
 
@@ -9,14 +9,18 @@ export function useSyncManager() {
   const [lastSyncAt, setLastSyncAt] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isInitialSyncing, setIsInitialSyncing] = useState<boolean>(false);
+  const initialSyncFired = useRef(false);
 
   const triggerSync = useCallback(async () => {
     if (!isTauri()) return;
     setSyncState("syncing");
     setErrorMessage(null);
 
-    const isFirstTime = lastSyncAt === null;
-    if (isFirstTime) setIsInitialSyncing(true);
+    const isFirstTime = !initialSyncFired.current;
+    if (isFirstTime) {
+      setIsInitialSyncing(true);
+      initialSyncFired.current = true;
+    }
 
     try {
       const res = await syncEngine.sync();
@@ -31,9 +35,11 @@ export function useSyncManager() {
         setSyncState("idle");
       }
     } finally {
-      setIsInitialSyncing(false);
+      if (isFirstTime) {
+        setIsInitialSyncing(false);
+      }
     }
-  }, [queryClient, lastSyncAt]);
+  }, [queryClient]);
 
   // Sync on app launch
   useEffect(() => {

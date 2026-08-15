@@ -5,6 +5,7 @@ import type {
   CategoryBreakdown,
   DashboardSummary,
   FinanceDashboardWidget,
+  HabitAnalyticsData,
   HabitDefinition,
   HabitLogEntry,
   HabitStats,
@@ -28,7 +29,17 @@ import type {
   WeeklySummary,
 } from "@lifeos/contracts";
 
-const API_BASE_URL = import.meta.env.DEV ? "" : import.meta.env.VITE_API_URL || "";
+import { log } from "./logger.js";
+import { isTauri } from "./platform.js";
+
+const apiLog = log.child("api");
+
+export function getApiBaseUrl(): string {
+  if (isTauri()) {
+    return import.meta.env.DEV ? "http://127.0.0.1:3000" : "https://api-lifeos.shatik.me";
+  }
+  return import.meta.env.DEV ? "" : import.meta.env.VITE_API_URL || "";
+}
 
 export async function request<T>(url: string, options?: RequestInit): Promise<T> {
   let token =
@@ -42,6 +53,10 @@ export async function request<T>(url: string, options?: RequestInit): Promise<T>
     }
   }
 
+  if (token === "session-token" || token === "null" || token === "undefined") {
+    token = null;
+  }
+
   const headers = new Headers(options?.headers);
   if (options?.body && !headers.has("Content-Type")) {
     headers.set("Content-Type", "application/json");
@@ -50,25 +65,63 @@ export async function request<T>(url: string, options?: RequestInit): Promise<T>
     headers.set("Authorization", `Bearer ${token}`);
   }
 
-  const fullUrl = url.startsWith("/api/") ? `${API_BASE_URL}${url}` : url;
+  if (isTauri() && !headers.has("Origin")) {
+    headers.set("Origin", "tauri://localhost");
+  }
 
-  const res = await fetch(fullUrl, {
-    credentials: "include",
-    ...options,
-    headers,
-  });
+  const baseUrl = getApiBaseUrl();
+  const fullUrl = url.startsWith("/api/") ? `${baseUrl}${url}` : url;
+  const method = options?.method || "GET";
+
+  const fetchOptions: RequestInit = { ...options, headers };
+  if (!isTauri()) {
+    fetchOptions.credentials = "include";
+  }
+
+  apiLog.debug(`→ ${method} ${url}`);
+  const start = performance.now();
+
+  let res: Response;
+  try {
+    res = await fetch(fullUrl, fetchOptions);
+  } catch (err) {
+    const duration = Math.round(performance.now() - start);
+    apiLog.error(`✖ ${method} ${url} — Network error`, {
+      error: (err as Error).message,
+      duration: `${duration}ms`,
+    });
+    throw err;
+  }
+
+  const duration = Math.round(performance.now() - start);
+
   if (!res.ok) {
     const body = await res.text().catch(() => "");
+    apiLog.error(`← ${method} ${url}`, {
+      status: res.status,
+      duration: `${duration}ms`,
+      body: body.slice(0, 500) || res.statusText,
+    });
     throw new Error(`API error ${res.status}: ${body || res.statusText}`);
   }
+
+  apiLog.info(`← ${method} ${url}`, { status: res.status, duration: `${duration}ms` });
+
   if (res.status === 204) return undefined as T;
   return res.json() as Promise<T>;
 }
 
 export const api = {
   // Dashboard
-  getSummary: (date?: string) =>
-    request<DashboardSummary>(`/api/dashboard/summary${date ? `?date=${date}` : ""}`),
+  getSummary: (date?: string) => {
+    const d = date || new Date().toISOString().split("T")[0];
+    const now = new Date();
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const localIso = `${d}T${pad(now.getHours())}:${pad(now.getMinutes())}:${pad(now.getSeconds())}`;
+    return request<DashboardSummary>(
+      `/api/dashboard/summary?date=${d}&nowIso=${encodeURIComponent(localIso)}`,
+    );
+  },
 
   // Routine
   getTasks: (date: string) => request<Task[]>(`/api/routine/tasks?date=${date}`),
@@ -131,6 +184,10 @@ export const api = {
   getTodayHabits: () => request<HabitWithStreak[]>("/api/habits/today"),
   getHabitStats: (id: string, startDate: string, endDate: string) =>
     request<HabitStats>(`/api/habits/${id}/stats?startDate=${startDate}&endDate=${endDate}`),
+  getHabitAnalytics: (id: string, period: "week" | "month" = "week", endDate?: string) =>
+    request<HabitAnalyticsData>(
+      `/api/habits/${id}/analytics?period=${period}${endDate ? `&endDate=${endDate}` : ""}`,
+    ),
   getWeeklyReview: (weekStart?: string) =>
     request<WeeklySummary>(
       `/api/habits/weekly-review${weekStart ? `?weekStart=${weekStart}` : ""}`,
@@ -266,7 +323,7 @@ export const api = {
     const headers: Record<string, string> = {};
     if (token) headers.Authorization = `Bearer ${token}`;
 
-    const res = await fetch(`${API_BASE_URL}/api/backup/export`, {
+    const res = await fetch(`${getApiBaseUrl()}/api/backup/export`, {
       headers,
       credentials: "include",
     });

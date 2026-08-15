@@ -18,6 +18,8 @@ export default function DashboardPage() {
     loading,
     error,
     refresh,
+    startTask,
+    completeTask,
     logHabit,
     unlogHabit,
     completeReminder,
@@ -31,7 +33,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="flex flex-col h-auto lg:h-[calc(100dvh-9.5rem)] lg:max-h-[calc(100dvh-9.5rem)] animate-fade-in gap-3 overflow-visible lg:overflow-hidden">
+    <div className="flex flex-col h-auto lg:h-[calc(100dvh-5rem)] lg:max-h-[calc(100dvh-5rem)] animate-fade-in gap-3 overflow-visible lg:overflow-hidden">
       {/* Header Status Bar */}
       <StatusBar loading={loading} onRefresh={refresh} />
 
@@ -51,6 +53,8 @@ export default function DashboardPage() {
             now={summary?.now ?? null}
             next={summary?.next ?? null}
             onNavigate={navigate}
+            onStartTask={startTask}
+            onCompleteTask={completeTask}
           />
         </div>
 
@@ -104,7 +108,7 @@ export default function DashboardPage() {
 
 function DashboardSkeleton() {
   return (
-    <div className="flex flex-col h-auto lg:h-[calc(100dvh-9.5rem)] animate-pulse gap-3 overflow-hidden">
+    <div className="flex flex-col h-auto lg:h-[calc(100dvh-5rem)] animate-pulse gap-3 overflow-hidden">
       <div className="flex items-center justify-between h-10 px-1">
         <div className="h-6 w-48 bg-card-solid rounded-md" />
         <div className="h-6 w-24 bg-card-solid rounded-md" />

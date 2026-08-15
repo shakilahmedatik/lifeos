@@ -1,6 +1,8 @@
 import { ArrowRight, Eye, EyeOff, Lock, Mail, Sparkles, User as UserIcon } from "lucide-react";
 import { type FC, type SubmitEvent, useState } from "react";
 import { useAuth } from "../../context/AuthContext.js";
+import { getApiBaseUrl } from "../../lib/api.js";
+import { isTauri } from "../../lib/dataSource.js";
 import Button from "../ui/Button.js";
 import ErrorBanner from "../ui/ErrorBanner.js";
 import Input from "../ui/Input.js";
@@ -24,14 +26,18 @@ export const AuthModal: FC = () => {
     try {
       const endpoint = mode === "login" ? "/api/auth/sign-in/email" : "/api/auth/sign-up/email";
       const payload = mode === "login" ? { email, password } : { email, password, name };
-      const API_BASE_URL = import.meta.env.DEV ? "" : import.meta.env.VITE_API_URL || "";
+      const API_BASE_URL = getApiBaseUrl();
 
-      const res = await fetch(`${API_BASE_URL}${endpoint}`, {
+      const fetchOptions: RequestInit = {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify(payload),
-      });
+      };
+      if (!isTauri()) {
+        fetchOptions.credentials = "include";
+      }
+
+      const res = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
 
       if (!res.ok) {
         const body = await res.json().catch(() => ({ message: "Authentication failed" }));

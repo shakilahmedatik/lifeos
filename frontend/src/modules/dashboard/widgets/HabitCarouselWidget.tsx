@@ -65,12 +65,13 @@ export function HabitCarouselWidget({ habits, onLog, onUnlog }: HabitCarouselWid
           {/* Active front card */}
           <div className="relative w-full h-[94%] rounded-xl bg-surface border border-border flex flex-col items-center justify-between p-3 shadow-lg">
             {/* Header info */}
-            <div className="w-full flex items-center justify-between">
-              <span className="text-xs font-semibold text-primary truncate max-w-35">
-                {habit.name}
+            <div className="w-full flex items-center justify-between gap-2">
+              <span className="text-xs font-semibold text-primary truncate flex items-center gap-1.5">
+                {habit.icon && <span className="text-sm">{habit.icon}</span>}
+                <span className="truncate">{habit.name}</span>
               </span>
               {habit.currentStreak > 0 && (
-                <span className="text-[11px] font-mono text-orange-400 font-medium">
+                <span className="text-[11px] font-mono text-orange-400 font-medium shrink-0">
                   🔥{habit.currentStreak}d
                 </span>
               )}
@@ -80,9 +81,9 @@ export function HabitCarouselWidget({ habits, onLog, onUnlog }: HabitCarouselWid
             <div className="text-center my-0.5">
               <div className="font-mono text-xs font-semibold text-accent">
                 {habit.type === "water"
-                  ? `${val} / ${tgt} ml`
+                  ? `${val.toLocaleString()} / ${tgt.toLocaleString()} ml`
                   : habit.type === "walking"
-                    ? `${val} / ${tgt} ${"unit" in habit.config ? habit.config.unit : "steps"}`
+                    ? `${val.toLocaleString()} / ${tgt.toLocaleString()} ${"unit" in habit.config ? habit.config.unit : "steps"}`
                     : habit.type === "timed"
                       ? `${val} / ${tgt} min`
                       : habit.type === "prayer"
@@ -99,7 +100,10 @@ export function HabitCarouselWidget({ habits, onLog, onUnlog }: HabitCarouselWid
                 className={`h-full rounded-full transition-all duration-500 ${
                   habit.loggedToday ? "bg-emerald-400" : "bg-accent"
                 }`}
-                style={{ width: `${pct}%` }}
+                style={{
+                  width: `${pct}%`,
+                  backgroundColor: !habit.loggedToday && habit.color ? habit.color : undefined,
+                }}
               />
             </div>
 
@@ -142,10 +146,13 @@ export function HabitCarouselWidget({ habits, onLog, onUnlog }: HabitCarouselWid
               {habit.type === "walking" && (
                 <button
                   type="button"
-                  onClick={() => onLog(habit.id, 1000)}
+                  onClick={() =>
+                    onLog(habit.id, "unit" in habit.config && habit.config.unit === "km" ? 1 : 1000)
+                  }
                   className="flex items-center gap-1 text-xs font-mono bg-amber-950/60 hover:bg-amber-900/80 text-amber-300 border border-amber-800/50 px-2.5 py-0.5 rounded-lg transition-all"
                 >
-                  <Plus size={11} /> +1,000 steps
+                  <Plus size={11} /> +
+                  {"unit" in habit.config && habit.config.unit === "km" ? "1 km" : "1,000 steps"}
                 </button>
               )}
 

@@ -146,24 +146,47 @@ export const HabitConfigSchema = z.discriminatedUnion("type", [
 export const NewHabitDefinitionSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
   type: HabitTypeSchema,
-  category: HabitCategorySchema.optional(),
-  icon: z.string().max(10).optional(),
+  category: HabitCategorySchema.optional()
+    .nullable()
+    .transform((v) => v || undefined),
+  icon: z
+    .string()
+    .max(10)
+    .optional()
+    .nullable()
+    .transform((v) => v || undefined),
   color: z
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
-    .optional(),
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => v || undefined),
   config: HabitConfigSchema,
 });
 
 export const UpdateHabitDefinitionSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long").optional(),
-  category: HabitCategorySchema.optional(),
-  icon: z.string().max(10).optional(),
+  type: HabitTypeSchema.optional(),
+  category: HabitCategorySchema.optional()
+    .nullable()
+    .transform((v) => v || undefined),
+  icon: z
+    .string()
+    .max(10)
+    .optional()
+    .nullable()
+    .transform((v) => v || undefined),
   color: z
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
-    .optional(),
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => v || undefined),
   config: HabitConfigSchema.optional(),
+  archived: z.boolean().optional(),
+  sortOrder: z.number().optional(),
 });
 
 export const NewHabitLogEntrySchema = z.object({

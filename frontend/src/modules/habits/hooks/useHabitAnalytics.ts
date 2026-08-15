@@ -1,24 +1,25 @@
-import type { HabitAnalyticsData } from "@lifeos/contracts";
-import { useEffect, useState } from "react";
-import { habitApi } from "../api.js";
+import { getClientDateString, type HabitAnalyticsData } from "@lifeos/contracts";
+import { useQuery } from "@tanstack/react-query";
+import { getDataSource } from "../../../lib/dataSource.js";
+import { queryKeys } from "../../../lib/queryKeys.js";
 
-export function useHabitAnalytics(habitId: string, period: "week" | "month" = "week") {
-  const [data, setData] = useState<HabitAnalyticsData | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useHabitAnalytics(
+  habitId: string,
+  period: "week" | "month" = "week",
+  endDate?: string,
+) {
+  const targetEndDate = endDate || getClientDateString();
 
-  useEffect(() => {
-    if (!habitId) {
-      setData(null);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
-    habitApi
-      .getAnalytics(habitId, period)
-      .then(setData)
-      .catch(console.error)
-      .finally(() => setLoading(false));
-  }, [habitId, period]);
+  const { data, isLoading, error } = useQuery<HabitAnalyticsData | null>({
+    queryKey: queryKeys.habits.analytics(habitId, period, targetEndDate),
+    queryFn: async () => {
+      if (!habitId) return null;
+      const ds = getDataSource();
+      const res = await ds.getHabitAnalytics(habitId, period, targetEndDate);
+      return res || null;
+    },
+    enabled: Boolean(habitId),
+  });
 
-  return { data, loading };
+  return { data: data ?? null, loading: isLoading, error };
 }

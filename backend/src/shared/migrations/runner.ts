@@ -23,7 +23,28 @@ export async function runMigrations(client: Client, migrationsDir: string): Prom
     if (applied.includes(version)) continue;
 
     const sql = readFileSync(join(migrationsDir, file), "utf-8");
-    await client.executeMultiple(sql);
+    try {
+      await client.executeMultiple(sql);
+    } catch (err) {
+      if ((err as Error).message.includes("duplicate column name")) {
+        const statements = sql
+          .split(";")
+          .map((s) => s.trim())
+          .filter(Boolean);
+        for (const stmt of statements) {
+          try {
+            await client.execute(stmt);
+          } catch (stmtErr) {
+            if (!(stmtErr as Error).message.includes("duplicate column name")) {
+              throw stmtErr;
+            }
+          }
+        }
+      } else {
+        throw err;
+      }
+    }
+
     await client.execute({
       sql: "INSERT OR IGNORE INTO schema_migrations (version) VALUES (?)",
       args: [version],

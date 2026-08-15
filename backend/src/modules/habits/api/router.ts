@@ -196,6 +196,7 @@ export function createHabitsRouter(
         res.json(habit);
       } catch (error) {
         const msg = (error as Error).message;
+        console.error("[Update Habit Error]:", error);
         if (msg.includes("already exists") || msg.includes("UNIQUE constraint failed")) {
           res.status(409).json({ error: "A habit with this name already exists" });
           return;
@@ -288,7 +289,7 @@ export function createHabitsRouter(
 
   router.get("/:id/analytics", async (req: AuthenticatedRequest, res) => {
     const userId = req.user?.id || (req.query.userId as string) || "default";
-    const { period } = req.query;
+    const { period, endDate } = req.query;
     if (period !== "week" && period !== "month") {
       res.status(400).json({ error: "period must be week or month" });
       return;
@@ -298,6 +299,7 @@ export function createHabitsRouter(
       req.params.id as string,
       period as "week" | "month",
       userId,
+      endDate as string | undefined,
     );
     if (!stats) {
       res.status(404).json({ error: "Habit not found" });

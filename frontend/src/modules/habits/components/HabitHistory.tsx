@@ -45,6 +45,26 @@ export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
     label: `${h.icon || "📌"} ${h.name}`,
   }));
 
+  const selectedHabit = habits.find((h) => h.id === selectedHabitId);
+
+  const formatLogValue = (log: HabitLogEntry) => {
+    if (!selectedHabit) return String(log.value);
+    switch (selectedHabit.type) {
+      case "water":
+        return `${log.value.toLocaleString()} ml`;
+      case "walking":
+        return `${log.value.toLocaleString()} ${"unit" in selectedHabit.config ? selectedHabit.config.unit : "steps"}`;
+      case "timed":
+        return `${log.value} min`;
+      case "prayer":
+        return log.meta ? `Prayer: ${log.meta}` : `${log.value} prayer`;
+      case "boolean":
+        return "Completed ✓";
+      default:
+        return String(log.value);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex gap-4 items-center">
@@ -77,8 +97,10 @@ export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
             <Card key={log.id}>
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
-                  <span className="font-medium text-primary">{log.value}</span>
-                  {log.meta && <span className="ml-2 text-sm text-secondary">({log.meta})</span>}
+                  <span className="font-semibold text-primary">{formatLogValue(log)}</span>
+                  {log.meta && selectedHabit?.type !== "prayer" && (
+                    <span className="ml-2 text-sm text-secondary">({log.meta})</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 text-sm text-muted">
                   <span>

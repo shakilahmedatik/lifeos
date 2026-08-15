@@ -3,6 +3,9 @@ import express, { type Express } from "express";
 import type { Container } from "./container.js";
 import { logger } from "./shared/logger.js";
 import { apiRateLimiter } from "./shared/rate-limiter.js";
+import { requestLogger } from "./shared/request-logger.js";
+
+const appLog = logger.child({ module: "app" });
 
 export function createApp(container: Container): Express {
   const app = express();
@@ -34,6 +37,9 @@ export function createApp(container: Container): Express {
   );
 
   app.use(express.json({ limit: "10mb" }));
+
+  // ── Logging & Rate Limiting ────────────────────────────────────────────
+  app.use(requestLogger());
   app.use("/api", apiRateLimiter);
 
   // Auth & Health public routes
@@ -57,7 +63,7 @@ export function createApp(container: Container): Express {
   // Global error handler
   app.use(
     (err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
-      logger.error("Unhandled error", { error: err.message, stack: err.stack });
+      appLog.error("Unhandled error", { error: err.message, stack: err.stack });
       res.status(500).json({ error: "Internal server error" });
     },
   );

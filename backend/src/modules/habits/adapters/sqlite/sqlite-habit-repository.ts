@@ -164,6 +164,15 @@ export class SqliteHabitRepository implements HabitRepository {
       fields.push("config = ?");
       values.push(JSON.stringify(patch.config));
     }
+    const p = patch as Record<string, unknown>;
+    if (p.archived !== undefined) {
+      fields.push("archived = ?");
+      values.push(p.archived ? 1 : 0);
+    }
+    if (p.sortOrder !== undefined) {
+      fields.push("sort_order = ?");
+      values.push(p.sortOrder as number);
+    }
 
     if (fields.length === 0) return existing;
 
@@ -172,10 +181,49 @@ export class SqliteHabitRepository implements HabitRepository {
     values.push(id);
     values.push(userId);
 
-    await this.client.execute({
-      sql: `UPDATE habits SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '')`,
-      args: values,
-    });
+    try {
+      await this.client.execute({
+        sql: `UPDATE habits SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '')`,
+        args: values,
+      });
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg.includes("no such column: category") || msg.includes("no such column: updated_at")) {
+        try {
+          if (msg.includes("category")) {
+            await this.client.execute(
+              "ALTER TABLE habits ADD COLUMN category TEXT DEFAULT 'general'",
+            );
+          }
+          if (msg.includes("updated_at")) {
+            await this.client.execute("ALTER TABLE habits ADD COLUMN updated_at TEXT");
+          }
+          await this.client.execute({
+            sql: `UPDATE habits SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '')`,
+            args: values,
+          });
+        } catch {
+          // Fallback without missing columns
+          const cleanFields = fields.filter(
+            (f) => !f.startsWith("updated_at") && !f.startsWith("category"),
+          );
+          const cleanValues: (string | number | null)[] = [];
+          if (patch.name !== undefined) cleanValues.push(patch.name);
+          if (patch.icon !== undefined) cleanValues.push(patch.icon ?? null);
+          if (patch.color !== undefined) cleanValues.push(patch.color ?? null);
+          if (patch.config !== undefined) cleanValues.push(JSON.stringify(patch.config));
+          cleanValues.push(id);
+          cleanValues.push(userId);
+
+          await this.client.execute({
+            sql: `UPDATE habits SET ${cleanFields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '')`,
+            args: cleanValues,
+          });
+        }
+      } else {
+        throw err;
+      }
+    }
 
     return await this.getById(id, userId);
   }
@@ -189,10 +237,17 @@ export class SqliteHabitRepository implements HabitRepository {
   }
 
   async archive(id: string, archived: boolean, userId: string): Promise<void> {
-    await this.client.execute({
-      sql: "UPDATE habits SET archived = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
-      args: [archived ? 1 : 0, new Date().toISOString(), id, userId],
-    });
+    try {
+      await this.client.execute({
+        sql: "UPDATE habits SET archived = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
+        args: [archived ? 1 : 0, new Date().toISOString(), id, userId],
+      });
+    } catch {
+      await this.client.execute({
+        sql: "UPDATE habits SET archived = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
+        args: [archived ? 1 : 0, id, userId],
+      });
+    }
   }
 
   async updateSortOrders(
@@ -200,11 +255,18 @@ export class SqliteHabitRepository implements HabitRepository {
     userId: string,
   ): Promise<void> {
     const now = new Date().toISOString();
-    const statements = updates.map((update) => ({
-      sql: "UPDATE habits SET sort_order = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
-      args: [update.sortOrder, now, update.id, userId],
-    }));
-
-    await this.client.batch(statements, "write");
+    try {
+      const statements = updates.map((update) => ({
+        sql: "UPDATE habits SET sort_order = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
+        args: [update.sortOrder, now, update.id, userId],
+      }));
+      await this.client.batch(statements, "write");
+    } catch {
+      const statements = updates.map((update) => ({
+        sql: "UPDATE habits SET sort_order = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
+        args: [update.sortOrder, update.id, userId],
+      }));
+      await this.client.batch(statements, "write");
+    }
   }
 }

@@ -8,7 +8,9 @@ import { NotificationToast } from "../../modules/notifications/NotificationToast
 import { playNotificationSound } from "../../modules/notifications/sound-player.js";
 import type { SoundPreset } from "../../modules/notifications/sound-presets.js";
 import { ToastProvider } from "../Toast.js";
-import Dock from "./Dock.js";
+import MobileTabBar from "./MobileTabBar.js";
+import Sidebar from "./Sidebar.js";
+import Titlebar from "./Titlebar.js";
 
 export default function Layout() {
   const [notification, setNotification] = useState<{
@@ -52,15 +54,18 @@ export default function Layout() {
 
   return (
     <ToastProvider>
-      <div className="min-h-screen relative overflow-hidden bg-surface">
-        <main className="min-h-screen relative z-10">
-          <div className="w-full mx-auto px-6 pt-14 pb-24">
+      <div className="min-h-screen relative overflow-hidden bg-surface flex">
+        <Titlebar />
+        <Sidebar />
+
+        <main className="flex-1 min-h-screen relative z-10 sm:ml-20">
+          <div className="w-full mx-auto px-4 sm:px-8 pt-8 pb-24 sm:pb-8 relative z-10">
             <Outlet />
           </div>
         </main>
 
-        <div className="relative z-20">
-          <Dock />
+        <div className="relative z-50">
+          <MobileTabBar />
           <NotificationToast notification={notification} onDismiss={() => setNotification(null)} />
         </div>
       </div>

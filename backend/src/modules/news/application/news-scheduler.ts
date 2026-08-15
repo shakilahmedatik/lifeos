@@ -1,6 +1,8 @@
 import { logger } from "../../../shared/logger.js";
 import type { createRssFetchService } from "./rss-fetch-service.js";
 
+const newsLog = logger.child({ module: "news" });
+
 export function createNewsScheduler(rssFetchService: ReturnType<typeof createRssFetchService>) {
   let fetchIntervalMinutes = 60;
   let lastRun: string | undefined;
@@ -15,7 +17,7 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
       if (intervalMinutes) {
         fetchIntervalMinutes = intervalMinutes;
       }
-      logger.info("News scheduler enabled (lazy request-driven execution)", {
+      newsLog.info("News scheduler enabled (lazy request-driven execution)", {
         intervalMinutes: fetchIntervalMinutes,
       });
       // Trigger lazy cycle immediately if needed
@@ -24,7 +26,7 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
 
     stop(): void {
       _active = false;
-      logger.info("News scheduler disabled");
+      newsLog.info("News scheduler disabled");
     },
 
     setInterval(minutes: number): void {
@@ -63,9 +65,9 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
       if (!_active || running) return;
       running = true;
       try {
-        logger.info("Running news fetch cycle");
+        newsLog.info("Running news fetch cycle");
         const result = await rssFetchService.fetchAllActiveFeeds();
-        logger.info("News fetch cycle complete", {
+        newsLog.info("News fetch cycle complete", {
           totalFeeds: result.totalFeeds,
           newArticles: result.totalNewArticles,
         });
@@ -73,7 +75,7 @@ export function createNewsScheduler(rssFetchService: ReturnType<typeof createRss
         lastRun = new Date(lastRunTimestamp).toISOString();
         error = undefined;
       } catch (err) {
-        logger.error("Error in news fetch cycle", { error: (err as Error).message });
+        newsLog.error("Error in news fetch cycle", { error: (err as Error).message });
         error = (err as Error).message;
         lastRunTimestamp = Date.now();
         lastRun = new Date(lastRunTimestamp).toISOString();

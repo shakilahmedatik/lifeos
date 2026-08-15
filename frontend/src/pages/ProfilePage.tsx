@@ -1,4 +1,5 @@
 import { Settings, Shield, User } from "lucide-react";
+import { OnlineOnlyBanner } from "../components/ui/OnlineOnlyBanner.js";
 import PageHeader from "../components/ui/PageHeader.js";
 import Tabs, { TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { useAuth } from "../context/AuthContext.js";
@@ -21,6 +22,8 @@ export default function ProfilePage() {
         title="User Profile & Settings"
         description="Manage your account profile details, systemwide application settings, backups, and security."
       />
+
+      <OnlineOnlyBanner moduleName="User Profile" />
 
       <ProfileHeader user={user} />
 

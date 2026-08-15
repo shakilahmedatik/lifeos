@@ -17,6 +17,8 @@ import {
 
 type Tab = "overview" | "transactions" | "accounts" | "categories" | "backup";
 
+import { OnlineOnlyBanner } from "../components/ui/OnlineOnlyBanner.js";
+
 export default function FinancePage() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -54,6 +56,8 @@ export default function FinancePage() {
           </div>
         }
       />
+
+      <OnlineOnlyBanner moduleName="Finance" />
 
       <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as Tab)} variant="underline">
         <TabsList className="w-full">

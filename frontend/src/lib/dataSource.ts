@@ -1,17 +1,30 @@
 import { api } from "./api.js";
+import { log } from "./logger.js";
+import { isTauri } from "./platform.js";
 
-// Detect if running inside Tauri
-export const isTauri = () => typeof window !== "undefined" && "__TAURI__" in window;
+const dataLog = log.child("data");
 
 let _localDal: typeof import("./local-db/dal.js").localDal | null = null;
+let _initPromise: Promise<void> | null = null;
 
-// Lazy dynamic getter for local DAL in Tauri environment
-async function getLocalDal() {
-  if (!_localDal) {
-    const { localDal } = await import("./local-db/dal.js");
-    _localDal = localDal;
-  }
-  return _localDal;
+// Initialize the local DAL if in Tauri environment
+export async function initDataSource(): Promise<void> {
+  if (!isTauri()) return;
+  if (_initPromise) return _initPromise;
+
+  _initPromise = (async () => {
+    try {
+      const { localDal } = await import("./local-db/dal.js");
+      _localDal = localDal;
+      dataLog.info("Local DAL initialized successfully");
+    } catch (err) {
+      dataLog.error("Failed to initialize local DAL", {
+        error: (err as Error).message,
+      });
+    }
+  })();
+
+  return _initPromise;
 }
 
 export function getDataSource() {
@@ -21,9 +34,4 @@ export function getDataSource() {
   return api;
 }
 
-// Pre-initialize local DAL if in Tauri
-if (isTauri()) {
-  getLocalDal().catch(() => {});
-}
-
-export { api as dataSource };
+export { isTauri };

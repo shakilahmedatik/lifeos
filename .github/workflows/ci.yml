@@ -24,9 +24,11 @@ jobs:
           node-version: 22
           cache: "pnpm"
 
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
-
 
       - name: Check code formatting and linting
         run: pnpm check
@@ -36,6 +38,9 @@ jobs:
 
       - name: Typecheck TypeScript packages
         run: pnpm -r exec tsc --noEmit
+
+      - name: Check Rust Tauri compilation
+        run: cargo check --manifest-path frontend/src-tauri/Cargo.toml
 
       - name: Run unit test suites
         run: pnpm -r test

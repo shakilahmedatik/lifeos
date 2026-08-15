@@ -14,11 +14,15 @@ export function useDashboard() {
   const summaryQuery = useQuery<DashboardSummary>({
     queryKey: queryKeys.dashboard.summary(today),
     queryFn: () => ds.getSummary(today),
+    refetchInterval: 15_000,
   });
 
   const invalidateSummary = () => {
     queryClient.invalidateQueries({
       queryKey: queryKeys.dashboard.summary(today),
+    });
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.routine.tasks(today),
     });
     queryClient.invalidateQueries({
       queryKey: queryKeys.habits.today(),
@@ -27,6 +31,24 @@ export function useDashboard() {
       queryKey: queryKeys.reminders.all(),
     });
   };
+
+  const startTaskMutation = useMutation({
+    mutationFn: (taskId: string) => ds.updateTaskStatus(taskId, "in_progress"),
+    onSuccess: () => {
+      toast.success("Task started");
+      invalidateSummary();
+    },
+    onError: () => toast.error("Failed to start task"),
+  });
+
+  const completeTaskMutation = useMutation({
+    mutationFn: (taskId: string) => ds.updateTaskStatus(taskId, "done"),
+    onSuccess: () => {
+      toast.success("Task completed!");
+      invalidateSummary();
+    },
+    onError: () => toast.error("Failed to complete task"),
+  });
 
   const logHabitMutation = useMutation({
     mutationFn: ({ habitId, value, meta }: { habitId: string; value: number; meta?: string }) =>
@@ -61,6 +83,8 @@ export function useDashboard() {
     loading: summaryQuery.isLoading,
     error: summaryQuery.error ? (summaryQuery.error as Error).message : null,
     refresh: () => summaryQuery.refetch(),
+    startTask: (taskId: string) => startTaskMutation.mutateAsync(taskId),
+    completeTask: (taskId: string) => completeTaskMutation.mutateAsync(taskId),
     logHabit: (habitId: string, value: number, meta?: string) =>
       logHabitMutation.mutateAsync({ habitId, value, meta }),
     unlogHabit: (logId: string) => unlogHabitMutation.mutateAsync(logId),

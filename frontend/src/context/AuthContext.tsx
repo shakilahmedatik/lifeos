@@ -1,4 +1,5 @@
 import { createContext, type FC, type ReactNode, useContext, useEffect, useState } from "react";
+import { getApiBaseUrl } from "../lib/api.js";
 import {
   clearTauriStoredSession,
   getTauriStoredSession,
@@ -52,11 +53,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
         if (token && token !== "session-token") {
           headers.Authorization = `Bearer ${token}`;
         }
-        const API_BASE_URL = import.meta.env.DEV ? "" : import.meta.env.VITE_API_URL || "";
-        const res = await fetch(`${API_BASE_URL}/api/auth/get-session`, {
-          headers,
-          credentials: "include",
-        });
+        const API_BASE_URL = getApiBaseUrl();
+        const fetchOptions: RequestInit = { headers };
+        if (!isTauri()) {
+          fetchOptions.credentials = "include";
+        }
+
+        const res = await fetch(`${API_BASE_URL}/api/auth/get-session`, fetchOptions);
 
         if (res.ok) {
           const data = await res.json();
@@ -114,11 +117,12 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   };
 
   const logout = () => {
-    const API_BASE_URL = import.meta.env.DEV ? "" : import.meta.env.VITE_API_URL || "";
-    fetch(`${API_BASE_URL}/api/auth/sign-out`, {
-      method: "POST",
-      credentials: "include",
-    }).catch(() => {});
+    const API_BASE_URL = getApiBaseUrl();
+    const fetchOptions: RequestInit = { method: "POST" };
+    if (!isTauri()) {
+      fetchOptions.credentials = "include";
+    }
+    fetch(`${API_BASE_URL}/api/auth/sign-out`, fetchOptions).catch(() => {});
     removeToken();
     removeUser();
     if (isTauri()) {

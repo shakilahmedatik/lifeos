@@ -11,6 +11,7 @@ export const localMigrations = [
     status TEXT NOT NULL DEFAULT 'planned' CHECK (status IN ('todo', 'planned', 'in_progress', 'done', 'missed', 'cancelled', 'skipped')),
     notes TEXT,
     reminder_minutes_before INTEGER,
+    reminder_silent INTEGER NOT NULL DEFAULT 0,
     reminder_sound INTEGER NOT NULL DEFAULT 1,
     recurrence TEXT NOT NULL DEFAULT 'none' CHECK (recurrence IN ('none', 'daily', 'weekdays', 'weekly')),
     subtasks TEXT DEFAULT '[]',

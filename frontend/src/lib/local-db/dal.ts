@@ -1,48 +1,51 @@
-import type {
-  Account,
-  AccountType,
-  AccountWithBalance,
-  Category,
-  CategoryBreakdown,
-  CategoryKind,
-  DashboardSummary,
-  FinanceDashboardWidget,
-  HabitDefinition,
-  HabitLogEntry,
-  HabitStats,
-  HabitWithStreak,
-  LearningLog,
-  LearningResource,
-  LearningUnit,
-  MonthlySummary,
-  NewAccountInput,
-  NewCategoryInput,
-  NewHabitDefinitionInput,
-  NewLearningLogInput,
-  NewLearningResourceInput,
-  NewNotificationInput,
-  NewReminderInput,
-  NewSkillAreaInput,
-  NewTaskInput,
-  NewTransactionInput,
-  Notification,
-  NotificationSoundType,
-  NotificationWithTask,
-  Reminder,
-  ResourceWithProgress,
-  RoutineStats,
-  SkillArea,
-  SkillAreaSummary,
-  Task,
-  TaskCategory,
-  TaskHistoryQuery,
-  TaskStatus,
-  Transaction,
-  UpdateLearningLogInput,
-  UpdateLearningResourceInput,
-  UpdateReminderInput,
-  UpdateSkillAreaInput,
-  WeeklySummary,
+import {
+  type Account,
+  type AccountType,
+  type AccountWithBalance,
+  type Category,
+  type CategoryBreakdown,
+  type CategoryKind,
+  type DashboardHabitConsistency,
+  type DashboardSummary,
+  type FinanceDashboardWidget,
+  getClientDateString,
+  type HabitAnalyticsData,
+  type HabitDefinition,
+  type HabitLogEntry,
+  type HabitStats,
+  type HabitWithStreak,
+  type LearningLog,
+  type LearningResource,
+  type LearningUnit,
+  type MonthlySummary,
+  type NewAccountInput,
+  type NewCategoryInput,
+  type NewHabitDefinitionInput,
+  type NewLearningLogInput,
+  type NewLearningResourceInput,
+  type NewNotificationInput,
+  type NewReminderInput,
+  type NewSkillAreaInput,
+  type NewTaskInput,
+  type NewTransactionInput,
+  type Notification,
+  type NotificationSoundType,
+  type NotificationWithTask,
+  type Reminder,
+  type ResourceWithProgress,
+  type RoutineStats,
+  type SkillArea,
+  type SkillAreaSummary,
+  type Task,
+  type TaskCategory,
+  type TaskHistoryQuery,
+  type TaskStatus,
+  type Transaction,
+  type UpdateLearningLogInput,
+  type UpdateLearningResourceInput,
+  type UpdateReminderInput,
+  type UpdateSkillAreaInput,
+  type WeeklySummary,
 } from "@lifeos/contracts";
 import { getLocalDb } from "./index.js";
 
@@ -346,15 +349,39 @@ export const localDal = {
 
     const updated = {
       name: patch.name ?? String(existing.name),
+      category: patch.category ?? String(existing.category || "general"),
+      icon: patch.icon !== undefined ? patch.icon : existing.icon ? String(existing.icon) : null,
+      color:
+        patch.color !== undefined ? patch.color : existing.color ? String(existing.color) : null,
       config: patch.config ? JSON.stringify(patch.config) : String(existing.config),
-      archived: existing.archived ? 1 : 0,
-      sort_order: Number(existing.sort_order),
+      archived:
+        (patch as { archived?: boolean }).archived !== undefined
+          ? (patch as { archived?: boolean }).archived
+            ? 1
+            : 0
+          : existing.archived
+            ? 1
+            : 0,
+      sort_order:
+        (patch as { sortOrder?: number }).sortOrder !== undefined
+          ? Number((patch as { sortOrder?: number }).sortOrder)
+          : Number(existing.sort_order || 0),
       updated_at: now,
     };
 
     await db.execute(
-      `UPDATE habits SET name = ?, config = ?, archived = ?, sort_order = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?`,
-      [updated.name, updated.config, updated.archived, updated.sort_order, now, id],
+      `UPDATE habits SET name = ?, category = ?, icon = ?, color = ?, config = ?, archived = ?, sort_order = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?`,
+      [
+        updated.name,
+        updated.category,
+        updated.icon,
+        updated.color,
+        updated.config,
+        updated.archived,
+        updated.sort_order,
+        now,
+        id,
+      ],
     );
 
     const found = (await localDal.getHabits()).find((h) => h.id === id);
@@ -427,10 +454,18 @@ export const localDal = {
     const result: HabitWithStreak[] = [];
 
     for (const h of activeHabits) {
-      const logs = await db.select<SqliteRow[]>(
+      const rows = await db.select<SqliteRow[]>(
         "SELECT * FROM habit_logs WHERE habit_id = ? AND date = ? AND deleted_at IS NULL",
         [h.id, today],
       );
+      const logs: HabitLogEntry[] = rows.map((l) => ({
+        id: String(l.id),
+        habitId: String(l.habit_id),
+        date: String(l.date),
+        value: Number(l.value) || 1,
+        meta: l.meta ? String(l.meta) : undefined,
+        loggedAt: String(l.logged_at),
+      }));
       const todayValue = logs.reduce((sum, l) => sum + (Number(l.value) || 0), 0);
       result.push({
         ...h,
@@ -440,6 +475,7 @@ export const localDal = {
         todayProgress: todayValue > 0 ? 1 : 0,
         todayValue,
         todayTarget: 1,
+        logs,
       });
     }
 
@@ -461,12 +497,218 @@ export const localDal = {
     };
   },
 
-  getWeeklyReview: async (_weekStart?: string): Promise<WeeklySummary> => {
+  getHabitAnalytics: async (
+    habitId: string,
+    period: "week" | "month" = "week",
+    endDate?: string,
+  ): Promise<HabitAnalyticsData | undefined> => {
+    const db = await getLocalDb();
+    const habitRows = await db.select<SqliteRow[]>(
+      "SELECT * FROM habits WHERE id = ? AND deleted_at IS NULL",
+      [habitId],
+    );
+    if (habitRows.length === 0) return undefined;
+    const habitRow = habitRows[0];
+    let config = { type: habitRow.type || "boolean" };
+    try {
+      if (habitRow.config) config = JSON.parse(String(habitRow.config));
+    } catch {}
+
+    const todayStr = endDate || getClientDateString();
+    const [y, m, d] = todayStr.split("-").map(Number);
+    const end = new Date(Date.UTC(y, m - 1, d));
+    const totalDays = period === "week" ? 7 : 30;
+    const start = new Date(end);
+    start.setUTCDate(start.getUTCDate() - (totalDays - 1));
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const startDateStr = `${start.getUTCFullYear()}-${pad(start.getUTCMonth() + 1)}-${pad(start.getUTCDate())}`;
+
+    const rawLogs = await db.select<SqliteRow[]>(
+      "SELECT * FROM habit_logs WHERE habit_id = ? AND date >= ? AND date <= ? AND deleted_at IS NULL ORDER BY date ASC, logged_at ASC",
+      [habitId, startDateStr, todayStr],
+    );
+
+    const logsByDate = new Map<string, number>();
+    for (const row of rawLogs) {
+      const d = String(row.date);
+      const val = Number(row.value) || 1;
+      logsByDate.set(d, (logsByDate.get(d) || 0) + val);
+    }
+
+    let target = 1;
+    if (habitRow.type === "water" && "dailyGoalMl" in config) {
+      target = Number(config.dailyGoalMl) || 2500;
+    } else if (habitRow.type === "walking" && "dailyGoal" in config) {
+      target = Number(config.dailyGoal) || 10000;
+    } else if (habitRow.type === "timed" && "dailyGoalMinutes" in config) {
+      target = Number(config.dailyGoalMinutes) || 30;
+    } else if (habitRow.type === "prayer") {
+      target = Array.isArray((config as { prayers?: unknown[] }).prayers)
+        ? (config as { prayers?: unknown[] }).prayers?.length || 5
+        : 5;
+    }
+
+    const dailyValues: { date: string; value: number; target: number }[] = [];
+    let completedDays = 0;
+    let totalValue = 0;
+
+    for (let i = 0; i < totalDays; i++) {
+      const cur = new Date(start);
+      cur.setUTCDate(start.getUTCDate() + i);
+      const curStr = `${cur.getUTCFullYear()}-${pad(cur.getUTCMonth() + 1)}-${pad(cur.getUTCDate())}`;
+      const dayVal = logsByDate.get(curStr) || 0;
+      totalValue += dayVal;
+      if (dayVal >= target && target > 0) completedDays++;
+
+      dailyValues.push({
+        date: curStr,
+        value: dayVal,
+        target,
+      });
+    }
+
+    const completionRate = Math.round((completedDays / totalDays) * 100);
+    const averageValue = Math.round((totalValue / totalDays) * 10) / 10;
+
+    let streak = 0;
+    const checkDate = new Date(end);
+    for (let i = 0; i < 365; i++) {
+      const dStr = `${checkDate.getUTCFullYear()}-${pad(checkDate.getUTCMonth() + 1)}-${pad(checkDate.getUTCDate())}`;
+      const val = logsByDate.get(dStr) || 0;
+      if (val >= target) {
+        streak++;
+        checkDate.setUTCDate(checkDate.getUTCDate() - 1);
+      } else {
+        if (i === 0) {
+          checkDate.setUTCDate(checkDate.getUTCDate() - 1);
+          continue;
+        }
+        break;
+      }
+    }
+
     return {
-      habits: [],
-      dailyBreakdown: [],
-      topHabits: [],
-      overallCompletionRate: 0,
+      habitId,
+      period,
+      dailyValues,
+      completionRate,
+      currentStreak: streak,
+      longestStreak: streak,
+      totalValue,
+      averageValue,
+    };
+  },
+
+  getWeeklyReview: async (weekStart?: string): Promise<WeeklySummary> => {
+    const db = await getLocalDb();
+    const habits = await localDal.getHabits();
+    const activeHabits = habits.filter((h) => !h.archived);
+
+    const todayStr = getClientDateString();
+    const [y, m, d] = (weekStart || todayStr).split("-").map(Number);
+    const today = new Date(Date.UTC(y, m - 1, d));
+    const day = today.getUTCDay();
+    const diff = today.getUTCDate() - day + (day === 0 ? -6 : 1);
+    const monday = new Date(today);
+    monday.setUTCDate(diff);
+
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const weekStartStr = `${monday.getUTCFullYear()}-${pad(monday.getUTCMonth() + 1)}-${pad(monday.getUTCDate())}`;
+
+    const sunday = new Date(monday);
+    sunday.setUTCDate(monday.getUTCDate() + 6);
+    const weekEndStr = `${sunday.getUTCFullYear()}-${pad(sunday.getUTCMonth() + 1)}-${pad(sunday.getUTCDate())}`;
+
+    const rawLogs = await db.select<SqliteRow[]>(
+      "SELECT * FROM habit_logs WHERE date >= ? AND date <= ? AND deleted_at IS NULL",
+      [weekStartStr, weekEndStr],
+    );
+
+    const habitsSummary = activeHabits.map((h) => {
+      const hLogs = rawLogs.filter((l) => String(l.habit_id) === h.id);
+      let target = 1;
+      if (h.type === "water" && "dailyGoalMl" in h.config)
+        target = Number(h.config.dailyGoalMl) || 2500;
+      else if (h.type === "walking" && "dailyGoal" in h.config)
+        target = Number(h.config.dailyGoal) || 10000;
+      else if (h.type === "timed" && "dailyGoalMinutes" in h.config)
+        target = Number(h.config.dailyGoalMinutes) || 30;
+      else if (h.type === "prayer")
+        target = Array.isArray((h.config as { prayers?: unknown[] }).prayers)
+          ? (h.config as { prayers?: unknown[] }).prayers?.length || 5
+          : 5;
+
+      const completedDates = new Set<string>();
+      const grouped = new Map<string, number>();
+      for (const log of hLogs) {
+        const d = String(log.date);
+        grouped.set(d, (grouped.get(d) || 0) + (Number(log.value) || 1));
+      }
+      for (const [date, val] of grouped.entries()) {
+        if (val >= target) completedDates.add(date);
+      }
+
+      const completionCount = completedDates.size;
+      const targetCount = 7;
+      const completionRate = targetCount > 0 ? completionCount / targetCount : 0;
+
+      return {
+        habitId: h.id,
+        name: h.name,
+        type: h.type,
+        category: h.category,
+        completionCount,
+        targetCount,
+        completionRate,
+      };
+    });
+
+    const dailyBreakdown = [];
+    for (let i = 0; i < 7; i++) {
+      const cur = new Date(monday);
+      cur.setUTCDate(monday.getUTCDate() + i);
+      const curStr = `${cur.getUTCFullYear()}-${pad(cur.getUTCMonth() + 1)}-${pad(cur.getUTCDate())}`;
+
+      let dayCompletions = 0;
+      for (const h of activeHabits) {
+        let target = 1;
+        if (h.type === "water" && "dailyGoalMl" in h.config)
+          target = Number(h.config.dailyGoalMl) || 2500;
+        else if (h.type === "walking" && "dailyGoal" in h.config)
+          target = Number(h.config.dailyGoal) || 10000;
+        else if (h.type === "timed" && "dailyGoalMinutes" in h.config)
+          target = Number(h.config.dailyGoalMinutes) || 30;
+        else if (h.type === "prayer")
+          target = Array.isArray((h.config as { prayers?: unknown[] }).prayers)
+            ? (h.config as { prayers?: unknown[] }).prayers?.length || 5
+            : 5;
+
+        const curLogs = rawLogs.filter(
+          (l) => String(l.habit_id) === h.id && String(l.date) === curStr,
+        );
+        const dayVal = curLogs.reduce((sum, l) => sum + (Number(l.value) || 1), 0);
+        if (dayVal >= target && target > 0) dayCompletions++;
+      }
+
+      dailyBreakdown.push({
+        date: curStr,
+        completions: dayCompletions,
+      });
+    }
+
+    const topHabits = [...habitsSummary]
+      .sort((a, b) => b.completionRate - a.completionRate)
+      .slice(0, 3);
+    const totalPossible = habitsSummary.reduce((sum, h) => sum + h.targetCount, 0);
+    const totalCompleted = habitsSummary.reduce((sum, h) => sum + h.completionCount, 0);
+    const overallCompletionRate = totalPossible > 0 ? totalCompleted / totalPossible : 0;
+
+    return {
+      habits: habitsSummary,
+      dailyBreakdown,
+      topHabits,
+      overallCompletionRate,
     };
   },
 
@@ -944,30 +1186,169 @@ export const localDal = {
 
   // --- Dashboard Summary ---
   getSummary: async (date?: string): Promise<DashboardSummary> => {
+    const db = await getLocalDb();
+    const pad = (n: number) => String(n).padStart(2, "0");
     const today = date || new Date().toISOString().split("T")[0];
     const tasks = await localDal.getTasks(today);
     const habits = await localDal.getTodayHabits();
     const reminders = await localDal.getTodayReminders();
 
-    const pendingTasks = tasks.filter((t) => t.status !== "done" && t.status !== "skipped");
+    const now = new Date();
+    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const timeToMins = (t: string) => {
+      const [h, m] = (t || "00:00").split(":").map(Number);
+      return (h || 0) * 60 + (m || 0);
+    };
+
+    const sortedTasks = [...tasks].sort(
+      (a, b) => timeToMins(a.startTime) - timeToMins(b.startTime),
+    );
+
+    const inProgressTask = sortedTasks.find((t) => t.status === "in_progress");
+
+    let timeActiveTask: import("@lifeos/contracts").Task | null = null;
+    for (const task of sortedTasks) {
+      if (task.status === "done" || task.status === "cancelled" || task.status === "skipped")
+        continue;
+      const start = timeToMins(task.startTime);
+      const end = timeToMins(task.endTime);
+      const isOvernight = task.isOvernight || start >= end;
+      const isActive = isOvernight
+        ? currentMinutes >= start || currentMinutes < end
+        : currentMinutes >= start && currentMinutes < end;
+      if (isActive) {
+        timeActiveTask = task;
+        break;
+      }
+    }
+
+    const nowTask = inProgressTask || timeActiveTask || null;
+
+    let nextTask: import("@lifeos/contracts").Task | null = null;
+    for (const task of sortedTasks) {
+      if (task.status === "done" || task.status === "cancelled" || task.status === "skipped")
+        continue;
+      if (nowTask && task.id === nowTask.id) continue;
+      const start = timeToMins(task.startTime);
+      if (start >= currentMinutes) {
+        nextTask = task;
+        break;
+      }
+    }
+
+    let previousTask: import("@lifeos/contracts").Task | null = null;
+    const candidatePreviousTasks = sortedTasks.filter((t) => {
+      if (nowTask && t.id === nowTask.id) return false;
+      if (nextTask && t.id === nextTask.id) return false;
+      const start = timeToMins(t.startTime);
+      const end = timeToMins(t.endTime);
+      const isOvernight = t.isOvernight || start >= end;
+
+      if (t.status === "done" || t.status === "skipped") return true;
+      if (isOvernight) {
+        return currentMinutes >= end && currentMinutes < start;
+      }
+      return end <= currentMinutes || start <= currentMinutes;
+    });
+
+    if (candidatePreviousTasks.length > 0) {
+      candidatePreviousTasks.sort((a, b) => {
+        const endA = timeToMins(a.endTime);
+        const endB = timeToMins(b.endTime);
+        const endedPastA = endA <= currentMinutes;
+        const endedPastB = endB <= currentMinutes;
+
+        if (endedPastA && endedPastB) {
+          return endA - endB;
+        }
+        if (endedPastA && !endedPastB) {
+          if (b.status === "done" && b.updatedAt && a.updatedAt) {
+            return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+          }
+          return 1;
+        }
+        if (!endedPastA && endedPastB) {
+          if (a.status === "done" && a.updatedAt && b.updatedAt) {
+            return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+          }
+          return -1;
+        }
+
+        if (a.updatedAt && b.updatedAt) {
+          return new Date(a.updatedAt).getTime() - new Date(b.updatedAt).getTime();
+        }
+        return endA - endB;
+      });
+
+      previousTask = candidatePreviousTasks[candidatePreviousTasks.length - 1];
+    }
+
     const completedTasks = tasks.filter((t) => t.status === "done");
 
+    const consistencyHabits = habits.slice(0, 4);
+    const habitConsistency: DashboardHabitConsistency[] = [];
+
+    const [curY, curM, curD] = today.split("-").map(Number);
+    const end7 = new Date(Date.UTC(curY, curM - 1, curD));
+    const start7 = new Date(end7);
+    start7.setUTCDate(start7.getUTCDate() - 6);
+    const start7Str = `${start7.getUTCFullYear()}-${pad(start7.getUTCMonth() + 1)}-${pad(start7.getUTCDate())}`;
+
+    for (const h of consistencyHabits) {
+      const hRawLogs = await db.select<SqliteRow[]>(
+        "SELECT * FROM habit_logs WHERE habit_id = ? AND date >= ? AND date <= ? AND deleted_at IS NULL",
+        [h.id, start7Str, today],
+      );
+      let target = 1;
+      if (h.type === "water" && "dailyGoalMl" in h.config)
+        target = Number(h.config.dailyGoalMl) || 2500;
+      else if (h.type === "walking" && "dailyGoal" in h.config)
+        target = Number(h.config.dailyGoal) || 10000;
+      else if (h.type === "timed" && "dailyGoalMinutes" in h.config)
+        target = Number(h.config.dailyGoalMinutes) || 30;
+      else if (h.type === "prayer")
+        target = Array.isArray((h.config as { prayers?: unknown[] }).prayers)
+          ? (h.config as { prayers?: unknown[] }).prayers?.length || 5
+          : 5;
+
+      const grouped = new Map<string, number>();
+      for (const log of hRawLogs) {
+        const d = String(log.date);
+        grouped.set(d, (grouped.get(d) || 0) + (Number(log.value) || 1));
+      }
+
+      const days: number[] = [];
+      for (let i = 0; i < 7; i++) {
+        const cur = new Date(start7);
+        cur.setUTCDate(start7.getUTCDate() + i);
+        const dStr = `${cur.getUTCFullYear()}-${pad(cur.getUTCMonth() + 1)}-${pad(cur.getUTCDate())}`;
+        const val = grouped.get(dStr) || 0;
+        const pct = target > 0 ? Math.min(100, Math.round((val / target) * 100)) : 0;
+        days.push(pct);
+      }
+
+      const weekAvg = Math.round(days.reduce((a, b) => a + b, 0) / 7);
+
+      habitConsistency.push({
+        habitId: h.id,
+        name: h.name,
+        color: h.color || "#10B981",
+        days,
+        currentStreak: h.currentStreak,
+        weekAverage: weekAvg,
+      });
+    }
+
     return {
-      now: pendingTasks[0] || null,
-      next: pendingTasks[1] || null,
+      now: nowTask,
+      next: nextTask,
       todayCount: tasks.length,
       todayDoneCount: completedTasks.length,
       dueHabits: habits,
-      previous: completedTasks[completedTasks.length - 1] || null,
+      previous: previousTask,
       upcomingReminders: reminders,
-      habitConsistency: habits.map((h) => ({
-        habitId: h.id,
-        name: h.name,
-        color: h.color || "#3b82f6",
-        days: [h.loggedToday ? 100 : 0],
-        currentStreak: h.currentStreak,
-        weekAverage: h.loggedToday ? 100 : 0,
-      })),
+      habitConsistency,
       workoutWeek: [],
       workoutLabels: [],
       skillsProgress: [],

@@ -9,7 +9,9 @@ export function createDashboardRouter(deps: DashboardDependencies): Router {
 
   router.get("/summary", async (req, res) => {
     const clientDate = req.query.date as string | undefined;
-    const nowIso = clientDate ? `${clientDate}T${nowIsoInDhaka().slice(11)}` : nowIsoInDhaka();
+    const nowIso =
+      (req.query.nowIso as string) ||
+      (clientDate ? `${clientDate}T${nowIsoInDhaka().slice(11)}` : nowIsoInDhaka());
     const userId =
       (req as unknown as { user?: { id: string } }).user?.id ||
       (req.query.userId as string) ||

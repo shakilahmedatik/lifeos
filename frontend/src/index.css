@@ -67,25 +67,25 @@
 }
 
 :root {
-  --color-surface: #030712;
-  --color-surface-elevated: #0f172a;
-  --color-sidebar: #0f172a;
-  --color-card: rgba(30, 41, 59, 0.6);
-  --color-card-solid: #1e293b;
-  --color-card-hover: #334155;
-  --color-input: #334155;
-  --color-border: rgba(51, 65, 85, 0.5);
-  --color-border-subtle: #1e293b;
-  --color-accent: #f59e0b;
-  --color-accent-hover: #d97706;
-  --color-accent-muted: rgba(245, 158, 11, 0.15);
-  --color-success: #22c55e;
-  --color-danger: #ef4444;
-  --color-warning: #eab308;
-  --color-primary: #f3f4f6;
-  --color-secondary: #9ca3af;
-  --color-muted: #6b7280;
-  --color-backdrop: rgba(0, 0, 0, 0.6);
+  --color-surface: #1e1e1e;
+  --color-surface-elevated: #282828;
+  --color-sidebar: rgba(40, 40, 40, 0.5);
+  --color-card: rgba(42, 42, 42, 0.8);
+  --color-card-solid: #2a2a2a;
+  --color-card-hover: #3a3a3a;
+  --color-input: #323232;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-border-subtle: rgba(255, 255, 255, 0.05);
+  --color-accent: #007aff;
+  --color-accent-hover: #0062cc;
+  --color-accent-muted: rgba(0, 122, 255, 0.15);
+  --color-success: #34c759;
+  --color-danger: #ff3b30;
+  --color-warning: #ffcc00;
+  --color-primary: #ffffff;
+  --color-secondary: rgba(255, 255, 255, 0.6);
+  --color-muted: rgba(255, 255, 255, 0.4);
+  --color-backdrop: rgba(0, 0, 0, 0.4);
 
   /* Spacing */
   --space-1: 0.25rem;
@@ -100,14 +100,16 @@
 
   /* Typography */
   --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-base: 1rem;
-  --text-lg: 1.125rem;
+  --text-sm: 0.8125rem; /* macOS 13px */
+  --text-base: 0.9375rem; /* macOS 15px default */
+  --text-lg: 1.0625rem; /* macOS 17px */
   --text-xl: 1.25rem;
   --text-2xl: 1.5rem;
   --text-3xl: 1.875rem;
-  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
-  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica,
+    Arial, sans-serif;
+  --font-mono: "SF Mono", SFMono-Regular, ui-monospace, Menlo, Monaco, Consolas, monospace;
 
   /* Border Radius */
   --radius-sm: 0.375rem;
@@ -137,24 +139,24 @@
 }
 
 html.light {
-  --color-surface: #f8fafc;
-  --color-surface-elevated: #ffffff;
-  --color-sidebar: #ffffff;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #f5f5f5;
+  --color-sidebar: rgba(246, 246, 246, 0.5);
   --color-card: rgba(255, 255, 255, 0.8);
   --color-card-solid: #ffffff;
-  --color-card-hover: #f1f5f9;
-  --color-input: #f1f5f9;
-  --color-border: rgba(226, 232, 240, 0.8);
-  --color-border-subtle: #f1f5f9;
-  --color-accent: #d97706;
-  --color-accent-hover: #b45309;
-  --color-accent-muted: rgba(217, 119, 6, 0.1);
-  --color-success: #16a34a;
-  --color-danger: #dc2626;
-  --color-warning: #ca8a04;
-  --color-primary: #0f172a;
-  --color-secondary: #475569;
-  --color-muted: #64748b;
+  --color-card-hover: #f0f0f0;
+  --color-input: #ffffff;
+  --color-border: rgba(0, 0, 0, 0.1);
+  --color-border-subtle: rgba(0, 0, 0, 0.05);
+  --color-accent: #007aff;
+  --color-accent-hover: #0062cc;
+  --color-accent-muted: rgba(0, 122, 255, 0.1);
+  --color-success: #28cd41;
+  --color-danger: #ff3b30;
+  --color-warning: #ffcc00;
+  --color-primary: #000000;
+  --color-secondary: rgba(0, 0, 0, 0.5);
+  --color-muted: rgba(0, 0, 0, 0.3);
   --color-backdrop: rgba(255, 255, 255, 0.5);
 }
 
@@ -162,7 +164,7 @@ body {
   margin: 0;
   background: var(--color-surface);
   color: var(--color-primary);
-  font-family: "Inter", system-ui, -apple-system, sans-serif;
+  font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
@@ -170,11 +172,15 @@ body {
 .glass {
   background: var(--color-card);
   border: 1px solid var(--color-border);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
 
 .glass-heavy {
-  background: color-mix(in srgb, var(--color-surface) 95%, transparent);
+  background: color-mix(in srgb, var(--color-surface) 60%, transparent);
   border: 1px solid var(--color-border);
+  backdrop-filter: blur(40px);
+  -webkit-backdrop-filter: blur(40px);
 }
 
 * {
@@ -221,4 +227,10 @@ body {
     opacity: 1;
     transform: scale(1);
   }
+}
+
+.drag-region {
+  -webkit-app-region: drag;
+  user-select: none;
+  -webkit-user-select: none;
 }

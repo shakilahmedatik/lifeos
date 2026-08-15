@@ -13,9 +13,8 @@ export function useHabitBuilder() {
   });
 
   const invalidateHabits = () => {
-    queryClient.invalidateQueries({ queryKey: queryKeys.habits.all() });
-    queryClient.invalidateQueries({ queryKey: queryKeys.habits.today() });
-    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
+    queryClient.invalidateQueries({ queryKey: ["habits"] });
+    queryClient.invalidateQueries({ queryKey: ["dashboard"] });
   };
 
   const createMutation = useMutation({

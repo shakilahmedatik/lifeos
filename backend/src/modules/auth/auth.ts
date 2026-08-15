@@ -1,6 +1,7 @@
 import type { Client } from "@libsql/client";
 import { LibsqlDialect } from "@libsql/kysely-libsql";
 import { betterAuth } from "better-auth";
+import { bearer } from "better-auth/plugins";
 import { Kysely } from "kysely";
 import type { AppConfig } from "../../config.js";
 
@@ -28,6 +29,7 @@ export function createAuth(client: Client, config: AppConfig): AuthInstance {
       enabled: true,
       autoSignIn: true,
     },
+    plugins: [bearer()],
     trustedOrigins: config.allowedOrigins,
     advanced: {
       defaultBearerTokenHeaderName: "Authorization",

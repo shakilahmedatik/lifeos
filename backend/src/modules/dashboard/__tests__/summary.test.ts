@@ -67,4 +67,44 @@ describe("getTaskScheduleStack", () => {
     expect(result2.now?.id).toBe("overnight");
     expect(result2.next?.id).toBe("morning");
   });
+
+  it("prioritizes task marked in_progress as nowTask regardless of time block", () => {
+    const task1 = makeTask("1", "08:00", "09:00");
+    const task2 = makeTask("2", "14:00", "15:00");
+    task2.status = "in_progress"; // User manually started task 2 early
+
+    // Even at 08:30 (during task 1's nominal window), task 2 is explicitly in progress
+    const result = getTaskScheduleStack([task1, task2], "2026-08-07T08:30:00+06:00");
+    expect(result.now?.id).toBe("2");
+  });
+
+  it("prioritizes in_progress task even if its nominal end time has passed", () => {
+    const task1 = makeTask("1", "08:00", "09:00");
+    task1.status = "in_progress"; // User is still working on task 1 past 09:00
+    const task2 = makeTask("2", "14:00", "15:00");
+
+    const result = getTaskScheduleStack([task1, task2], "2026-08-07T11:00:00+06:00");
+    expect(result.now?.id).toBe("1");
+    expect(result.next?.id).toBe("2");
+  });
+
+  it("picks the task whose time crossed most recently instead of an older done task", () => {
+    const task1 = makeTask("1", "07:00", "08:00");
+    task1.status = "done"; // done early in the morning
+    const task2 = makeTask("2", "12:00", "13:00");
+    task2.status = "planned"; // crossed time 1 hour ago at 13:00
+
+    const result = getTaskScheduleStack([task1, task2], "2026-08-07T14:00:00+06:00");
+    expect(result.previous?.id).toBe("2"); // Task 2 crossed time most recently!
+  });
+
+  it("picks the latest completed task when multiple tasks are completed", () => {
+    const task1 = makeTask("1", "07:00", "08:00");
+    task1.status = "done";
+    const task2 = makeTask("2", "10:00", "11:00");
+    task2.status = "done";
+
+    const result = getTaskScheduleStack([task1, task2], "2026-08-07T12:00:00+06:00");
+    expect(result.previous?.id).toBe("2");
+  });
 });

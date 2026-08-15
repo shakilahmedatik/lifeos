@@ -14,10 +14,13 @@ interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
 }
 
 const variantStyles: Record<Variant, string> = {
-  primary: "bg-accent hover:bg-accent-hover text-surface shadow-sm shadow-accent/20",
-  secondary: "bg-card-solid hover:bg-card-hover text-secondary border border-border",
-  ghost: "bg-transparent hover:bg-card-hover text-muted hover:text-primary",
-  danger: "bg-danger/10 hover:bg-danger/20 text-danger hover:text-danger border border-danger/20",
+  primary:
+    "bg-accent hover:bg-accent-hover text-white shadow-sm shadow-black/10 border border-black/10",
+  secondary:
+    "bg-card-solid hover:bg-card-hover text-primary border border-border shadow-sm shadow-black/5",
+  ghost: "bg-transparent hover:bg-card-hover text-secondary hover:text-primary",
+  danger:
+    "bg-danger hover:bg-[#d32f2f] text-white shadow-sm shadow-black/10 border border-black/10",
 };
 
 const sizeStyles: Record<Size, string> = {

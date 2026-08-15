@@ -1,11 +1,11 @@
 {
-  "$schema": "https://raw.githubusercontent.com/tauri-apps/tauri/dev/crates/tauri-config-schema/schema.json",
+  "$schema": "https://schema.tauri.app/config/2",
   "productName": "LifeOS",
   "version": "0.1.0",
-  "identifier": "com.lifeos.app",
+  "identifier": "com.lifeos.desktop",
   "build": {
-    "beforeDevCommand": "pnpm dev",
-    "beforeBuildCommand": "pnpm build",
+    "beforeDevCommand": "cd .. && pnpm dev",
+    "beforeBuildCommand": "cd .. && pnpm build",
     "devUrl": "http://localhost:5173",
     "frontendDist": "../dist"
   },
@@ -18,11 +18,21 @@
         "minWidth": 900,
         "minHeight": 600,
         "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
         "transparent": false
       }
     ],
     "security": {
       "csp": null
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY2MEEzQTY0RDAwMjNFQzYKRldSdWtzcGl3eWhndjhxYWJzY2Z0Z3ZodWlqazFsMnAzaTRwNTY3ODkwYWJjZGVmZ2hpamtsbW5vCg==",
+      "endpoints": [
+        "https://github.com/shakilahmedatik/lifeos/releases/latest/download/latest.json"
+      ]
     }
   },
   "bundle": {

@@ -46,7 +46,7 @@ export default function Card({
   const content = (
     <div
       className={cn(
-        "bg-card border border-border rounded-xl",
+        "bg-card glass border border-border/50 rounded-xl shadow-sm shadow-black/5",
         paddingStyles[padding],
         hover && "hover:bg-card-hover transition-colors duration-200",
         accent && `border-l-4 ${accent}`,
@@ -65,7 +65,7 @@ export default function Card({
       <TiltCard className={className} onClick={onClick}>
         <div
           className={cn(
-            "bg-card border border-border rounded-xl h-full w-full",
+            "bg-card glass border border-border/50 rounded-xl h-full w-full shadow-sm shadow-black/5",
             paddingStyles[padding],
             hover && "hover:bg-card-hover transition-colors duration-200",
             accent && `border-l-4 ${accent}`,

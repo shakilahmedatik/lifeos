@@ -209,4 +209,31 @@ describe("Habit Module Services Integration", () => {
     expect(found?.todayTarget).toBe(4);
     expect(found?.todayProgress).toBe(0.25);
   });
+
+  it("calculates analytics correctly for a habit with getAnalytics", async () => {
+    const habit = await habitService.createHabit({
+      name: "Study",
+      type: "timed",
+      config: { type: "timed", dailyGoalMinutes: 60 },
+    });
+
+    await habitLogService.logHabit({
+      habitId: habit.id,
+      date: "2026-08-14",
+      value: 60,
+    });
+
+    const module = initHabitsModule(client);
+    const stats = await module.habitStatsService.getAnalytics(
+      habit.id,
+      "week",
+      "default",
+      "2026-08-14",
+    );
+    expect(stats).toBeDefined();
+    expect(stats?.totalValue).toBe(60);
+    expect(stats?.completionRate).toBe(14);
+    expect(stats?.dailyValues).toHaveLength(7);
+    expect(stats?.dailyValues[6].value).toBe(60);
+  });
 });
