@@ -25,6 +25,7 @@ import {
   type NewLearningResourceInput,
   type NewNotificationInput,
   type NewReminderInput,
+  type NewRoutineCategoryInput,
   type NewSkillAreaInput,
   type NewTaskInput,
   type NewTransactionInput,
@@ -33,6 +34,7 @@ import {
   type NotificationWithTask,
   type Reminder,
   type ResourceWithProgress,
+  type RoutineCategory,
   type RoutineStats,
   type SkillArea,
   type SkillAreaSummary,
@@ -44,6 +46,7 @@ import {
   type UpdateLearningLogInput,
   type UpdateLearningResourceInput,
   type UpdateReminderInput,
+  type UpdateRoutineCategoryInput,
   type UpdateSkillAreaInput,
   type WeeklySummary,
 } from "@lifeos/contracts";
@@ -277,6 +280,134 @@ export const localDal = {
       categoryDistribution: [],
       weeklyTrends: [],
     };
+  },
+
+  getRoutineCategories: async (): Promise<RoutineCategory[]> => {
+    const db = await getLocalDb();
+    const countRes = await db.select<{ count: number }[]>(
+      "SELECT COUNT(*) as count FROM routine_categories WHERE deleted_at IS NULL",
+    );
+    if ((countRes[0]?.count || 0) === 0) {
+      const now = new Date().toISOString();
+      const defaults = [
+        { id: "routine", name: "Routine", color: "#14b8a6", icon: "Clock", sortOrder: 0 },
+        { id: "must_do", name: "Must Do", color: "#dc2626", icon: "AlertCircle", sortOrder: 1 },
+        { id: "work", name: "Work", color: "#3b82f6", icon: "Briefcase", sortOrder: 2 },
+        { id: "workout", name: "Workout", color: "#ef4444", icon: "Dumbbell", sortOrder: 3 },
+        { id: "learning", name: "Learning", color: "#a855f7", icon: "BookOpen", sortOrder: 4 },
+        { id: "habit", name: "Habit", color: "#f97316", icon: "Flame", sortOrder: 5 },
+        { id: "personal", name: "Personal", color: "#ec4899", icon: "User", sortOrder: 6 },
+        { id: "flex", name: "Flex", color: "#6366f1", icon: "Shuffle", sortOrder: 7 },
+        { id: "general", name: "General", color: "#6b7280", icon: "CheckSquare", sortOrder: 8 },
+      ];
+      for (const d of defaults) {
+        await db.execute(
+          `INSERT OR IGNORE INTO routine_categories (id, user_id, name, color, icon, is_default, sort_order, created_at, updated_at, _sync_status)
+           VALUES (?, '', ?, ?, ?, 1, ?, ?, ?, 'synced')`,
+          [d.id, d.name, d.color, d.icon, d.sortOrder, now, now],
+        );
+      }
+    }
+
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM routine_categories WHERE deleted_at IS NULL ORDER BY sort_order ASC, created_at ASC",
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      name: String(r.name),
+      color: String(r.color),
+      icon: r.icon ? String(r.icon) : undefined,
+      isDefault: Boolean(r.is_default),
+      sortOrder: Number(r.sort_order),
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    }));
+  },
+
+  createRoutineCategory: async (input: NewRoutineCategoryInput): Promise<RoutineCategory> => {
+    const db = await getLocalDb();
+    const id = `rcat_${crypto.randomUUID()}`;
+    const now = new Date().toISOString();
+    const color = input.color || "#3b82f6";
+    const sortOrder = input.sortOrder ?? 100;
+
+    await db.execute(
+      `INSERT INTO routine_categories (id, user_id, name, color, icon, is_default, sort_order, created_at, updated_at, _sync_status)
+       VALUES (?, '', ?, ?, ?, 0, ?, ?, ?, 'pending')`,
+      [id, input.name.trim(), color, input.icon || null, sortOrder, now, now],
+    );
+
+    return {
+      id,
+      name: input.name.trim(),
+      color,
+      icon: input.icon || undefined,
+      isDefault: false,
+      sortOrder,
+      createdAt: now,
+      updatedAt: now,
+    };
+  },
+
+  updateRoutineCategory: async (
+    id: string,
+    patch: UpdateRoutineCategoryInput,
+  ): Promise<RoutineCategory> => {
+    const db = await getLocalDb();
+    const existing = (
+      await db.select<SqliteRow[]>("SELECT * FROM routine_categories WHERE id = ?", [id])
+    )[0];
+    if (!existing) throw new Error(`Routine category ${id} not found`);
+
+    const updated = {
+      name: patch.name ? patch.name.trim() : String(existing.name),
+      color: patch.color ? patch.color.trim() : String(existing.color),
+      icon: patch.icon !== undefined ? patch.icon || null : (existing.icon as string | null),
+      sort_order: patch.sortOrder !== undefined ? patch.sortOrder : Number(existing.sort_order),
+      updated_at: new Date().toISOString(),
+    };
+
+    await db.execute(
+      `UPDATE routine_categories SET name = ?, color = ?, icon = ?, sort_order = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?`,
+      [updated.name, updated.color, updated.icon, updated.sort_order, updated.updated_at, id],
+    );
+
+    return {
+      id,
+      name: updated.name,
+      color: updated.color,
+      icon: updated.icon ? String(updated.icon) : undefined,
+      isDefault: Boolean(existing.is_default),
+      sortOrder: updated.sort_order,
+      createdAt: String(existing.created_at),
+      updatedAt: updated.updated_at,
+    };
+  },
+
+  deleteRoutineCategory: async (
+    id: string,
+    fallback = "general",
+  ): Promise<{ success: boolean; reassignedCount: number }> => {
+    const db = await getLocalDb();
+    const existing = (
+      await db.select<SqliteRow[]>("SELECT * FROM routine_categories WHERE id = ?", [id])
+    )[0];
+    if (!existing) throw new Error(`Routine category ${id} not found`);
+
+    // Reassign tasks
+    const catName = String(existing.name).toLowerCase();
+    await db.execute(
+      `UPDATE tasks SET category = ?, updated_at = ?, _sync_status = 'pending' 
+       WHERE (category = ? OR lower(category) = ?) AND deleted_at IS NULL`,
+      [fallback, new Date().toISOString(), id, catName],
+    );
+
+    await db.execute(
+      "UPDATE routine_categories SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [new Date().toISOString(), new Date().toISOString(), id],
+    );
+
+    return { success: true, reassignedCount: 0 };
   },
 
   // --- Habits ---

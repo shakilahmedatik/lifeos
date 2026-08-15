@@ -1,6 +1,8 @@
 import {
   isValidDateString,
+  NewRoutineCategoryInputSchema,
   NewTaskInputSchema,
+  UpdateRoutineCategoryInputSchema,
   UpdateStatusSchema,
   UpdateTaskSchema,
 } from "@lifeos/contracts";
@@ -8,6 +10,12 @@ import { Router } from "express";
 import { validateBody } from "../../../shared/validate.js";
 import type { AuthenticatedRequest } from "../../auth/middleware.js";
 
+import {
+  createRoutineCategory,
+  deleteRoutineCategory,
+  getRoutineCategories,
+  updateRoutineCategory,
+} from "../application/category-use-cases.js";
 import {
   createTask,
   deleteTask,
@@ -17,9 +25,13 @@ import {
   setTaskStatus,
   updateTask,
 } from "../application/use-cases.js";
+import type { RoutineCategoryRepository } from "../ports/routine-category-repository.js";
 import type { TaskRepository } from "../ports/task-repository.js";
 
-export function createRoutineRouter(repo: TaskRepository): Router {
+export function createRoutineRouter(
+  repo: TaskRepository,
+  categoryRepo?: RoutineCategoryRepository,
+): Router {
   const router = Router();
 
   router.get("/tasks", async (req: AuthenticatedRequest, res) => {
@@ -125,6 +137,93 @@ export function createRoutineRouter(repo: TaskRepository): Router {
     try {
       await deleteTask(repo, req.params.id as string, userId);
       res.status(204).send();
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg.includes("not found")) {
+        res.status(404).json({ error: msg });
+      } else {
+        res.status(400).json({ error: msg });
+      }
+    }
+  });
+
+  // ── Categories Endpoints ────────────────────────────────────────────────
+  router.get("/categories", async (req: AuthenticatedRequest, res) => {
+    if (!categoryRepo) {
+      res.status(501).json({ error: "Category repository not configured" });
+      return;
+    }
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    try {
+      const categories = await getRoutineCategories(categoryRepo, userId);
+      res.json(categories);
+    } catch (_err) {
+      res.status(500).json({ error: "Failed to retrieve routine categories" });
+    }
+  });
+
+  router.post(
+    "/categories",
+    validateBody(NewRoutineCategoryInputSchema),
+    async (req: AuthenticatedRequest, res) => {
+      if (!categoryRepo) {
+        res.status(501).json({ error: "Category repository not configured" });
+        return;
+      }
+      const userId = req.user?.id || (req.query.userId as string) || "default";
+      try {
+        const category = await createRoutineCategory(categoryRepo, req.body, userId);
+        res.status(201).json(category);
+      } catch (err) {
+        const msg = (err as Error).message;
+        res.status(400).json({ error: msg });
+      }
+    },
+  );
+
+  router.patch(
+    "/categories/:id",
+    validateBody(UpdateRoutineCategoryInputSchema),
+    async (req: AuthenticatedRequest, res) => {
+      if (!categoryRepo) {
+        res.status(501).json({ error: "Category repository not configured" });
+        return;
+      }
+      const userId = req.user?.id || (req.query.userId as string) || "default";
+      try {
+        const category = await updateRoutineCategory(
+          categoryRepo,
+          req.params.id as string,
+          req.body,
+          userId,
+        );
+        res.json(category);
+      } catch (err) {
+        const msg = (err as Error).message;
+        if (msg.includes("not found")) {
+          res.status(404).json({ error: msg });
+        } else {
+          res.status(400).json({ error: msg });
+        }
+      }
+    },
+  );
+
+  router.delete("/categories/:id", async (req: AuthenticatedRequest, res) => {
+    if (!categoryRepo) {
+      res.status(501).json({ error: "Category repository not configured" });
+      return;
+    }
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    try {
+      const fallback = (req.query.fallback as string) || "general";
+      const result = await deleteRoutineCategory(
+        categoryRepo,
+        req.params.id as string,
+        userId,
+        fallback,
+      );
+      res.json({ success: true, ...result });
     } catch (err) {
       const msg = (err as Error).message;
       if (msg.includes("not found")) {

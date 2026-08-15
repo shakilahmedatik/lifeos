@@ -27,7 +27,7 @@ export function useSyncManager() {
       if (res.status === "success") {
         setSyncState("idle");
         setLastSyncAt(new Date().toLocaleTimeString());
-        queryClient.invalidateQueries();
+        await queryClient.invalidateQueries();
       } else if (res.status === "error") {
         setSyncState("error");
         setErrorMessage(res.error || "Sync failed");

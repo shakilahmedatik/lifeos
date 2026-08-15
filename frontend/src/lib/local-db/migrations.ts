@@ -4,7 +4,7 @@ export const localMigrations = [
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL DEFAULT '',
     title TEXT NOT NULL,
-    category TEXT NOT NULL CHECK (category IN ('routine', 'must_do', 'work', 'workout', 'learning', 'habit', 'personal', 'general', 'flex')),
+    category TEXT NOT NULL DEFAULT 'general',
     date TEXT NOT NULL,
     start_time TEXT NOT NULL,
     end_time TEXT NOT NULL,
@@ -16,6 +16,20 @@ export const localMigrations = [
     recurrence TEXT NOT NULL DEFAULT 'none' CHECK (recurrence IN ('none', 'daily', 'weekdays', 'weekly')),
     subtasks TEXT DEFAULT '[]',
     reference_id TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    deleted_at TEXT,
+    _sync_status TEXT NOT NULL DEFAULT 'synced'
+  );
+
+  CREATE TABLE IF NOT EXISTS routine_categories (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL,
+    color TEXT NOT NULL DEFAULT '#3b82f6',
+    icon TEXT,
+    is_default INTEGER NOT NULL DEFAULT 0,
+    sort_order INTEGER NOT NULL DEFAULT 0,
     created_at TEXT NOT NULL DEFAULT (datetime('now')),
     updated_at TEXT NOT NULL DEFAULT (datetime('now')),
     deleted_at TEXT,
@@ -235,6 +249,11 @@ export const localMigrations = [
   CREATE INDEX IF NOT EXISTS idx_tasks_date ON tasks(date);
   CREATE INDEX IF NOT EXISTS idx_tasks_sync_status ON tasks(_sync_status);
   CREATE INDEX IF NOT EXISTS idx_tasks_deleted_at ON tasks(deleted_at);
+
+  CREATE INDEX IF NOT EXISTS idx_routine_categories_user_id ON routine_categories(user_id);
+  CREATE INDEX IF NOT EXISTS idx_routine_categories_sort_order ON routine_categories(sort_order);
+  CREATE INDEX IF NOT EXISTS idx_routine_categories_sync_status ON routine_categories(_sync_status);
+  CREATE INDEX IF NOT EXISTS idx_routine_categories_deleted_at ON routine_categories(deleted_at);
 
   CREATE INDEX IF NOT EXISTS idx_habits_user_id ON habits(user_id);
   CREATE INDEX IF NOT EXISTS idx_habits_sync_status ON habits(_sync_status);

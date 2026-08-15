@@ -8,7 +8,7 @@ import {
   Filter as FilterIcon,
   RefreshCw as RefreshCwIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
 import Card from "../../components/ui/Card.js";
@@ -18,6 +18,7 @@ import { SearchInput } from "../../components/ui/SearchInput.js";
 import { Select } from "../../components/ui/Select.js";
 import { getDataSource } from "../../lib/dataSource.js";
 import { queryKeys } from "../../lib/queryKeys.js";
+import { useRoutineCategories } from "./hooks/useRoutineCategories.js";
 import TaskCategoryBadge from "./TaskCategoryBadge.js";
 import { computeDurationMins } from "./TaskList.js";
 
@@ -51,6 +52,32 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
   const [categoryFilter, setCategoryFilter] = useState<TaskCategory | "all">("all");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const { categories: routineCategories } = useRoutineCategories();
+
+  const categoryOptions = useMemo(() => {
+    const base = [{ value: "all", label: "All Categories" }];
+    if (routineCategories && routineCategories.length > 0) {
+      return [
+        ...base,
+        ...routineCategories.map((c) => ({
+          value: c.id,
+          label: `${c.icon ? `${c.icon} ` : ""}${c.name}`,
+        })),
+      ];
+    }
+    return [
+      ...base,
+      { value: "general", label: "General" },
+      { value: "routine", label: "Routine" },
+      { value: "must_do", label: "Must Do" },
+      { value: "work", label: "Work" },
+      { value: "workout", label: "Workout" },
+      { value: "learning", label: "Learning" },
+      { value: "habit", label: "Habit" },
+      { value: "personal", label: "Personal" },
+      { value: "flex", label: "Flex" },
+    ];
+  }, [routineCategories]);
 
   const ds = getDataSource();
 
@@ -146,15 +173,7 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
               label="Category"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as TaskCategory | "all")}
-              options={[
-                { value: "all", label: "All Categories" },
-                { value: "general", label: "General" },
-                { value: "work", label: "Work" },
-                { value: "workout", label: "Workout" },
-                { value: "learning", label: "Learning" },
-                { value: "habit", label: "Habit" },
-                { value: "personal", label: "Personal" },
-              ]}
+              options={categoryOptions}
             />
 
             {/* Status Filter */}
@@ -260,7 +279,7 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
                         {task.title}
                       </span>
 
-                      <TaskCategoryBadge category={task.category} />
+                      <TaskCategoryBadge category={task.category} categories={routineCategories} />
 
                       <Badge variant={STATUS_VARIANTS[task.status]} size="sm">
                         {task.status.replace("_", " ")}

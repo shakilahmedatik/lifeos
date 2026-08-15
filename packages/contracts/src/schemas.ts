@@ -1,17 +1,41 @@
 import { z } from "zod";
 import { isValidDateString } from "./date-utils.js";
 
-export const TaskCategorySchema = z.enum([
-  "routine",
-  "must_do",
-  "work",
-  "workout",
-  "learning",
-  "habit",
-  "personal",
-  "general",
-  "flex",
-]);
+export const TaskCategorySchema = z.string().min(1, "Category is required");
+
+export const RoutineCategorySchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, "Name is required").max(50, "Name is too long"),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
+    .or(z.string().min(1)),
+  icon: z.string().max(50).optional(),
+  isDefault: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const NewRoutineCategoryInputSchema = z.object({
+  name: z.string().min(1, "Name is required").max(50, "Name is too long"),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
+    .optional(),
+  icon: z.string().max(50).optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+export const UpdateRoutineCategoryInputSchema = z.object({
+  name: z.string().min(1, "Name is required").max(50, "Name is too long").optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
+    .optional(),
+  icon: z.string().max(50).optional(),
+  sortOrder: z.number().int().optional(),
+});
 
 export const TaskStatusSchema = z.enum([
   "todo",

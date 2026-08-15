@@ -1,6 +1,6 @@
 import type { Task, TaskCategory, TaskRecurrence, TaskSubtask } from "@lifeos/contracts";
 import { Plus as PlusIcon, X as XIcon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import { ErrorBanner } from "../../components/ui/ErrorBanner.js";
 import { Input } from "../../components/ui/Input.js";
@@ -9,6 +9,7 @@ import ModalFooter from "../../components/ui/ModalFooter.js";
 import { Select } from "../../components/ui/Select.js";
 import { useLearningResources } from "../skills/hooks/useLearningResources.js";
 import { useWorkouts } from "../workouts/useWorkouts.js";
+import { useRoutineCategories } from "./hooks/useRoutineCategories.js";
 import { addMinutesToTime } from "./TaskForm.js";
 import { computeDurationMins } from "./TaskList.js";
 
@@ -48,6 +49,27 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
 
   const { workouts } = useWorkouts();
   const { resources: learningResources } = useLearningResources();
+  const { categories: routineCategories } = useRoutineCategories();
+
+  const categoryOptions = useMemo(() => {
+    if (routineCategories && routineCategories.length > 0) {
+      return routineCategories.map((c) => ({
+        value: c.id,
+        label: `${c.icon ? `${c.icon} ` : ""}${c.name}`,
+      }));
+    }
+    return [
+      { value: "general", label: "General" },
+      { value: "routine", label: "Routine" },
+      { value: "must_do", label: "Must Do" },
+      { value: "work", label: "Work" },
+      { value: "workout", label: "Workout" },
+      { value: "learning", label: "Learning" },
+      { value: "habit", label: "Habit" },
+      { value: "personal", label: "Personal" },
+      { value: "flex", label: "Flex" },
+    ];
+  }, [routineCategories]);
 
   // Subtasks
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>(task.subtasks ?? []);
@@ -156,14 +178,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
               label="Category"
               value={category}
               onChange={(e) => setCategory(e.target.value as TaskCategory)}
-              options={[
-                { value: "general", label: "General" },
-                { value: "work", label: "Work" },
-                { value: "workout", label: "Workout" },
-                { value: "learning", label: "Learning" },
-                { value: "habit", label: "Habit" },
-                { value: "personal", label: "Personal" },
-              ]}
+              options={categoryOptions}
             />
 
             <Input

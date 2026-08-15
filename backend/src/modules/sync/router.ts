@@ -3,6 +3,7 @@ import { Router } from "express";
 
 const TABLES_WITH_USER_ID = new Set([
   "tasks",
+  "routine_categories",
   "habits",
   "habit_logs",
   "workouts",
@@ -19,6 +20,7 @@ const TABLES_WITH_USER_ID = new Set([
 
 const SYNCABLE_TABLES = [
   "tasks",
+  "routine_categories",
   "habits",
   "habit_logs",
   "exercises",
@@ -38,6 +40,7 @@ const SYNCABLE_TABLES = [
 
 const TABLE_TIMESTAMP_COLUMN: Record<string, string> = {
   tasks: "updated_at",
+  routine_categories: "updated_at",
   habits: "updated_at",
   habit_logs: "logged_at",
   exercises: "updated_at",
@@ -116,16 +119,16 @@ export function createSyncRouter(client: Client): Router {
 
         if (hasUserId) {
           if (lastSyncAt) {
-            sql = `SELECT * FROM ${table} WHERE user_id = ? AND (${timeCol} > ? OR (deleted_at IS NOT NULL AND deleted_at > ?))`;
-            args.push(userId, lastSyncAt, lastSyncAt);
+            sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) > datetime(?) OR deleted_at > ?)))`;
+            args.push(userId, lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
           } else {
-            sql = `SELECT * FROM ${table} WHERE user_id = ?`;
+            sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL)`;
             args.push(userId);
           }
         } else {
           if (lastSyncAt) {
-            sql = `SELECT * FROM ${table} WHERE ${timeCol} > ? OR (deleted_at IS NOT NULL AND deleted_at > ?)`;
-            args.push(lastSyncAt, lastSyncAt);
+            sql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) > datetime(?) OR deleted_at > ?)))`;
+            args.push(lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
           } else {
             sql = `SELECT * FROM ${table}`;
           }

@@ -8,6 +8,7 @@ export const queryKeys = {
     tasks: (date: string) => ["routine", "tasks", date] as const,
     stats: () => ["routine", "stats"] as const,
     history: (query?: object) => ["routine", "history", query] as const,
+    categories: () => ["routine", "categories"] as const,
   },
   // Habits
   habits: {

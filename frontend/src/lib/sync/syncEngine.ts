@@ -5,6 +5,7 @@ import { getLocalDb } from "../local-db/index.js";
 
 const SYNCABLE_TABLES = [
   "tasks",
+  "routine_categories",
   "habits",
   "habit_logs",
   "exercises",

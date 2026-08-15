@@ -1,4 +1,4 @@
-export type TaskCategory =
+export type DefaultTaskCategory =
   | "routine"
   | "must_do"
   | "work"
@@ -8,6 +8,33 @@ export type TaskCategory =
   | "personal"
   | "general"
   | "flex";
+
+export type TaskCategory = DefaultTaskCategory | (string & {});
+
+export interface RoutineCategory {
+  id: string;
+  name: string;
+  color: string;
+  icon?: string;
+  isDefault?: boolean;
+  sortOrder?: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface NewRoutineCategoryInput {
+  name: string;
+  color?: string;
+  icon?: string;
+  sortOrder?: number;
+}
+
+export interface UpdateRoutineCategoryInput {
+  name?: string;
+  color?: string;
+  icon?: string;
+  sortOrder?: number;
+}
 
 export type TaskStatus =
   | "todo"

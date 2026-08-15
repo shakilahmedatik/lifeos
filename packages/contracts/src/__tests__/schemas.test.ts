@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   NewExerciseInputSchema,
   NewNotificationInputSchema,
+  NewRoutineCategoryInputSchema,
   NewTransactionInputSchema,
   TransferInputSchema,
   UpdateNotificationInputSchema,
+  UpdateRoutineCategoryInputSchema,
 } from "../schemas.js";
 
 describe("TransferInputSchema", () => {
@@ -212,6 +214,42 @@ describe("NewExerciseInputSchema", () => {
     const result = NewExerciseInputSchema.safeParse({
       name: "Bicep Curls",
       videoUrl: "https://example.com/demo.mp4",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("RoutineCategory Schemas", () => {
+  it("accepts valid NewRoutineCategoryInput", () => {
+    const result = NewRoutineCategoryInputSchema.safeParse({
+      name: "Deep Work",
+      color: "#3b82f6",
+      icon: "⚡",
+      sortOrder: 1,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects NewRoutineCategoryInput with empty name", () => {
+    const result = NewRoutineCategoryInputSchema.safeParse({
+      name: "",
+      color: "#3b82f6",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid hex color format in NewRoutineCategoryInput", () => {
+    const result = NewRoutineCategoryInputSchema.safeParse({
+      name: "Deep Work",
+      color: "not-a-color",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid UpdateRoutineCategoryInput", () => {
+    const result = UpdateRoutineCategoryInputSchema.safeParse({
+      name: "Focus Time",
+      color: "#8b5cf6",
     });
     expect(result.success).toBe(true);
   });

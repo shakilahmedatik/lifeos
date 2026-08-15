@@ -1,6 +1,5 @@
 import type { RoutineStats, TaskCategory } from "@lifeos/contracts";
 import {
-  Activity as ActivityIcon,
   Calendar as CalendarIcon,
   CheckCircle2 as CheckCircle2Icon,
   Clock as ClockIcon,
@@ -11,6 +10,7 @@ import {
   TrendingUp as TrendingUpIcon,
 } from "lucide-react";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
+import { useRoutineCategories } from "./hooks/useRoutineCategories.js";
 import TaskCategoryBadge, { CATEGORY_COLORS } from "./TaskCategoryBadge.js";
 
 interface RoutineOverviewProps {
@@ -28,6 +28,8 @@ export function RoutineOverview({
   onNavigateToSchedule,
   onNavigateToHistory,
 }: RoutineOverviewProps) {
+  const { categories: routineCategories = [] } = useRoutineCategories();
+
   if (loading || !stats) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -116,20 +118,15 @@ export function RoutineOverview({
         </Card>
       </div>
 
-      {/* Main Section: Category Distribution & Weekly Trends */}
+      {/* Main Charts & Breakdown Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Category Breakdown Card */}
-        <Card className="border-border">
-          <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <ActivityIcon size={18} className="text-blue-400" />
-                Category Distribution
-              </CardTitle>
-              <p className="text-xs text-secondary mt-0.5">
-                Time and task volume by routine category
-              </p>
-            </div>
+        {/* Category Distribution Card */}
+        <Card padding="none" className="border-border">
+          <CardHeader className="border-b border-border p-4">
+            <CardTitle className="text-sm font-semibold flex items-center gap-2">
+              <TargetIcon size={16} className="text-blue-400" />
+              Category Distribution
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
             {stats.categoryDistribution.length === 0 ? (
@@ -138,6 +135,10 @@ export function RoutineOverview({
               </p>
             ) : (
               stats.categoryDistribution.map((cat) => {
+                const matchedCat = routineCategories.find(
+                  (c) =>
+                    c.id === cat.category || c.name.toLowerCase() === cat.category?.toLowerCase(),
+                );
                 const percentage =
                   stats.totalScheduledMinutes > 0
                     ? Math.round((cat.totalMinutes / stats.totalScheduledMinutes) * 100)
@@ -149,7 +150,11 @@ export function RoutineOverview({
                   <div key={cat.category} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <TaskCategoryBadge category={cat.category as TaskCategory} />
+                        <TaskCategoryBadge
+                          category={cat.category as TaskCategory}
+                          categoryObj={matchedCat}
+                          categories={routineCategories}
+                        />
                         <span className="text-secondary">
                           ({cat.taskCount} task{cat.taskCount !== 1 ? "s" : ""})
                         </span>
@@ -162,7 +167,10 @@ export function RoutineOverview({
                     <div className="w-full bg-card-hover h-2 rounded-full overflow-hidden">
                       <div
                         className={`h-full ${catStyle.borderLeft.replace("border-l-", "bg-")} transition-all duration-500`}
-                        style={{ width: `${percentage}%` }}
+                        style={{
+                          width: `${percentage}%`,
+                          ...(matchedCat?.color && { backgroundColor: matchedCat.color }),
+                        }}
                       />
                     </div>
                   </div>

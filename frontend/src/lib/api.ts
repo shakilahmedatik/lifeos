@@ -16,16 +16,19 @@ import type {
   NewHabitDefinitionInput,
   NewNotificationInput,
   NewReminderInput,
+  NewRoutineCategoryInput,
   NewTransactionInput,
   Notification,
   NotificationSoundType,
   NotificationWithTask,
   Reminder,
+  RoutineCategory,
   RoutineStats,
   Task,
   TaskHistoryQuery,
   Transaction,
   UpdateReminderInput,
+  UpdateRoutineCategoryInput,
   WeeklySummary,
 } from "@lifeos/contracts";
 
@@ -155,6 +158,24 @@ export const api = {
     return request<Task[]>(`/api/routine/tasks/history${qs ? `?${qs}` : ""}`);
   },
   getRoutineStats: () => request<RoutineStats>("/api/routine/stats"),
+  getRoutineCategories: () => request<RoutineCategory[]>("/api/routine/categories"),
+  createRoutineCategory: (input: NewRoutineCategoryInput) =>
+    request<RoutineCategory>("/api/routine/categories", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  updateRoutineCategory: (id: string, patch: UpdateRoutineCategoryInput) =>
+    request<RoutineCategory>(`/api/routine/categories/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  deleteRoutineCategory: (id: string, fallback = "general") =>
+    request<{ success: boolean; reassignedCount: number }>(
+      `/api/routine/categories/${id}?fallback=${fallback}`,
+      { method: "DELETE" },
+    ),
 
   // Habits
   getHabits: () => request<HabitDefinition[]>("/api/habits"),

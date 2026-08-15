@@ -17,6 +17,7 @@ import DeleteConfirmModal from "../modules/routine/DeleteConfirmModal.js";
 
 import { useRoutineStats } from "../modules/routine/hooks/useRoutineStats.js";
 import { useRoutineTasks } from "../modules/routine/hooks/useRoutineTasks.js";
+import { RoutineCategoryManager } from "../modules/routine/RoutineCategoryManager.js";
 import { RoutineHistory } from "../modules/routine/RoutineHistory.js";
 import { RoutineOverview } from "../modules/routine/RoutineOverview.js";
 import TaskCreateModal from "../modules/routine/TaskCreateModal.js";
@@ -25,7 +26,7 @@ import TaskEditModal from "../modules/routine/TaskEditModal.js";
 import TaskList from "../modules/routine/TaskList.js";
 import TaskTimelineView from "../modules/routine/TaskTimelineView.js";
 
-type Tab = "overview" | "schedule" | "history";
+type Tab = "overview" | "schedule" | "history" | "categories";
 type ViewMode = "list" | "timeline";
 
 export default function RoutinePage() {
@@ -116,6 +117,7 @@ export default function RoutinePage() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="schedule">Schedule</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
+          <TabsTrigger value="categories">Categories</TabsTrigger>
         </TabsList>
 
         {/* Tab 1: Overview Dashboard */}
@@ -233,6 +235,11 @@ export default function RoutinePage() {
             onViewTask={(task) => setViewingTask(task)}
             onEditTask={(task) => setEditingTask(task)}
           />
+        </TabsContent>
+
+        {/* Tab 4: Routine Categories Management */}
+        <TabsContent value="categories">
+          <RoutineCategoryManager />
         </TabsContent>
       </Tabs>
 
