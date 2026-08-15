@@ -6,7 +6,10 @@ import {
   type CategoryBreakdown,
   type CategoryKind,
   type DashboardHabitConsistency,
+  type DashboardNewsItem,
+  type DashboardSkillProgress,
   type DashboardSummary,
+  type DashboardWorkoutDay,
   type FinanceDashboardWidget,
   getClientDateString,
   type HabitAnalyticsData,
@@ -53,6 +56,87 @@ import {
 import { getLocalDb } from "./index.js";
 
 type SqliteRow = Record<string, unknown>;
+
+let _cachedNewsItems: DashboardNewsItem[] = [];
+let _lastNewsFetchTime = 0;
+
+async function getDashboardNewsItems(): Promise<DashboardNewsItem[]> {
+  const now = Date.now();
+  if (_cachedNewsItems.length > 0 && now - _lastNewsFetchTime < 5 * 60 * 1000) {
+    return _cachedNewsItems;
+  }
+
+  // 1. Try fetching ticker articles from backend API
+  try {
+    const { fetchTickerArticles } = await import("../../modules/news/api.js");
+    const articles = await fetchTickerArticles();
+    if (Array.isArray(articles) && articles.length > 0) {
+      _cachedNewsItems = articles.slice(0, 5).map((a) => ({
+        id: a.id,
+        source: ((a as { feedTitle?: string }).feedTitle || "tech")
+          .toLowerCase()
+          .split(" ")[0]
+          .slice(0, 10),
+        title: a.title,
+        url: a.url,
+        publishedAt: a.publishedAt || null,
+      }));
+      _lastNewsFetchTime = now;
+      return _cachedNewsItems;
+    }
+  } catch {
+    // backend API not available or no articles
+  }
+
+  // 2. Fallback to public Hacker News Top Stories API (works directly in browser/Tauri without CORS)
+  try {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 3500);
+    const res = await fetch("https://hacker-news.firebaseio.com/v0/topstories.json", {
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const ids: number[] = await res.json();
+      const top5Ids = ids.slice(0, 5);
+      const articlePromises = top5Ids.map(async (id) => {
+        try {
+          const itemRes = await fetch(`https://hacker-news.firebaseio.com/v0/item/${id}.json`);
+          if (itemRes.ok) {
+            const item = await itemRes.json();
+            if (item?.title) {
+              return {
+                id: String(item.id),
+                source: "hn",
+                title: String(item.title),
+                url: String(item.url || `https://news.ycombinator.com/item?id=${item.id}`),
+                publishedAt: item.time ? new Date(item.time * 1000).toISOString() : null,
+              } as DashboardNewsItem;
+            }
+          }
+        } catch {
+          return null;
+        }
+        return null;
+      });
+
+      const fetched = (await Promise.all(articlePromises)).filter(
+        (a): a is DashboardNewsItem => a !== null,
+      );
+
+      if (fetched.length > 0) {
+        _cachedNewsItems = fetched;
+        _lastNewsFetchTime = now;
+        return _cachedNewsItems;
+      }
+    }
+  } catch {
+    // network unavailable / offline
+  }
+
+  return _cachedNewsItems;
+}
 
 export const localDal = {
   // --- Routine ---
@@ -108,8 +192,8 @@ export const localDal = {
     };
 
     await db.execute(
-      `INSERT INTO tasks (id, user_id, title, category, date, start_time, end_time, status, notes, reminder_minutes_before, reminder_sound, recurrence, subtasks, reference_id, created_at, updated_at, _sync_status)
-       VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      `INSERT INTO tasks (id, user_id, title, category, date, start_time, end_time, status, notes, reminder_minutes_before, reminder_silent, reminder_sound, recurrence, subtasks, reference_id, created_at, updated_at, _sync_status)
+       VALUES (?, '', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
       [
         task.id,
         task.title,
@@ -120,6 +204,7 @@ export const localDal = {
         task.status,
         task.notes ?? null,
         task.reminderMinutesBefore ?? null,
+        task.reminderSilent ? 1 : 0,
         task.reminderSound,
         task.recurrence,
         JSON.stringify(task.subtasks),
@@ -161,13 +246,44 @@ export const localDal = {
       startTime: patch.startTime ?? String(existing.start_time),
       endTime: patch.endTime ?? String(existing.end_time),
       status: (existing.status as TaskStatus) || "planned",
-      notes: patch.notes ?? (existing.notes ? String(existing.notes) : undefined),
+      notes:
+        patch.notes !== undefined
+          ? patch.notes
+          : existing.notes
+            ? String(existing.notes)
+            : undefined,
+      reminderMinutesBefore:
+        patch.reminderMinutesBefore !== undefined
+          ? patch.reminderMinutesBefore
+          : typeof existing.reminder_minutes_before === "number"
+            ? existing.reminder_minutes_before
+            : null,
+      reminderSilent:
+        patch.reminderSilent !== undefined
+          ? patch.reminderSilent
+            ? 1
+            : 0
+          : Number(existing.reminder_silent || 0),
+      reminderSound:
+        patch.reminderSound !== undefined
+          ? patch.reminderSound
+          : (existing.reminder_sound as NotificationSoundType) || "default",
+      recurrence:
+        patch.recurrence !== undefined
+          ? patch.recurrence
+          : (existing.recurrence as Task["recurrence"]) || "none",
+      referenceId:
+        patch.referenceId !== undefined
+          ? patch.referenceId
+          : existing.reference_id
+            ? String(existing.reference_id)
+            : null,
       subtasks: patch.subtasks ? JSON.stringify(patch.subtasks) : String(existing.subtasks || "[]"),
       updated_at: now,
     };
 
     await db.execute(
-      `UPDATE tasks SET title = ?, category = ?, date = ?, start_time = ?, end_time = ?, status = ?, notes = ?, subtasks = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?`,
+      `UPDATE tasks SET title = ?, category = ?, date = ?, start_time = ?, end_time = ?, status = ?, notes = ?, reminder_minutes_before = ?, reminder_silent = ?, reminder_sound = ?, recurrence = ?, reference_id = ?, subtasks = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?`,
       [
         updated.title,
         updated.category,
@@ -176,6 +292,11 @@ export const localDal = {
         updated.endTime,
         updated.status,
         updated.notes ?? null,
+        updated.reminderMinutesBefore,
+        updated.reminderSilent,
+        updated.reminderSound,
+        updated.recurrence,
+        updated.referenceId,
         updated.subtasks,
         now,
         id,
@@ -191,7 +312,11 @@ export const localDal = {
       endTime: updated.endTime,
       status: updated.status,
       notes: updated.notes,
-      reminderSilent: Boolean(existing.reminder_silent),
+      reminderMinutesBefore: updated.reminderMinutesBefore ?? undefined,
+      reminderSilent: Boolean(updated.reminderSilent),
+      reminderSound: updated.reminderSound,
+      recurrence: updated.recurrence,
+      referenceId: updated.referenceId ?? undefined,
       subtasks: typeof updated.subtasks === "string" ? JSON.parse(updated.subtasks) : [],
       createdAt: String(existing.created_at),
       updatedAt: now,
@@ -574,6 +699,22 @@ export const localDal = {
       "UPDATE habit_logs SET deleted_at = ?, _sync_status = 'pending' WHERE id = ?",
       [now, logId],
     );
+  },
+
+  getHabitLogs: async (habitId: string, date: string): Promise<HabitLogEntry[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM habit_logs WHERE habit_id = ? AND date = ? AND deleted_at IS NULL ORDER BY logged_at ASC",
+      [habitId, date],
+    );
+    return rows.map((l) => ({
+      id: String(l.id),
+      habitId: String(l.habit_id),
+      date: String(l.date),
+      value: Number(l.value) || 1,
+      meta: l.meta ? String(l.meta) : undefined,
+      loggedAt: String(l.logged_at),
+    }));
   },
 
   getTodayHabits: async (): Promise<HabitWithStreak[]> => {
@@ -1748,10 +1889,10 @@ export const localDal = {
   getSummary: async (date?: string): Promise<DashboardSummary> => {
     const db = await getLocalDb();
     const pad = (n: number) => String(n).padStart(2, "0");
-    const today = date || new Date().toISOString().split("T")[0];
+    const today = date || getClientDateString();
     const tasks = await localDal.getTasks(today);
     const habits = await localDal.getTodayHabits();
-    const reminders = await localDal.getTodayReminders();
+    const reminders = await localDal.getTodayReminders(today);
 
     const now = new Date();
     const currentMinutes = now.getHours() * 60 + now.getMinutes();
@@ -1900,6 +2041,134 @@ export const localDal = {
       });
     }
 
+    // --- Workout Week Data ---
+    const workoutWeek: DashboardWorkoutDay[] = [];
+    const workoutLabelsSet = new Set<string>();
+    const daysName = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const nowUtc = new Date(`${today}T00:00:00Z`);
+    const dayOfWeekIndex = (nowUtc.getUTCDay() + 6) % 7;
+    const monday = new Date(nowUtc);
+    monday.setUTCDate(nowUtc.getUTCDate() - dayOfWeekIndex);
+    const weekEnd = new Date(monday);
+    weekEnd.setUTCDate(monday.getUTCDate() + 6);
+    const mondayStr = monday.toISOString().split("T")[0];
+    const weekEndStr = weekEnd.toISOString().split("T")[0];
+
+    try {
+      const allSessions = await db.select<SqliteRow[]>(
+        "SELECT * FROM workout_sessions WHERE deleted_at IS NULL AND started_at >= ? AND started_at <= ?",
+        [`${mondayStr}T00:00:00`, `${weekEndStr}T23:59:59`],
+      );
+      const allWorkouts = await db.select<SqliteRow[]>(
+        "SELECT id, name FROM workouts WHERE deleted_at IS NULL",
+      );
+      const workoutsMap = new Map(allWorkouts.map((w) => [String(w.id), String(w.name)]));
+
+      const dayBuckets: Record<string, Record<string, number>> = {};
+      for (const day of daysName) {
+        dayBuckets[day] = {};
+      }
+
+      for (const session of allSessions) {
+        const sessionDate = new Date(String(session.started_at));
+        const dayIndex = (sessionDate.getUTCDay() + 6) % 7;
+        const dayName = daysName[dayIndex];
+        const workoutName = workoutsMap.get(String(session.workout_id)) || "Workout";
+        workoutLabelsSet.add(workoutName);
+
+        const durationSeconds = Number(session.duration_seconds) || 0;
+        const mins = durationSeconds ? Math.round(durationSeconds / 60) : 30;
+        dayBuckets[dayName][workoutName] = (dayBuckets[dayName][workoutName] || 0) + mins;
+      }
+
+      for (const day of daysName) {
+        const entry: DashboardWorkoutDay = { day };
+        for (const [name, mins] of Object.entries(dayBuckets[day])) {
+          entry[name] = mins;
+        }
+        workoutWeek.push(entry);
+      }
+    } catch {
+      // ignore
+    }
+
+    // --- Skills Progress Data ---
+    const skillsProgress: DashboardSkillProgress[] = [];
+    try {
+      const areas = await db.select<SqliteRow[]>(
+        "SELECT * FROM skill_areas WHERE deleted_at IS NULL ORDER BY created_at ASC LIMIT 4",
+      );
+
+      for (const area of areas) {
+        const areaId = String(area.id);
+        const name = String(area.name);
+        const goal = Number(area.weekly_goal_hours) || 5;
+
+        const logs = await db.select<SqliteRow[]>(
+          `SELECT l.minutes_spent 
+           FROM learning_logs l 
+           JOIN learning_resources r ON l.resource_id = r.id 
+           WHERE r.skill_area_id = ? AND l.date >= ? AND l.date <= ? AND l.deleted_at IS NULL`,
+          [areaId, mondayStr, today],
+        );
+
+        const totalMinutes = logs.reduce((sum, l) => sum + (Number(l.minutes_spent) || 0), 0);
+        const hoursThisWeek = Math.round((totalMinutes / 60) * 10) / 10;
+        const pct = Math.min(100, Math.round((hoursThisWeek / goal) * 100));
+
+        skillsProgress.push({
+          skillAreaId: areaId,
+          name,
+          hoursThisWeek,
+          weeklyGoalHours: goal,
+          pct,
+        });
+      }
+    } catch {
+      // ignore
+    }
+
+    // --- Merge with Server Summary if reachable ---
+    let serverSummary: DashboardSummary | null = null;
+    try {
+      const { api } = await import("../api.js");
+      serverSummary = await api.getSummary(today);
+    } catch {
+      // offline / local mode
+    }
+
+    const finalNewsItems =
+      serverSummary?.newsItems && serverSummary.newsItems.length > 0
+        ? serverSummary.newsItems
+        : await getDashboardNewsItems();
+
+    const hasLocalWorkouts = workoutWeek.some((d) =>
+      Object.keys(d).some((k) => k !== "day" && Number(d[k]) > 0),
+    );
+    const finalWorkoutWeek = hasLocalWorkouts
+      ? workoutWeek
+      : serverSummary?.workoutWeek && serverSummary.workoutWeek.length > 0
+        ? serverSummary.workoutWeek
+        : workoutWeek;
+
+    const finalWorkoutLabels =
+      workoutLabelsSet.size > 0 ? Array.from(workoutLabelsSet) : serverSummary?.workoutLabels || [];
+
+    const finalSkillsProgress =
+      skillsProgress.length > 0 ? skillsProgress : serverSummary?.skillsProgress || [];
+
+    // Filter and sort today's upcoming reminders
+    const nowTime = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const allReminders = [
+      ...reminders,
+      ...(serverSummary?.upcomingReminders || []).filter(
+        (sr) => !reminders.some((lr) => lr.id === sr.id),
+      ),
+    ];
+    const upcoming = allReminders.filter((r) => !r.completed && r.time >= nowTime);
+    const past = allReminders.filter((r) => !r.completed && r.time < nowTime);
+    const upcomingReminders = [...upcoming, ...past].slice(0, 4);
+
     return {
       now: nowTask,
       next: nextTask,
@@ -1907,12 +2176,12 @@ export const localDal = {
       todayDoneCount: completedTasks.length,
       dueHabits: habits,
       previous: previousTask,
-      upcomingReminders: reminders,
+      upcomingReminders,
       habitConsistency,
-      workoutWeek: [],
-      workoutLabels: [],
-      skillsProgress: [],
-      newsItems: [],
+      workoutWeek: finalWorkoutWeek,
+      workoutLabels: finalWorkoutLabels,
+      skillsProgress: finalSkillsProgress,
+      newsItems: finalNewsItems,
     };
   },
 
@@ -1922,7 +2191,7 @@ export const localDal = {
     let sql = "SELECT * FROM reminders WHERE deleted_at IS NULL";
     const args: unknown[] = [];
     if (date) {
-      sql += " AND date = ?";
+      sql += " AND (date = ? OR date IS NULL OR date = '')";
       args.push(date);
     }
     sql += " ORDER BY time ASC";
@@ -1940,8 +2209,8 @@ export const localDal = {
     }));
   },
 
-  getTodayReminders: async (): Promise<Reminder[]> => {
-    const today = new Date().toISOString().split("T")[0];
+  getTodayReminders: async (date?: string): Promise<Reminder[]> => {
+    const today = date || getClientDateString();
     return localDal.getReminders(today);
   },
 
@@ -1967,6 +2236,13 @@ export const localDal = {
       [reminder.id, reminder.title, reminder.time, reminder.date ?? null, reminder.kind, now, now],
     );
 
+    try {
+      const { api } = await import("../api.js");
+      api.createReminder(input).catch(() => {});
+    } catch {
+      // ignore
+    }
+
     return reminder;
   },
 
@@ -1978,6 +2254,12 @@ export const localDal = {
       "UPDATE reminders SET completed = coalesce(?, completed), updated_at = ?, _sync_status = 'pending' WHERE id = ?",
       [comp, now, id],
     );
+    try {
+      const { api } = await import("../api.js");
+      api.updateReminder(id, patch).catch(() => {});
+    } catch {
+      // ignore
+    }
     const all = await localDal.getReminders();
     const found = all.find((r) => r.id === id);
     if (!found) throw new Error("Reminder not found");

@@ -1,8 +1,7 @@
 import type { Task } from "@lifeos/contracts";
-import { Check, GraduationCap, Play, Plus } from "lucide-react";
+import { Check, Clock, GraduationCap, Play, Plus } from "lucide-react";
 import { useEffect, useState } from "react";
 import Badge from "../../../components/ui/Badge.js";
-import Button from "../../../components/ui/Button.js";
 import { DashboardPanel } from "../components/DashboardPanel.js";
 
 interface ScheduleWidgetProps {
@@ -12,6 +11,21 @@ interface ScheduleWidgetProps {
   onNavigate: (path: string) => void;
   onStartTask?: (taskId: string) => void;
   onCompleteTask?: (taskId: string) => void;
+}
+
+function getCategoryVariant(category: string): "blue" | "danger" | "purple" | "orange" | "default" {
+  switch (category) {
+    case "work":
+      return "blue";
+    case "workout":
+      return "danger";
+    case "learning":
+      return "purple";
+    case "habit":
+      return "orange";
+    default:
+      return "default";
+  }
 }
 
 export function ScheduleWidget({
@@ -84,7 +98,7 @@ export function ScheduleWidget({
 
   return (
     <DashboardPanel title="Schedule" subtitle="routine">
-      <div className="flex flex-col gap-2 justify-between h-full py-0.5">
+      <div className="flex flex-col gap-1.5 sm:gap-2 justify-between h-full py-0.5 overflow-hidden">
         {/* Previous Card */}
         <div
           role="button"
@@ -93,66 +107,45 @@ export function ScheduleWidget({
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") onNavigate("/routine");
           }}
-          className="rounded-lg border border-border bg-surface px-3 py-2 flex items-center justify-between shrink-0 transition-colors hover:border-border-hover hover:bg-card-hover cursor-pointer"
+          className="rounded-lg border border-border/80 bg-surface/70 px-2.5 py-1.5 flex items-center justify-between shrink-0 transition-colors hover:border-border-hover hover:bg-card-hover cursor-pointer group"
           title={
             previous
               ? `Previous task: ${previous.title} (${previous.startTime} - ${previous.endTime})`
               : "View routine schedule"
           }
         >
-          <div className="flex-1 min-w-0 pr-2">
-            <div className="flex items-center gap-1.5 mb-0.5">
-              <span className="font-mono text-[9px] uppercase tracking-widest text-muted font-medium">
-                Previous
-              </span>
-              {previous && (
-                <span
-                  className={`text-[8.5px] uppercase font-semibold px-1 rounded ${
-                    previous.status === "done"
-                      ? "bg-emerald-500/15 text-emerald-400 border border-emerald-500/20"
-                      : previous.status === "skipped"
-                        ? "bg-amber-500/15 text-amber-400 border border-amber-500/20"
-                        : "bg-muted/20 text-muted"
-                  }`}
-                >
-                  {previous.status}
-                </span>
-              )}
-            </div>
-            <div
-              className={`text-xs truncate max-w-55 ${
-                previous
-                  ? previous.status === "done" || previous.status === "skipped"
+          <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+            <span className="font-mono text-[9px] uppercase tracking-wider text-muted font-medium shrink-0">
+              Prev
+            </span>
+            {previous ? (
+              <span
+                className={`text-xs truncate max-w-48 sm:max-w-64 ${
+                  previous.status === "done" || previous.status === "skipped"
                     ? "line-through text-muted"
                     : "text-primary font-medium"
-                  : "text-secondary italic"
-              }`}
-            >
-              {previous ? previous.title : "No previous task for today"}
-            </div>
+                }`}
+              >
+                {previous.title}
+              </span>
+            ) : (
+              <span className="text-xs text-secondary italic">No previous task for today</span>
+            )}
           </div>
 
           {previous ? (
-            <div className="flex flex-col items-end shrink-0 gap-0.5">
-              <span className="font-mono text-[10px] text-muted">
+            <div className="flex items-center gap-1.5 shrink-0">
+              <span className="font-mono text-[10px] text-muted hidden sm:inline">
                 {previous.startTime} – {previous.endTime}
               </span>
-              <Badge
-                size="sm"
-                variant={
-                  previous.category === "work"
-                    ? "blue"
-                    : previous.category === "workout"
-                      ? "danger"
-                      : previous.category === "learning"
-                        ? "purple"
-                        : previous.category === "habit"
-                          ? "orange"
-                          : "default"
-                }
-              >
+              <Badge size="sm" variant={getCategoryVariant(previous.category)}>
                 {previous.category}
               </Badge>
+              {previous.status === "done" && (
+                <span className="text-[8.5px] uppercase font-semibold px-1 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/20">
+                  Done
+                </span>
+              )}
             </div>
           ) : (
             <span className="font-mono text-[10px] text-muted">—</span>
@@ -160,153 +153,166 @@ export function ScheduleWidget({
         </div>
 
         {/* Now Card */}
-        <div className="rounded-lg border-l-3 border-accent border bg-surface px-3 py-2 flex-1 flex flex-col justify-between shadow-inner">
-          <div className="flex items-center justify-between">
+        <div className="rounded-lg border border-accent/40 bg-surface px-3 py-2 flex-1 flex flex-col justify-between shadow-xs min-h-0">
+          <div className="flex items-center justify-between shrink-0 gap-2">
             <div className="flex items-center gap-1.5">
               <span
-                className={`w-1.5 h-1.5 rounded-full ${now ? "bg-accent animate-pulse" : "bg-muted"}`}
+                className={`w-1.5 h-1.5 rounded-full ${now ? (now.status === "in_progress" ? "bg-amber-400 animate-ping" : "bg-accent animate-pulse") : "bg-muted"}`}
               />
-              <span className="font-mono text-[9.5px] uppercase tracking-widest text-accent font-semibold">
+              <span className="font-mono text-[9.5px] uppercase tracking-widest text-accent font-bold">
                 Now
               </span>
             </div>
+
             {now ? (
-              <div className="flex items-center gap-1.5">
-                {now.status === "in_progress" && (
+              <div className="flex items-center gap-1.5 shrink-0">
+                {/* Compact Icon Actions Before Status */}
+                {now.category === "workout" && now.referenceId && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onNavigate(`/workouts?startSession=${now.referenceId}&taskId=${now.id}`)
+                    }
+                    className="p-1 rounded-md bg-emerald-500/15 hover:bg-emerald-500/30 text-emerald-400 border border-emerald-500/30 transition-colors"
+                    title="Start Workout"
+                  >
+                    <Play size={12} className="fill-current" />
+                  </button>
+                )}
+
+                {now.category === "learning" && now.referenceId && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      onNavigate(`/skills?logSession=${now.referenceId}&taskId=${now.id}`)
+                    }
+                    className="p-1 rounded-md bg-purple-500/15 hover:bg-purple-500/30 text-purple-400 border border-purple-500/30 transition-colors"
+                    title="Log Skill"
+                  >
+                    <GraduationCap size={12} />
+                  </button>
+                )}
+
+                {onStartTask && now.status !== "in_progress" && now.status !== "done" && (
+                  <button
+                    type="button"
+                    onClick={() => onStartTask(now.id)}
+                    className="p-1 rounded-md bg-accent/20 hover:bg-accent/40 text-accent border border-accent/40 transition-colors"
+                    title="Set In Progress"
+                  >
+                    <Play size={12} className="fill-current" />
+                  </button>
+                )}
+
+                {onCompleteTask && now.status !== "done" && (
+                  <button
+                    type="button"
+                    onClick={() => onCompleteTask(now.id)}
+                    className="p-1 rounded-md bg-surface-elevated hover:bg-emerald-500/20 text-muted hover:text-emerald-400 border border-border hover:border-emerald-500/30 transition-colors"
+                    title="Mark Done"
+                  >
+                    <Check size={12} strokeWidth={2.5} />
+                  </button>
+                )}
+
+                {/* Status Badge */}
+                {now.status === "in_progress" ? (
                   <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 animate-pulse">
                     In Progress
                   </span>
+                ) : now.status === "done" ? (
+                  <span className="text-[9px] uppercase font-bold tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                    Done
+                  </span>
+                ) : (
+                  <span className="text-[9px] uppercase font-medium tracking-wider px-1.5 py-0.5 rounded bg-surface-elevated text-secondary border border-border">
+                    {now.status}
+                  </span>
                 )}
-                <Badge
-                  variant={
-                    now.category === "work"
-                      ? "blue"
-                      : now.category === "workout"
-                        ? "danger"
-                        : now.category === "learning"
-                          ? "purple"
-                          : now.category === "habit"
-                            ? "orange"
-                            : "default"
-                  }
-                >
+
+                {/* Category Badge */}
+                <Badge size="sm" variant={getCategoryVariant(now.category)}>
                   {now.category}
                 </Badge>
               </div>
             ) : next ? (
-              <span className="text-[9.5px] font-mono text-secondary">
-                Next at {next.startTime}
-              </span>
-            ) : null}
+              <div className="flex items-center gap-1.5 shrink-0">
+                {onStartTask && (
+                  <button
+                    type="button"
+                    onClick={() => onStartTask(next.id)}
+                    className="p-1 rounded-md bg-accent/15 hover:bg-accent/30 text-accent border border-accent/30 transition-colors"
+                    title={`Start "${next.title}" Now`}
+                  >
+                    <Play size={11} className="fill-current" />
+                  </button>
+                )}
+                <span className="text-[9.5px] font-mono text-secondary">
+                  Next at {next.startTime}
+                </span>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => onNavigate("/routine")}
+                className="p-1 rounded-md hover:bg-card-hover text-muted hover:text-primary transition-colors"
+                title="Add Daily Routine"
+              >
+                <Plus size={12} />
+              </button>
+            )}
           </div>
 
-          <div>
+          <div className="my-auto py-1.5">
             {now ? (
-              <>
-                <div className="text-sm font-semibold text-primary truncate">{now.title}</div>
-                <div className="flex items-center justify-between mt-1">
-                  <span className="font-mono text-[10.5px] text-muted">
-                    {now.startTime} – {now.endTime}
-                  </span>
-                  <span
-                    className="font-mono text-xs font-semibold text-accent tabular-nums"
+              <div className="space-y-1.5">
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="text-sm sm:text-base font-bold text-primary truncate leading-tight">
+                    {now.title}
+                  </div>
+                  <div
+                    className="font-mono text-base sm:text-lg font-bold text-accent tabular-nums flex items-center gap-1.5 shrink-0 tracking-tight"
                     title="Time remaining in current block"
                   >
+                    <Clock size={14} className="text-accent/80" />
                     {countdown}
+                  </div>
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-mono text-muted">
+                  <span>
+                    {now.startTime} – {now.endTime}
+                  </span>
+                  <span className="text-[9.5px] text-muted/70 uppercase tracking-wider">
+                    remaining
                   </span>
                 </div>
-              </>
+              </div>
             ) : next ? (
-              <div className="space-y-1">
-                <div className="text-xs text-secondary">
-                  Free time • Up next:{" "}
-                  <span className="font-semibold text-primary">{next.title}</span>
+              <div className="space-y-1.5">
+                <div className="flex items-baseline justify-between gap-2">
+                  <div className="text-xs sm:text-sm font-semibold text-primary truncate">
+                    <span className="text-muted font-normal mr-1">Up next:</span>
+                    {next.title}
+                  </div>
+                  <div className="font-mono text-xs sm:text-sm font-bold text-amber-400 tabular-nums shrink-0">
+                    in {nextCountdown}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="font-mono text-[10.5px] text-muted">
+                <div className="flex items-center justify-between font-mono text-[10.5px] text-muted">
+                  <span>
                     Scheduled {next.startTime} – {next.endTime}
                   </span>
-                  <span className="font-mono text-xs font-medium text-amber-400 tabular-nums">
-                    Starts in {nextCountdown}
+                  <span className="text-[9.5px] text-muted/70 uppercase tracking-wider">
+                    starts soon
                   </span>
                 </div>
               </div>
             ) : (
-              <div className="text-xs text-secondary py-0.5">
+              <div className="text-xs text-secondary py-1 text-center">
                 No active tasks scheduled for today
               </div>
             )}
           </div>
-
-          {/* Action buttons */}
-          {now ? (
-            <div className="flex items-center gap-1.5 mt-1">
-              {now.category === "workout" && now.referenceId && (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  className="flex-1 bg-emerald-600 hover:bg-emerald-500 py-1 text-xs"
-                  onClick={() =>
-                    onNavigate(`/workouts?startSession=${now.referenceId}&taskId=${now.id}`)
-                  }
-                >
-                  <Play className="w-3.5 h-3.5 mr-1" />
-                  Start Workout
-                </Button>
-              )}
-
-              {now.category === "learning" && now.referenceId && (
-                <Button
-                  size="sm"
-                  variant="primary"
-                  className="flex-1 bg-purple-600 hover:bg-purple-500 py-1 text-xs"
-                  onClick={() =>
-                    onNavigate(`/skills?logSession=${now.referenceId}&taskId=${now.id}`)
-                  }
-                >
-                  <GraduationCap className="w-3.5 h-3.5 mr-1" />
-                  Log Skill
-                </Button>
-              )}
-
-              {onCompleteTask && now.status !== "done" && (
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="py-1 text-xs hover:text-emerald-400"
-                  onClick={() => onCompleteTask(now.id)}
-                  title="Mark task completed"
-                >
-                  <Check className="w-3.5 h-3.5 mr-1" />
-                  Done
-                </Button>
-              )}
-            </div>
-          ) : next && onStartTask ? (
-            <div className="mt-1">
-              <Button
-                size="sm"
-                variant="secondary"
-                className="w-full py-1 text-xs border-accent/30 text-accent hover:bg-accent/10"
-                onClick={() => onStartTask(next.id)}
-              >
-                <Play className="w-3.5 h-3.5 mr-1" />
-                Start "{next.title}" Now
-              </Button>
-            </div>
-          ) : (
-            <div className="mt-1">
-              <Button
-                size="sm"
-                variant="ghost"
-                className="w-full py-1 text-xs text-muted hover:text-primary"
-                onClick={() => onNavigate("/routine")}
-              >
-                <Plus className="w-3.5 h-3.5 mr-1" />
-                Add Daily Routine
-              </Button>
-            </div>
-          )}
         </div>
 
         {/* Next Card */}
@@ -317,37 +323,26 @@ export function ScheduleWidget({
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") onNavigate("/routine");
           }}
-          className="rounded-lg border border-border bg-surface px-3 py-2 flex items-center justify-between shrink-0 transition-colors hover:border-border-hover hover:bg-card-hover cursor-pointer"
+          className="rounded-lg border border-border/80 bg-surface/70 px-2.5 py-1.5 flex items-center justify-between shrink-0 transition-colors hover:border-border-hover hover:bg-card-hover cursor-pointer group"
           title={next ? `Next task: ${next.title} (${next.startTime})` : "View routine schedule"}
         >
-          <div className="flex-1 min-w-0 pr-2">
-            <div className="font-mono text-[9px] uppercase tracking-widest text-muted font-medium mb-0.5">
+          <div className="flex items-center gap-2 min-w-0 flex-1 pr-2">
+            <span className="font-mono text-[9px] uppercase tracking-wider text-muted font-medium shrink-0">
               Next
-            </div>
-            <div
-              className={`text-xs truncate max-w-55 ${next ? "font-medium text-primary" : "text-secondary italic"}`}
-            >
-              {next ? next.title : "No upcoming tasks"}
-            </div>
+            </span>
+            {next ? (
+              <span className="text-xs truncate max-w-48 sm:max-w-64 font-medium text-primary">
+                {next.title}
+              </span>
+            ) : (
+              <span className="text-xs text-secondary italic">No upcoming tasks</span>
+            )}
           </div>
 
           {next ? (
-            <div className="flex flex-col items-end shrink-0 gap-0.5">
+            <div className="flex items-center gap-1.5 shrink-0">
               <span className="font-mono text-[10px] text-muted">{next.startTime}</span>
-              <Badge
-                size="sm"
-                variant={
-                  next.category === "work"
-                    ? "blue"
-                    : next.category === "workout"
-                      ? "danger"
-                      : next.category === "learning"
-                        ? "purple"
-                        : next.category === "habit"
-                          ? "orange"
-                          : "default"
-                }
-              >
+              <Badge size="sm" variant={getCategoryVariant(next.category)}>
                 {next.category}
               </Badge>
             </div>

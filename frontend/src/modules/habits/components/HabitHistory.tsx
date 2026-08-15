@@ -4,12 +4,13 @@ import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import Card, { CardContent } from "../../../components/ui/Card.js";
 import { Select } from "../../../components/ui/Select.js";
-import { habitApi } from "../api.js";
+import { getDataSource } from "../../../lib/dataSource.js";
 
 export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
   const [selectedHabitId, setSelectedHabitId] = useState<string>(habits[0]?.id || "");
   const [logs, setLogs] = useState<HabitLogEntry[]>([]);
   const [dateStr, setDateStr] = useState<string>(() => getClientDateString());
+  const ds = getDataSource();
 
   useEffect(() => {
     if (habits.length > 0 && (!selectedHabitId || !habits.some((h) => h.id === selectedHabitId))) {
@@ -20,12 +21,12 @@ export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
   const loadLogs = useCallback(async () => {
     if (!selectedHabitId || !dateStr) return;
     try {
-      const data = await habitApi.getLogs(selectedHabitId, dateStr);
+      const data = await ds.getHabitLogs(selectedHabitId, dateStr);
       setLogs(data);
     } catch (err) {
       console.error(err);
     }
-  }, [selectedHabitId, dateStr]);
+  }, [selectedHabitId, dateStr, ds]);
 
   useEffect(() => {
     loadLogs();
@@ -33,7 +34,7 @@ export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
 
   const handleDeleteLog = async (logId: string) => {
     try {
-      await habitApi.removeLog(logId);
+      await ds.unlogHabitByLogId(logId);
       await loadLogs();
     } catch (err) {
       console.error(err);

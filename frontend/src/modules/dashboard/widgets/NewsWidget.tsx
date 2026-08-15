@@ -27,10 +27,10 @@ export function NewsWidget({ items }: NewsWidgetProps) {
                 className="py-1.5 px-1 group hover:bg-card-hover/40 rounded transition-colors flex items-start justify-between gap-1.5 cursor-pointer"
               >
                 <div className="min-w-0">
-                  <span className="font-mono text-[9px] uppercase tracking-widest text-accent/90 mr-1.5 font-semibold">
-                    [{n.source}]
-                  </span>
-                  <span className="text-[12px] text-primary group-hover:text-primary leading-snug line-clamp-2">
+                  <span className="text-[11px] text-primary group-hover:text-primary leading-snug line-clamp-2">
+                    <span className="font-mono uppercase tracking-widest text-accent/90 mr-1.5 font-semibold">
+                      [{n.source}]
+                    </span>
                     {n.title}
                   </span>
                 </div>

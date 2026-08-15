@@ -60,6 +60,22 @@ const TABLE_TIMESTAMP_COLUMN: Record<string, string> = {
 
 export function createSyncRouter(client: Client): Router {
   const router = Router();
+  const tableColumnsCache = new Map<string, Set<string>>();
+
+  async function getTableColumns(table: string): Promise<Set<string>> {
+    const cached = tableColumnsCache.get(table);
+    if (cached) {
+      return cached;
+    }
+    try {
+      const res = await client.execute(`PRAGMA table_info(${table})`);
+      const cols = new Set((res.rows as unknown as { name: string }[]).map((r) => r.name));
+      tableColumnsCache.set(table, cols);
+      return cols;
+    } catch {
+      return new Set();
+    }
+  }
 
   router.post("/", async (req, res, next) => {
     try {
@@ -74,6 +90,7 @@ export function createSyncRouter(client: Client): Router {
 
           const hasUserId = TABLES_WITH_USER_ID.has(table);
           const primaryKey = table === "settings" ? "key" : "id";
+          const validColumns = await getTableColumns(table);
 
           for (const rawRow of rows) {
             if (!rawRow || typeof rawRow !== "object") continue;
@@ -85,7 +102,10 @@ export function createSyncRouter(client: Client): Router {
             // Remove internal client sync status tag if present
             delete row._sync_status;
 
-            const keys = Object.keys(row);
+            // Filter to only columns that exist in the database table
+            const keys = Object.keys(row).filter((k) =>
+              validColumns.size > 0 ? validColumns.has(k) : true,
+            );
             if (keys.length === 0) continue;
 
             const placeholders = keys.map(() => "?").join(", ");
@@ -101,7 +121,11 @@ export function createSyncRouter(client: Client): Router {
               ? `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) ON CONFLICT(${primaryKey}) DO UPDATE SET ${updateClause}`
               : `INSERT INTO ${table} (${columns}) VALUES (${placeholders})`;
 
-            await client.execute({ sql, args: values });
+            try {
+              await client.execute({ sql, args: values });
+            } catch (err) {
+              console.warn(`Sync row insert failed for ${table}:`, err);
+            }
           }
         }
       }

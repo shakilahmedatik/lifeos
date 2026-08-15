@@ -202,6 +202,8 @@ export const api = {
     request<void>(`/api/habits/${habitId}/log/${date}`, { method: "DELETE" }),
   unlogHabitByLogId: (logId: string) =>
     request<void>(`/api/habits/log/${logId}`, { method: "DELETE" }),
+  getHabitLogs: (habitId: string, date: string) =>
+    request<HabitLogEntry[]>(`/api/habits/${habitId}/logs?date=${date}`),
   getTodayHabits: () => request<HabitWithStreak[]>("/api/habits/today"),
   getHabitStats: (id: string, startDate: string, endDate: string) =>
     request<HabitStats>(`/api/habits/${id}/stats?startDate=${startDate}&endDate=${endDate}`),

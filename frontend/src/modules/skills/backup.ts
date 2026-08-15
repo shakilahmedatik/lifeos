@@ -1,4 +1,5 @@
 import { api } from "../../lib/api.js";
+import { getDataSource } from "../../lib/dataSource.js";
 import type { LearningBackup } from "./types";
 
 const BACKUP_VERSION = "1.0.0";
@@ -7,10 +8,11 @@ const BACKUP_SCHEMA = "lifeos-learning-backup";
 const STORAGE_KEY = "lifeos_last_backup_date";
 
 export async function createBackup(): Promise<LearningBackup> {
+  const ds = getDataSource();
   const [areas, resources, logs] = await Promise.all([
-    api.getSkillAreas(),
-    api.getLearningResources(),
-    api.getLearningLogsByRange("2000-01-01", new Date().toISOString().split("T")[0]),
+    ds.getSkillAreas(),
+    ds.getLearningResources(),
+    ds.getLearningLogsByRange("2000-01-01", new Date().toISOString().split("T")[0]),
   ]);
 
   return {
