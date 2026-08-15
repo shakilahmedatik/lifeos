@@ -122,13 +122,7 @@ export default function RoutinePage() {
 
         {/* Tab 1: Overview Dashboard */}
         <TabsContent value="overview">
-          <RoutineOverview
-            stats={stats}
-            loading={loadingStats}
-            onOpenCreateModal={() => setIsCreateModalOpen(true)}
-            onNavigateToSchedule={() => setActiveTab("schedule")}
-            onNavigateToHistory={() => setActiveTab("history")}
-          />
+          <RoutineOverview stats={stats} loading={loadingStats} />
         </TabsContent>
 
         {/* Tab 2: Day Schedule & Timeline Planner */}

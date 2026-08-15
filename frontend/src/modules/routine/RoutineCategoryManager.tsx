@@ -1,9 +1,8 @@
 import type { RoutineCategory } from "@lifeos/contracts";
-import { Edit2, Layers, Plus, Tag, Trash2 } from "lucide-react";
+import { Edit2, Layers, Plus, Trash2 } from "lucide-react";
 import type React from "react";
 import { useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
-import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent } from "../../components/ui/Card.js";
 import { ColorPicker } from "../../components/ui/ColorPicker.js";
@@ -199,7 +198,7 @@ export function RoutineCategoryManager() {
           }
         />
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
           {categories.map((cat) => (
             <Card
               key={cat.id}
@@ -211,42 +210,15 @@ export function RoutineCategoryManager() {
                 style={{ backgroundColor: cat.color || "#3b82f6" }}
               />
 
-              <CardContent className="p-4 pl-5">
+              <CardContent className="p-1">
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
-                    <div
-                      className="w-8 h-8 rounded-lg flex items-center justify-center text-sm font-semibold border shadow-inner shrink-0"
-                      style={{
-                        backgroundColor: `${cat.color || "#3b82f6"}15`,
-                        borderColor: `${cat.color || "#3b82f6"}30`,
-                        color: cat.color || "#3b82f6",
-                      }}
-                    >
-                      {cat.icon || <Tag size={14} />}
-                    </div>
-
-                    <div>
-                      <h3 className="text-sm font-semibold text-primary">{cat.name}</h3>
-                      <div className="flex items-center gap-1.5 mt-0.5">
-                        <TaskCategoryBadge
-                          category={cat.id}
-                          categoryObj={cat}
-                          className="text-[10px] py-0"
-                        />
-                        {cat.isDefault && (
-                          <Badge variant="default" className="text-[10px] py-0 px-1.5 text-muted">
-                            Default
-                          </Badge>
-                        )}
-                      </div>
-                    </div>
-                  </div>
+                  <TaskCategoryBadge category={cat.id} categoryObj={cat} className="text-[14px]" />
 
                   <div className="flex items-center gap-1">
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="p-1.5 text-secondary hover:text-primary rounded-lg"
+                      className="p-1.5 text-secondary hover:text-primary rounded-lg cursor-pointer"
                       onClick={() => handleOpenEdit(cat)}
                       aria-label={`Edit ${cat.name}`}
                       title="Edit Category"
@@ -256,7 +228,7 @@ export function RoutineCategoryManager() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="p-1.5 text-secondary hover:text-red-400 rounded-lg"
+                      className="p-1.5 text-secondary hover:text-red-400 rounded-lg cursor-pointer"
                       onClick={() => setDeletingCategory(cat)}
                       aria-label={`Delete ${cat.name}`}
                       title="Delete Category"
@@ -279,7 +251,7 @@ export function RoutineCategoryManager() {
           resetForm();
         }}
         title="Create Routine Category"
-        size="sm"
+        size="md"
       >
         <form onSubmit={handleCreate} className="space-y-4">
           {formError && <ErrorBanner message={formError} />}
@@ -391,7 +363,7 @@ export function RoutineCategoryManager() {
             resetForm();
           }}
           title="Edit Category"
-          size="sm"
+          size="md"
         >
           <form onSubmit={handleUpdate} className="space-y-4">
             {formError && <ErrorBanner message={formError} />}

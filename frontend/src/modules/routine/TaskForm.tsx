@@ -75,7 +75,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
   const categoryOptions = useMemo(() => {
     if (routineCategories && routineCategories.length > 0) {
       return routineCategories.map((c) => ({
-        value: c.id,
+        value: c.name,
         label: `${c.icon ? `${c.icon} ` : ""}${c.name}`,
       }));
     }
@@ -203,19 +203,6 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
   return (
     <Card className="border-blue-500/30">
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-primary">Create New Task</h2>
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            onClick={onCancel}
-            aria-label="Cancel task creation"
-          >
-            Cancel
-          </Button>
-        </div>
-
         {formError && <ErrorBanner message={formError} />}
 
         <Input
@@ -237,14 +224,6 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
             options={categoryOptions}
           />
 
-          <Input
-            id="task-date"
-            label="Date"
-            type="date"
-            value={date}
-            onChange={(e) => setDate(e.target.value)}
-          />
-
           <Select
             id="task-recurrence"
             label="Repeat"
@@ -257,9 +236,17 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
               { value: "weekly", label: "Weekly" },
             ]}
           />
+
+          <Input
+            id="task-date"
+            label="Date"
+            type="date"
+            value={date}
+            onChange={(e) => setDate(e.target.value)}
+          />
         </div>
 
-        {category === "workout" && (
+        {category.toLocaleLowerCase() === "workout" && (
           <Select
             id="task-workout"
             label="Select Workout Plan *"
@@ -275,7 +262,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
           />
         )}
 
-        {category === "learning" && (
+        {category.toLocaleLowerCase() === "learning" && (
           <Select
             id="task-learning-resource"
             label="Select Learning Resource (Optional)"
@@ -294,7 +281,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
             <div>
               <Input
                 id="task-start-time"
-                label="Start Time (Defaults to Current Time)"
+                label="Start Time"
                 type="time"
                 value={startTime}
                 onChange={(e) => setStartTime(e.target.value)}

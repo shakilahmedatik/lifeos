@@ -119,15 +119,7 @@ describe("Routine Component Unit Tests", () => {
       weeklyTrends: [{ date: "2026-08-01", total: 2, completed: 2 }],
     };
 
-    renderWithProviders(
-      <RoutineOverview
-        stats={sampleStats}
-        loading={false}
-        onOpenCreateModal={vi.fn()}
-        onNavigateToSchedule={vi.fn()}
-        onNavigateToHistory={vi.fn()}
-      />,
-    );
+    renderWithProviders(<RoutineOverview stats={sampleStats} loading={false} />);
 
     expect(screen.getByText("80%")).toBeDefined();
     expect(screen.getByText("3/4")).toBeDefined();
