@@ -229,5 +229,41 @@ export const localMigrations = [
     sync_version INTEGER NOT NULL DEFAULT 1
   );
   INSERT OR IGNORE INTO _sync_meta (id, last_sync_at, user_id) VALUES (1, NULL, NULL);
+
+  -- Performance Indexes
+  CREATE INDEX IF NOT EXISTS idx_tasks_user_id ON tasks(user_id);
+  CREATE INDEX IF NOT EXISTS idx_tasks_date ON tasks(date);
+  CREATE INDEX IF NOT EXISTS idx_tasks_sync_status ON tasks(_sync_status);
+  CREATE INDEX IF NOT EXISTS idx_tasks_deleted_at ON tasks(deleted_at);
+
+  CREATE INDEX IF NOT EXISTS idx_habits_user_id ON habits(user_id);
+  CREATE INDEX IF NOT EXISTS idx_habits_sync_status ON habits(_sync_status);
+
+  CREATE INDEX IF NOT EXISTS idx_habit_logs_habit_date ON habit_logs(habit_id, date);
+  CREATE INDEX IF NOT EXISTS idx_habit_logs_user_id ON habit_logs(user_id);
+  CREATE INDEX IF NOT EXISTS idx_habit_logs_sync_status ON habit_logs(_sync_status);
+
+  CREATE INDEX IF NOT EXISTS idx_workouts_user_id ON workouts(user_id);
+  CREATE INDEX IF NOT EXISTS idx_workout_exercises_workout_id ON workout_exercises(workout_id);
+  CREATE INDEX IF NOT EXISTS idx_workout_sessions_user_id ON workout_sessions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_exercise_logs_session_id ON exercise_logs(session_id);
+
+  CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
+  CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
+  CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON transactions(account_id);
+  CREATE INDEX IF NOT EXISTS idx_transactions_category_id ON transactions(category_id);
+  CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
+  CREATE INDEX IF NOT EXISTS idx_transactions_sync_status ON transactions(_sync_status);
+
+  CREATE INDEX IF NOT EXISTS idx_skill_areas_user_id ON skill_areas(user_id);
+  CREATE INDEX IF NOT EXISTS idx_learning_resources_skill_area_id ON learning_resources(skill_area_id);
+  CREATE INDEX IF NOT EXISTS idx_learning_logs_resource_id ON learning_logs(resource_id);
+  CREATE INDEX IF NOT EXISTS idx_learning_logs_user_id ON learning_logs(user_id);
+  CREATE INDEX IF NOT EXISTS idx_learning_logs_date ON learning_logs(date);
+  CREATE INDEX IF NOT EXISTS idx_learning_logs_sync_status ON learning_logs(_sync_status);
+
+  CREATE INDEX IF NOT EXISTS idx_reminders_user_id ON reminders(user_id);
+  CREATE INDEX IF NOT EXISTS idx_reminders_date ON reminders(date);
+  CREATE INDEX IF NOT EXISTS idx_reminders_sync_status ON reminders(_sync_status);
   `,
 ];

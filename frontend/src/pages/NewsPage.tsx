@@ -20,6 +20,7 @@ import ModalFooter from "../components/ui/ModalFooter.js";
 import { OnlineOnlyBanner } from "../components/ui/OnlineOnlyBanner.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { SearchInput } from "../components/ui/SearchInput.js";
+import { openExternalUrl } from "../lib/openExternal.js";
 import { queryKeys } from "../lib/queryKeys.js";
 import * as newsApi from "../modules/news/api.js";
 
@@ -247,7 +248,7 @@ export default function NewsPage() {
                   className={`cursor-pointer transition-opacity ${a.isRead ? "opacity-60" : ""}`}
                   onClick={() => {
                     if (!a.isRead) markReadMutation.mutate(a.id);
-                    window.open(a.url, "_blank", "noopener,noreferrer");
+                    openExternalUrl(a.url);
                   }}
                 >
                   <div className="flex items-start justify-between gap-3">

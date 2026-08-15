@@ -50,15 +50,20 @@ export class SyncEngine {
       const lastSyncAt = meta[0]?.last_sync_at || null;
 
       // 2. Gather local pending changes
-      const localChanges: Record<string, unknown[]> = {};
+      const localChanges: Record<string, Record<string, unknown>[]> = {};
+      const pushedIds: Record<string, string[]> = {};
       let pushedCount = 0;
 
       for (const table of SYNCABLE_TABLES) {
-        const rows = await db.select<unknown[]>(
+        const rows = await db.select<Record<string, unknown>[]>(
           `SELECT * FROM ${table} WHERE _sync_status = 'pending'`,
         );
         if (rows.length > 0) {
           localChanges[table] = rows;
+          const primaryKey = table === "settings" ? "key" : "id";
+          pushedIds[table] = rows
+            .map((r) => r[primaryKey])
+            .filter((id): id is string => typeof id === "string" && id.length > 0);
           pushedCount += rows.length;
         }
       }
@@ -90,11 +95,18 @@ export class SyncEngine {
         }
       }
 
-      // 5. Mark local pending changes as synced
-      for (const table of SYNCABLE_TABLES) {
-        await db.execute(
-          `UPDATE ${table} SET _sync_status = 'synced' WHERE _sync_status = 'pending'`,
-        );
+      // 5. Mark only the sent local pending changes as synced
+      for (const [table, ids] of Object.entries(pushedIds)) {
+        if (ids.length === 0) continue;
+        const primaryKey = table === "settings" ? "key" : "id";
+        for (let i = 0; i < ids.length; i += 100) {
+          const chunk = ids.slice(i, i + 100);
+          const placeholders = chunk.map(() => "?").join(", ");
+          await db.execute(
+            `UPDATE ${table} SET _sync_status = 'synced' WHERE ${primaryKey} IN (${placeholders}) AND _sync_status = 'pending'`,
+            chunk,
+          );
+        }
       }
 
       // 6. Update sync metadata

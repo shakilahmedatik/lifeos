@@ -1,5 +1,6 @@
 import type { DashboardNewsItem } from "@lifeos/contracts";
 import { ExternalLink } from "lucide-react";
+import { openExternalUrl } from "../../../lib/openExternal.js";
 import { DashboardPanel } from "../components/DashboardPanel.js";
 
 interface NewsWidgetProps {
@@ -19,9 +20,11 @@ export function NewsWidget({ items }: NewsWidgetProps) {
             <a
               key={n.id}
               href={n.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="py-1.5 px-0.5 group hover:bg-card-hover/40 rounded transition-colors flex items-start justify-between gap-1.5"
+              onClick={(e) => {
+                e.preventDefault();
+                openExternalUrl(n.url);
+              }}
+              className="py-1.5 px-0.5 group hover:bg-card-hover/40 rounded transition-colors flex items-start justify-between gap-1.5 cursor-pointer"
             >
               <div className="min-w-0">
                 <span className="font-mono text-[9px] uppercase tracking-widest text-accent/90 mr-1.5 font-semibold">

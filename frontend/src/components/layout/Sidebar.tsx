@@ -26,8 +26,8 @@ const navItems = [
 
 export default function Sidebar() {
   return (
-    <aside className="hidden sm:flex flex-col h-screen bg-sidebar glass border-r border-border fixed left-0 top-0 z-40 pt-10 pb-4 shadow-lg shadow-black/5 w-20 px-2">
-      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none py-2 space-y-1 mt-6">
+    <aside className="hidden sm:flex flex-col h-screen bg-sidebar glass border-r border-border fixed left-0 top-0 z-40 pt-9 pb-4 shadow-lg shadow-black/5 w-20 px-2">
+      <div className="flex-1 overflow-y-auto overflow-x-hidden scrollbar-none pb-2 space-y-1 mt-0">
         {navItems.map((item) => (
           <NavLink
             key={item.to}
@@ -37,7 +37,7 @@ export default function Sidebar() {
             className={({ isActive }) =>
               `flex items-center justify-center gap-3 py-2 rounded-lg transition-colors duration-150 ${
                 isActive
-                  ? "bg-accent text-white shadow-sm"
+                  ? "border border-accent text-white shadow-sm"
                   : "text-secondary hover:bg-card-hover hover:text-primary"
               }`
             }

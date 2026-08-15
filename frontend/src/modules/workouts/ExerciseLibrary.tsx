@@ -18,6 +18,7 @@ import Modal from "../../components/ui/Modal.js";
 import ModalFooter from "../../components/ui/ModalFooter.js";
 import { Select } from "../../components/ui/Select.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
+import { openExternalUrl } from "../../lib/openExternal.js";
 import { useExercises } from "./useWorkouts.js";
 
 const MUSCLE_GROUPS: (MuscleGroup | "all")[] = [
@@ -197,9 +198,12 @@ export function ExerciseLibrary() {
                   {ex.videoUrl && (
                     <a
                       href={ex.videoUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-400 hover:text-blue-300 ml-auto"
+                      onClick={(e) => {
+                        e.preventDefault();
+                        if (ex.videoUrl) openExternalUrl(ex.videoUrl);
+                      }}
+                      className="text-blue-400 hover:text-blue-300 ml-auto cursor-pointer"
+                      title="Open exercise video"
                     >
                       <VideoIcon className="w-5 h-5" />
                     </a>
