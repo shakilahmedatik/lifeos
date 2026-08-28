@@ -20,6 +20,7 @@ const SYNCABLE_TABLES = [
   "learning_resources",
   "learning_logs",
   "reminders",
+  "notifications",
   "settings",
 ] as const;
 

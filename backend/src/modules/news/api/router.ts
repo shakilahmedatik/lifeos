@@ -14,7 +14,10 @@ export function createNewsRouter(
   const router = Router();
 
   router.use("/feeds", createFeedsRouter(feedRepository, rssFetchService));
-  router.use("/articles", createArticlesRouter(articleRepository, feedRepository, newsScheduler));
+  router.use(
+    "/articles",
+    createArticlesRouter(articleRepository, feedRepository, newsScheduler, rssFetchService),
+  );
 
   return router;
 }

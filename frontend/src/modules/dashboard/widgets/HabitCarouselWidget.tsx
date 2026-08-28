@@ -130,7 +130,11 @@ export function HabitCarouselWidget({ habits, onLog, onUnlog }: HabitCarouselWid
               {habit.type === "boolean" && (
                 <button
                   type="button"
-                  onClick={() => onLog(habit.id, 1)}
+                  onClick={() =>
+                    habit.loggedToday && lastLog && onUnlog
+                      ? onUnlog(lastLog.id)
+                      : onLog(habit.id, 1)
+                  }
                   className={`flex items-center gap-1.5 text-xs font-medium px-3 py-1 rounded-lg transition-all border ${
                     habit.loggedToday
                       ? "bg-emerald-950/60 text-emerald-300 border-emerald-800/60"

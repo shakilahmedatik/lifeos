@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS rss_feeds (
   user_id TEXT NOT NULL DEFAULT '',
   name TEXT NOT NULL DEFAULT '',
   title TEXT NOT NULL DEFAULT '',
-  url TEXT NOT NULL UNIQUE,
+  url TEXT NOT NULL,
   category TEXT NOT NULL DEFAULT 'general',
   icon_url TEXT,
   enabled INTEGER NOT NULL DEFAULT 1,
@@ -209,9 +209,11 @@ CREATE TABLE IF NOT EXISTS rss_feeds (
   last_fetched_at TEXT,
   last_fetch_error TEXT,
   created_at TEXT NOT NULL DEFAULT (datetime('now')),
-  updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+  deleted_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_rss_feeds_user_id ON rss_feeds(user_id);
+CREATE INDEX IF NOT EXISTS idx_rss_feeds_user_url ON rss_feeds(user_id, url);
 
 CREATE TABLE IF NOT EXISTS news_articles (
   id TEXT PRIMARY KEY,
@@ -224,7 +226,7 @@ CREATE TABLE IF NOT EXISTS news_articles (
   fetched_at TEXT NOT NULL DEFAULT (datetime('now')),
   is_read INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (feed_id) REFERENCES rss_feeds(id) ON DELETE CASCADE,
-  UNIQUE(url, feed_id)
+  UNIQUE(user_id, url, feed_id)
 );
 CREATE INDEX IF NOT EXISTS idx_news_articles_user_id ON news_articles(user_id);
 CREATE INDEX IF NOT EXISTS idx_news_articles_feed_id ON news_articles(feed_id);

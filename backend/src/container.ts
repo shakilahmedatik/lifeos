@@ -70,6 +70,7 @@ export async function createContainer(config: AppConfig): Promise<Container> {
     skillAreaService: skills.skillAreaService,
     newsArticleRepo: news.newsArticleRepo,
     rssFeedRepo: news.rssFeedRepo,
+    rssFetchService: news.rssFetchService,
   });
 
   const getSchedulerStatus = (): SchedulerStatus[] => {

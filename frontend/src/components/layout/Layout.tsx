@@ -3,9 +3,15 @@ import { useEffect, useRef, useState } from "react";
 import { Outlet } from "react-router-dom";
 import { getDataSource } from "../../lib/dataSource.js";
 import { queryKeys } from "../../lib/queryKeys.js";
-import { showBrowserNotification } from "../../modules/notifications/browser-notifications.js";
+import {
+  requestNotificationPermission,
+  showBrowserNotification,
+} from "../../modules/notifications/browser-notifications.js";
 import { NotificationToast } from "../../modules/notifications/NotificationToast.js";
-import { playNotificationSound } from "../../modules/notifications/sound-player.js";
+import {
+  playNotificationSound,
+  resumeAudioContext,
+} from "../../modules/notifications/sound-player.js";
 import type { SoundPreset } from "../../modules/notifications/sound-presets.js";
 import { ToastProvider } from "../Toast.js";
 import MobileTabBar from "./MobileTabBar.js";
@@ -21,13 +27,28 @@ export default function Layout() {
   } | null>(null);
 
   const processedIdsRef = useRef<Set<string>>(new Set());
-
   const ds = getDataSource();
+
+  // Request permissions and resume audio on initial user interaction
+  useEffect(() => {
+    requestNotificationPermission().catch(() => {});
+    const onUserGesture = () => {
+      resumeAudioContext();
+      window.removeEventListener("click", onUserGesture);
+      window.removeEventListener("keydown", onUserGesture);
+    };
+    window.addEventListener("click", onUserGesture);
+    window.addEventListener("keydown", onUserGesture);
+    return () => {
+      window.removeEventListener("click", onUserGesture);
+      window.removeEventListener("keydown", onUserGesture);
+    };
+  }, []);
 
   const { data: dueList } = useQuery({
     queryKey: queryKeys.notifications.due(),
     queryFn: () => ds.getDueNotifications(),
-    refetchInterval: 15000,
+    refetchInterval: 10000,
   });
 
   useEffect(() => {
@@ -51,6 +72,38 @@ export default function Layout() {
       });
     }
   }, [dueList]);
+
+  // Also check standalone reminders
+  const { data: todayReminders } = useQuery({
+    queryKey: queryKeys.reminders.all(),
+    queryFn: () => ds.getTodayReminders(),
+    refetchInterval: 15000,
+  });
+
+  useEffect(() => {
+    if (todayReminders && todayReminders.length > 0) {
+      const now = new Date();
+      const currentHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      for (const r of todayReminders) {
+        if (!r.completed && r.time === currentHHMM) {
+          const key = `reminder-${r.id}-${r.time}`;
+          if (!processedIdsRef.current.has(key)) {
+            processedIdsRef.current.add(key);
+            playNotificationSound("default");
+            showBrowserNotification(r.title, {
+              body: `Time: ${r.time} · ${r.kind === "event" ? "Event" : "Reminder"}`,
+            });
+            setNotification({
+              id: r.id,
+              taskTitle: r.title,
+              reminderTime: r.time,
+              soundType: "default",
+            });
+          }
+        }
+      }
+    }
+  }, [todayReminders]);
 
   return (
     <ToastProvider>

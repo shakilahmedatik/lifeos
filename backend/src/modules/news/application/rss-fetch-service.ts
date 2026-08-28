@@ -46,15 +46,19 @@ export function createRssFetchService(
           const cleanSummary = sanitizeSummary(rawSummary);
           const publishedAt = parseValidDate(item.pubDate || item.isoDate);
 
-          await articleRepository.create({
-            feedId,
-            title: rawTitle,
-            url: rawLink,
-            summary: cleanSummary,
-            publishedAt,
-            fetchedAt: new Date().toISOString(),
-            isRead: false,
-          });
+          await articleRepository.create(
+            {
+              userId: feed.userId,
+              feedId,
+              title: rawTitle,
+              url: rawLink,
+              summary: cleanSummary,
+              publishedAt,
+              fetchedAt: new Date().toISOString(),
+              isRead: false,
+            },
+            feed.userId,
+          );
 
           newArticleCount++;
         }
@@ -72,8 +76,13 @@ export function createRssFetchService(
       }
     },
 
-    async fetchAllActiveFeeds(): Promise<{ totalFeeds: number; totalNewArticles: number }> {
-      const activeFeeds = await feedRepository.getActive();
+    async fetchAllActiveFeeds(
+      userId?: string,
+    ): Promise<{ totalFeeds: number; totalNewArticles: number }> {
+      const activeFeeds =
+        userId !== undefined
+          ? await feedRepository.getActive(userId)
+          : await feedRepository.getAllActiveAcrossUsers();
       let totalNewArticles = 0;
 
       for (const feed of activeFeeds) {

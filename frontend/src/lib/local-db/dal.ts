@@ -662,7 +662,7 @@ export const localDal = {
   ): Promise<HabitLogEntry> => {
     const db = await getLocalDb();
     const id = crypto.randomUUID();
-    const logDate = date || new Date().toISOString().split("T")[0];
+    const logDate = date || getClientDateString();
     const now = new Date().toISOString();
 
     const entry: HabitLogEntry = {
@@ -717,9 +717,9 @@ export const localDal = {
     }));
   },
 
-  getTodayHabits: async (): Promise<HabitWithStreak[]> => {
+  getTodayHabits: async (date?: string): Promise<HabitWithStreak[]> => {
     const habits = await localDal.getHabits();
-    const today = new Date().toISOString().split("T")[0];
+    const today = date || getClientDateString();
     const db = await getLocalDb();
 
     const activeHabits = habits.filter((h) => !h.archived);
@@ -727,7 +727,7 @@ export const localDal = {
 
     for (const h of activeHabits) {
       const rows = await db.select<SqliteRow[]>(
-        "SELECT * FROM habit_logs WHERE habit_id = ? AND date = ? AND deleted_at IS NULL",
+        "SELECT * FROM habit_logs WHERE habit_id = ? AND date = ? AND deleted_at IS NULL ORDER BY logged_at ASC",
         [h.id, today],
       );
       const logs: HabitLogEntry[] = rows.map((l) => ({
@@ -738,15 +738,63 @@ export const localDal = {
         meta: l.meta ? String(l.meta) : undefined,
         loggedAt: String(l.logged_at),
       }));
-      const todayValue = logs.reduce((sum, l) => sum + (Number(l.value) || 0), 0);
+
+      let todayValue = logs.reduce((sum, l) => sum + (Number(l.value) || 0), 0);
+      if (h.type === "prayer") {
+        todayValue = logs.length;
+      } else if (h.type === "boolean") {
+        todayValue = logs.length > 0 ? 1 : 0;
+      }
+
+      let todayTarget = 1;
+      if (h.type === "water" && "dailyGoalMl" in h.config) {
+        todayTarget = Number(h.config.dailyGoalMl) || 2500;
+      } else if (h.type === "walking" && "dailyGoal" in h.config) {
+        todayTarget = Number(h.config.dailyGoal) || 10000;
+      } else if (h.type === "timed" && "dailyGoalMinutes" in h.config) {
+        todayTarget = Number(h.config.dailyGoalMinutes) || 30;
+      } else if (h.type === "prayer") {
+        todayTarget = Array.isArray((h.config as { prayers?: unknown[] })?.prayers)
+          ? (h.config as { prayers?: unknown[] })?.prayers?.length || 5
+          : 5;
+      }
+
+      const todayProgress =
+        todayTarget > 0 ? Math.min(1, todayValue / todayTarget) : todayValue > 0 ? 1 : 0;
+
+      // Current streak: calculate consecutive days completed
+      let streak = todayProgress >= 1 ? 1 : 0;
+      try {
+        const [y, m, d] = today.split("-").map(Number);
+        for (let i = 1; i <= 365; i++) {
+          const prevD = new Date(Date.UTC(y, m - 1, d - i));
+          const pad = (n: number) => String(n).padStart(2, "0");
+          const prevStr = `${prevD.getUTCFullYear()}-${pad(prevD.getUTCMonth() + 1)}-${pad(prevD.getUTCDate())}`;
+          const prevLogs = await db.select<SqliteRow[]>(
+            "SELECT * FROM habit_logs WHERE habit_id = ? AND date = ? AND deleted_at IS NULL",
+            [h.id, prevStr],
+          );
+          let prevVal = prevLogs.reduce((sum, l) => sum + (Number(l.value) || 0), 0);
+          if (h.type === "prayer") prevVal = prevLogs.length;
+          else if (h.type === "boolean") prevVal = prevLogs.length > 0 ? 1 : 0;
+          if (prevVal >= todayTarget) {
+            streak++;
+          } else {
+            break;
+          }
+        }
+      } catch {
+        // ignore
+      }
+
       result.push({
         ...h,
-        currentStreak: todayValue > 0 ? 1 : 0,
-        longestStreak: 1,
-        loggedToday: todayValue > 0,
-        todayProgress: todayValue > 0 ? 1 : 0,
+        currentStreak: streak,
+        longestStreak: Math.max(streak, 1),
+        loggedToday: todayProgress >= 1,
+        todayProgress,
         todayValue,
-        todayTarget: 1,
+        todayTarget,
         logs,
       });
     }
@@ -2278,7 +2326,11 @@ export const localDal = {
   getNotifications: async (): Promise<NotificationWithTask[]> => {
     const db = await getLocalDb();
     const rows = await db.select<SqliteRow[]>(
-      "SELECT * FROM notifications WHERE deleted_at IS NULL ORDER BY reminder_time DESC",
+      `SELECT n.*, t.title as task_title, t.date as task_date, t.start_time as task_start_time
+       FROM notifications n
+       LEFT JOIN tasks t ON n.task_id = t.id
+       WHERE n.deleted_at IS NULL
+       ORDER BY n.reminder_time DESC`,
     );
     return rows.map((r) => ({
       id: String(r.id),
@@ -2289,21 +2341,34 @@ export const localDal = {
       status: r.status as NotificationWithTask["status"],
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
-      taskTitle: "",
-      taskDate: "",
-      taskStartTime: "",
+      taskTitle: r.task_title ? String(r.task_title) : "",
+      taskDate: r.task_date ? String(r.task_date) : "",
+      taskStartTime: r.task_start_time ? String(r.task_start_time) : "",
     }));
   },
 
   getDueNotifications: async (): Promise<NotificationWithTask[]> => {
+    const db = await getLocalDb();
     const all = await localDal.getNotifications();
     const now = new Date().toISOString();
-    return all.filter((n) => n.reminderTime <= now && n.status === "scheduled");
+    const due = all.filter((n) => n.reminderTime <= now && n.status === "scheduled");
+
+    for (const n of due) {
+      await db.execute(
+        "UPDATE notifications SET status = 'sent', updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+        [now, n.id],
+      );
+    }
+    return due;
   },
 
   getUnreadCount: async (): Promise<{ count: number }> => {
-    const due = await localDal.getDueNotifications();
-    return { count: due.length };
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT COUNT(*) as count FROM notifications WHERE status = 'scheduled' AND reminder_time <= ? AND deleted_at IS NULL",
+      [new Date().toISOString()],
+    );
+    return { count: Number(rows[0]?.count) || 0 };
   },
 
   createNotification: async (input: NewNotificationInput): Promise<Notification> => {

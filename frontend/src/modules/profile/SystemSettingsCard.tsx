@@ -163,20 +163,39 @@ export const SystemSettingsCard: FC = () => {
             <p className="text-sm font-medium text-primary flex items-center gap-2">
               <Bell className="w-4 h-4 text-amber-400" /> Desktop Notifications
             </p>
-            <p className="text-xs text-muted">Receive system reminder popups in your browser</p>
+            <p className="text-xs text-muted">
+              Receive system reminder alerts in macOS and browser
+            </p>
           </div>
 
-          <Button
-            type="button"
-            onClick={handleEnableNotifications}
-            className={`text-xs px-4 py-2 rounded-xl transition-all duration-200 ${
-              browserNotifEnabled
-                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
-                : "bg-amber-500 text-slate-950 font-bold hover:bg-amber-400"
-            }`}
-          >
-            {browserNotifEnabled ? "Notifications Active" : "Enable Alerts"}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={async () => {
+                playNotificationSound(soundPreset);
+                await showBrowserNotification("LifeOS Test Alert", {
+                  body: "This is a test notification from LifeOS. Alerts are working!",
+                });
+                setMessage("Test notification dispatched!");
+                setTimeout(() => setMessage(null), 3000);
+              }}
+              className="text-xs px-3 py-2 rounded-xl"
+            >
+              Test Notification
+            </Button>
+            <Button
+              type="button"
+              onClick={handleEnableNotifications}
+              className={`text-xs px-4 py-2 rounded-xl transition-all duration-200 ${
+                browserNotifEnabled
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/40"
+                  : "bg-amber-500 text-slate-950 font-bold hover:bg-amber-400"
+              }`}
+            >
+              {browserNotifEnabled ? "Notifications Active" : "Enable Alerts"}
+            </Button>
+          </div>
         </div>
       </CardContent>
     </Card>

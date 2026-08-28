@@ -3,25 +3,113 @@ import type { Client } from "@libsql/client";
 import type { NewRssFeedInput, RssFeed } from "../../domain/types.js";
 import type { RssFeedRepository } from "../../ports/repositories.js";
 
-export function createSqliteRssFeedRepository(client: Client): RssFeedRepository {
+const DEFAULT_RSS_FEEDS: Array<{ title: string; url: string }> = [
+  { title: "Hacker News", url: "https://news.ycombinator.com/rss" },
+  { title: "TechCrunch", url: "https://techcrunch.com/feed/" },
+  { title: "The Verge", url: "https://www.theverge.com/rss/index.xml" },
+];
+
+function getUserFilter(userId?: string): { clause: string; args: string[] } {
+  const uid = userId !== undefined ? userId.trim() : "default";
+  if (uid === "default" || uid === "") {
+    return {
+      clause: "(user_id = 'default' OR user_id = '' OR user_id IS NULL)",
+      args: [],
+    };
+  }
   return {
-    async getById(id: string): Promise<RssFeed | undefined> {
+    clause: "user_id = ?",
+    args: [uid],
+  };
+}
+
+export function createSqliteRssFeedRepository(
+  client: Client,
+  onFeedsCreated?: (feedIds: string[]) => Promise<void> | void,
+): RssFeedRepository {
+  const ensuringUsers = new Set<string>();
+
+  async function ensureDefaults(userId?: string): Promise<void> {
+    const uid = userId !== undefined && userId.trim().length > 0 ? userId.trim() : "default";
+    if (ensuringUsers.has(uid)) return;
+    ensuringUsers.add(uid);
+
+    try {
+      const filter = getUserFilter(uid);
       const res = await client.execute({
-        sql: "SELECT * FROM rss_feeds WHERE id = ?",
-        args: [id],
+        sql: `SELECT COUNT(*) as count FROM rss_feeds WHERE ${filter.clause}`,
+        args: filter.args,
       });
+      const count = Number(res.rows[0]?.count ?? 0);
+      if (count === 0) {
+        const now = new Date().toISOString();
+        const createdIds: string[] = [];
+        for (const feed of DEFAULT_RSS_FEEDS) {
+          const feedId = `feed_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+          await client.execute({
+            sql: `INSERT INTO rss_feeds (id, user_id, title, url, status, created_at, updated_at)
+                  VALUES (?, ?, ?, ?, 'active', ?, ?)`,
+            args: [feedId, uid, feed.title, feed.url, now, now],
+          });
+          createdIds.push(feedId);
+        }
+        if (onFeedsCreated && createdIds.length > 0) {
+          await onFeedsCreated(createdIds);
+        }
+      }
+    } catch {
+      // Ignore initial seeding conflicts
+    } finally {
+      ensuringUsers.delete(uid);
+    }
+  }
+
+  return {
+    async getById(id: string, userId?: string): Promise<RssFeed | undefined> {
+      let sql = "SELECT * FROM rss_feeds WHERE id = ?";
+      const args: (string | number)[] = [id];
+
+      if (userId !== undefined) {
+        const filter = getUserFilter(userId);
+        sql += ` AND ${filter.clause}`;
+        args.push(...filter.args);
+      }
+
+      const res = await client.execute({ sql, args });
       const row = res.rows[0] as unknown as Record<string, unknown> | undefined;
       if (!row) return undefined;
       return mapRowToRssFeed(row);
     },
 
-    async getAll(): Promise<RssFeed[]> {
+    async getAll(userId?: string): Promise<RssFeed[]> {
+      if (userId !== undefined) {
+        await ensureDefaults(userId);
+        const filter = getUserFilter(userId);
+        const res = await client.execute({
+          sql: `SELECT * FROM rss_feeds WHERE ${filter.clause} ORDER BY created_at DESC`,
+          args: filter.args,
+        });
+        const rows = res.rows as unknown as Record<string, unknown>[];
+        return rows.map(mapRowToRssFeed);
+      }
+
       const res = await client.execute("SELECT * FROM rss_feeds ORDER BY created_at DESC");
       const rows = res.rows as unknown as Record<string, unknown>[];
       return rows.map(mapRowToRssFeed);
     },
 
-    async getActive(): Promise<RssFeed[]> {
+    async getActive(userId?: string): Promise<RssFeed[]> {
+      if (userId !== undefined) {
+        await ensureDefaults(userId);
+        const filter = getUserFilter(userId);
+        const res = await client.execute({
+          sql: `SELECT * FROM rss_feeds WHERE status = 'active' AND ${filter.clause} ORDER BY created_at DESC`,
+          args: filter.args,
+        });
+        const rows = res.rows as unknown as Record<string, unknown>[];
+        return rows.map(mapRowToRssFeed);
+      }
+
       const res = await client.execute(
         "SELECT * FROM rss_feeds WHERE status = 'active' ORDER BY created_at DESC",
       );
@@ -29,25 +117,41 @@ export function createSqliteRssFeedRepository(client: Client): RssFeedRepository
       return rows.map(mapRowToRssFeed);
     },
 
-    async getByUrl(url: string): Promise<RssFeed | undefined> {
-      const res = await client.execute({
-        sql: "SELECT * FROM rss_feeds WHERE url = ?",
-        args: [url],
-      });
+    async getAllActiveAcrossUsers(): Promise<RssFeed[]> {
+      const res = await client.execute(
+        "SELECT * FROM rss_feeds WHERE status = 'active' ORDER BY created_at DESC",
+      );
+      const rows = res.rows as unknown as Record<string, unknown>[];
+      return rows.map(mapRowToRssFeed);
+    },
+
+    async getByUrl(url: string, userId?: string): Promise<RssFeed | undefined> {
+      let sql = "SELECT * FROM rss_feeds WHERE url = ?";
+      const args: (string | number)[] = [url];
+
+      if (userId !== undefined) {
+        const filter = getUserFilter(userId);
+        sql += ` AND ${filter.clause}`;
+        args.push(...filter.args);
+      }
+
+      const res = await client.execute({ sql, args });
       const row = res.rows[0] as unknown as Record<string, unknown> | undefined;
       if (!row) return undefined;
       return mapRowToRssFeed(row);
     },
 
-    async create(id: string, input: NewRssFeedInput): Promise<RssFeed> {
+    async create(id: string, input: NewRssFeedInput, userId?: string): Promise<RssFeed> {
+      const uid = userId !== undefined && userId.trim().length > 0 ? userId.trim() : "default";
       const now = new Date().toISOString();
       await client.execute({
-        sql: "INSERT INTO rss_feeds (id, title, url, status, created_at, updated_at) VALUES (?, ?, ?, 'active', ?, ?)",
-        args: [id, input.title, input.url, now, now],
+        sql: "INSERT INTO rss_feeds (id, user_id, title, url, status, created_at, updated_at) VALUES (?, ?, ?, ?, 'active', ?, ?)",
+        args: [id, uid, input.title, input.url, now, now],
       });
 
       return {
         id,
+        userId: uid,
         title: input.title,
         url: input.url,
         status: "active",
@@ -56,8 +160,12 @@ export function createSqliteRssFeedRepository(client: Client): RssFeedRepository
       };
     },
 
-    async update(id: string, patch: Partial<NewRssFeedInput>): Promise<RssFeed | undefined> {
-      const existing = await this.getById(id);
+    async update(
+      id: string,
+      patch: Partial<NewRssFeedInput>,
+      userId?: string,
+    ): Promise<RssFeed | undefined> {
+      const existing = await this.getById(id, userId);
       if (!existing) return undefined;
 
       const updates: string[] = [];
@@ -78,21 +186,34 @@ export function createSqliteRssFeedRepository(client: Client): RssFeedRepository
       values.push(new Date().toISOString());
       values.push(id);
 
-      await client.execute({
-        sql: `UPDATE rss_feeds SET ${updates.join(", ")} WHERE id = ?`,
-        args: values,
-      });
+      let sql = `UPDATE rss_feeds SET ${updates.join(", ")} WHERE id = ?`;
+      if (userId !== undefined) {
+        const filter = getUserFilter(userId);
+        sql += ` AND ${filter.clause}`;
+        values.push(...filter.args);
+      }
 
-      return await this.getById(id);
+      await client.execute({ sql, args: values });
+      return await this.getById(id, userId);
     },
 
-    async updateStatus(id: string, status: "active" | "inactive"): Promise<RssFeed | undefined> {
+    async updateStatus(
+      id: string,
+      status: "active" | "inactive",
+      userId?: string,
+    ): Promise<RssFeed | undefined> {
       const now = new Date().toISOString();
-      await client.execute({
-        sql: "UPDATE rss_feeds SET status = ?, updated_at = ? WHERE id = ?",
-        args: [status, now, id],
-      });
-      return await this.getById(id);
+      let sql = "UPDATE rss_feeds SET status = ?, updated_at = ? WHERE id = ?";
+      const args: (string | number)[] = [status, now, id];
+
+      if (userId !== undefined) {
+        const filter = getUserFilter(userId);
+        sql += ` AND ${filter.clause}`;
+        args.push(...filter.args);
+      }
+
+      await client.execute({ sql, args });
+      return await this.getById(id, userId);
     },
 
     async updateFetchStatus(
@@ -105,18 +226,28 @@ export function createSqliteRssFeedRepository(client: Client): RssFeedRepository
         sql: "UPDATE rss_feeds SET last_fetched_at = ?, last_fetch_error = ?, updated_at = ? WHERE id = ?",
         args: [lastFetchedAt, lastFetchError || null, now, id],
       });
-      return await this.getById(id);
+      const res = await client.execute({
+        sql: "SELECT * FROM rss_feeds WHERE id = ?",
+        args: [id],
+      });
+      const row = res.rows[0] as unknown as Record<string, unknown> | undefined;
+      return row ? mapRowToRssFeed(row) : undefined;
     },
 
-    async delete(id: string): Promise<boolean> {
-      await client.execute({
-        sql: "DELETE FROM news_articles WHERE feed_id = ?",
-        args: [id],
-      });
-      const res = await client.execute({
-        sql: "DELETE FROM rss_feeds WHERE id = ?",
-        args: [id],
-      });
+    async delete(id: string, userId?: string): Promise<boolean> {
+      let articlesSql = "DELETE FROM news_articles WHERE feed_id = ?";
+      let feedsSql = "DELETE FROM rss_feeds WHERE id = ?";
+      const args: (string | number)[] = [id];
+
+      if (userId !== undefined) {
+        const filter = getUserFilter(userId);
+        articlesSql += ` AND ${filter.clause}`;
+        feedsSql += ` AND ${filter.clause}`;
+        args.push(...filter.args);
+      }
+
+      await client.execute({ sql: articlesSql, args });
+      const res = await client.execute({ sql: feedsSql, args });
       return res.rowsAffected > 0;
     },
   };
@@ -125,6 +256,7 @@ export function createSqliteRssFeedRepository(client: Client): RssFeedRepository
 function mapRowToRssFeed(row: Record<string, unknown>): RssFeed {
   return {
     id: row.id as string,
+    userId: (row.user_id as string) || undefined,
     title: row.title as string,
     url: row.url as string,
     status: row.status as "active" | "inactive",

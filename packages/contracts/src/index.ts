@@ -603,6 +603,7 @@ export type FeedStatus = "active" | "inactive";
 
 export interface RssFeed {
   id: string;
+  userId?: string;
   title: string;
   url: string;
   status: FeedStatus;
@@ -619,6 +620,7 @@ export interface NewRssFeedInput {
 
 export interface NewsArticle {
   id: string;
+  userId?: string;
   feedId: string;
   title: string;
   url: string;

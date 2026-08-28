@@ -13,26 +13,33 @@ export function playNotificationSound(preset: SoundPreset | "none" = "default"):
   if (preset === "none" || !preset) return;
   const config = SOUND_PRESETS[preset];
   if (!config) return;
-  const ctx = getAudioContext();
+  try {
+    const ctx = getAudioContext();
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
 
-  const oscillator = ctx.createOscillator();
-  const gainNode = ctx.createGain();
+    const oscillator = ctx.createOscillator();
+    const gainNode = ctx.createGain();
 
-  oscillator.connect(gainNode);
-  gainNode.connect(ctx.destination);
+    oscillator.connect(gainNode);
+    gainNode.connect(ctx.destination);
 
-  oscillator.type = config.type;
-  oscillator.frequency.setValueAtTime(config.frequency, ctx.currentTime);
+    oscillator.type = config.type;
+    oscillator.frequency.setValueAtTime(config.frequency, ctx.currentTime);
 
-  gainNode.gain.setValueAtTime(config.volume, ctx.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + config.duration);
+    gainNode.gain.setValueAtTime(config.volume, ctx.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + config.duration);
 
-  oscillator.start(ctx.currentTime);
-  oscillator.stop(ctx.currentTime + config.duration);
+    oscillator.start(ctx.currentTime);
+    oscillator.stop(ctx.currentTime + config.duration);
+  } catch (e) {
+    console.warn("Could not play notification sound:", e);
+  }
 }
 
 export function resumeAudioContext(): void {
   if (audioContext && audioContext.state === "suspended") {
-    audioContext.resume();
+    audioContext.resume().catch(() => {});
   }
 }

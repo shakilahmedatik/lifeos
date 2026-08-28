@@ -228,6 +228,19 @@ export const localMigrations = [
     _sync_status TEXT NOT NULL DEFAULT 'synced'
   );
 
+  CREATE TABLE IF NOT EXISTS notifications (
+    id TEXT PRIMARY KEY,
+    task_id TEXT NOT NULL,
+    user_id TEXT NOT NULL DEFAULT '',
+    reminder_time TEXT NOT NULL,
+    sound_type TEXT NOT NULL DEFAULT 'default',
+    status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'sent', 'cancelled')),
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    deleted_at TEXT,
+    _sync_status TEXT NOT NULL DEFAULT 'synced'
+  );
+
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -284,5 +297,11 @@ export const localMigrations = [
   CREATE INDEX IF NOT EXISTS idx_reminders_user_id ON reminders(user_id);
   CREATE INDEX IF NOT EXISTS idx_reminders_date ON reminders(date);
   CREATE INDEX IF NOT EXISTS idx_reminders_sync_status ON reminders(_sync_status);
+
+  CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
+  CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status);
+  CREATE INDEX IF NOT EXISTS idx_notifications_reminder_time ON notifications(reminder_time);
+  CREATE INDEX IF NOT EXISTS idx_notifications_task_id ON notifications(task_id);
+  CREATE INDEX IF NOT EXISTS idx_notifications_sync_status ON notifications(_sync_status);
   `,
 ];

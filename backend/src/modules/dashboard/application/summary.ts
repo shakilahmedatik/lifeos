@@ -252,8 +252,15 @@ export async function getDashboardSummary(
   // 6. News Ticker Items
   const newsItems: DashboardNewsItem[] = [];
   if (deps.newsArticleRepo && deps.rssFeedRepo) {
-    const articles = await deps.newsArticleRepo.getRecent(5);
-    const feedsMap = new Map((await deps.rssFeedRepo.getAll()).map((f) => [f.id, f.title]));
+    let articles = await deps.newsArticleRepo.getRecent(5, userId);
+    if (articles.length === 0 && deps.rssFetchService) {
+      const feeds = await deps.rssFeedRepo.getAll(userId);
+      if (feeds.length > 0) {
+        await deps.rssFetchService.fetchAllActiveFeeds(userId);
+        articles = await deps.newsArticleRepo.getRecent(5, userId);
+      }
+    }
+    const feedsMap = new Map((await deps.rssFeedRepo.getAll(userId)).map((f) => [f.id, f.title]));
 
     for (const article of articles) {
       const feedTitle = feedsMap.get(article.feedId) || "tech";

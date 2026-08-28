@@ -16,10 +16,9 @@ import Card, { CardHeader, CardTitle } from "../components/ui/Card.js";
 import { EmptyState } from "../components/ui/EmptyState.js";
 import Modal from "../components/ui/Modal.js";
 import ModalFooter from "../components/ui/ModalFooter.js";
-import { OnlineOnlyBanner } from "../components/ui/OnlineOnlyBanner.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Select } from "../components/ui/Select.js";
-import { api } from "../lib/api.js";
+import { getDataSource } from "../lib/dataSource.js";
 
 type TaskReminder = {
   taskId: Task["id"];
@@ -33,6 +32,7 @@ function getCurrentTimeStr(): string {
 }
 
 export default function NotificationsPage() {
+  const ds = getDataSource();
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
@@ -63,9 +63,9 @@ export default function NotificationsPage() {
     try {
       const today = getClientDateString();
       const [tasksData, remindersData, notificationsData] = await Promise.all([
-        api.getTasks(today),
-        api.getReminders(),
-        api.getNotifications().catch(() => []),
+        ds.getTasks(today),
+        ds.getReminders(),
+        ds.getNotifications().catch(() => []),
       ]);
       setTasks(tasksData);
       setReminders(remindersData);
@@ -87,7 +87,7 @@ export default function NotificationsPage() {
     } finally {
       setLoading(false);
     }
-  }, [toast]);
+  }, [ds, toast]);
 
   useEffect(() => {
     fetchData();
@@ -99,7 +99,7 @@ export default function NotificationsPage() {
     const task = tasks.find((t) => t.id === selectedTask);
     if (!task) return;
     try {
-      await api.updateTask(selectedTask, {
+      await ds.updateTask(selectedTask, {
         reminderMinutesBefore: minutesBefore,
         reminderSilent: sound === "none",
       });
@@ -126,7 +126,7 @@ export default function NotificationsPage() {
           reminderTime: reminderDateObj.toISOString(),
           soundType: sound as NewNotificationInput["soundType"],
         };
-        await api.createNotification(input);
+        await ds.createNotification(input);
       }
       setShowTaskForm(false);
       fetchData();
@@ -146,7 +146,7 @@ export default function NotificationsPage() {
         date: reminderDate || null,
         kind: reminderKind,
       };
-      await api.createReminder(input);
+      await ds.createReminder(input);
       setShowReminderForm(false);
       setReminderTitle("");
       setReminderDate("");
@@ -159,8 +159,8 @@ export default function NotificationsPage() {
 
   const handleRemoveTaskReminder = async (taskId: string) => {
     try {
-      await api.deleteNotificationsByTaskId(taskId);
-      await api.updateTask(taskId, {
+      await ds.deleteNotificationsByTaskId(taskId);
+      await ds.updateTask(taskId, {
         reminderMinutesBefore: null,
         reminderSilent: true,
       });
@@ -172,7 +172,7 @@ export default function NotificationsPage() {
 
   const handleDeleteReminder = async (id: string) => {
     try {
-      await api.deleteReminder(id);
+      await ds.deleteReminder(id);
       fetchData();
       toast.success("Reminder deleted");
     } catch {
@@ -182,7 +182,7 @@ export default function NotificationsPage() {
 
   const handleToggleReminderDone = async (id: string, currentStatus: boolean) => {
     try {
-      await api.updateReminder(id, { completed: !currentStatus });
+      await ds.updateReminder(id, { completed: !currentStatus });
       fetchData();
     } catch {
       toast.error("Failed to update reminder");
@@ -216,8 +216,6 @@ export default function NotificationsPage() {
           </div>
         }
       />
-
-      <OnlineOnlyBanner moduleName="Notifications & Real-time Alerts" />
 
       {loading ? (
         <div className="space-y-3">

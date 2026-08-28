@@ -25,4 +25,7 @@ export interface DashboardDependencies {
   skillAreaService?: SkillAreaService;
   newsArticleRepo?: NewsArticleRepository;
   rssFeedRepo?: RssFeedRepository;
+  rssFetchService?: {
+    fetchAllActiveFeeds(userId?: string): Promise<{ totalFeeds: number; totalNewArticles: number }>;
+  };
 }

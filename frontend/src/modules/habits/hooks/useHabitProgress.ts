@@ -8,6 +8,10 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { getDataSource } from "../../../lib/dataSource.js";
 import { queryKeys } from "../../../lib/queryKeys.js";
+import {
+  requestNotificationPermission,
+  showBrowserNotification,
+} from "../../notifications/browser-notifications.js";
 
 export function useHabitProgress() {
   const queryClient = useQueryClient();
@@ -41,15 +45,9 @@ export function useHabitProgress() {
 
   // Notification alerts logic for prayer / water habits
   useEffect(() => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
-
-    if (Notification.permission === "default") {
-      Notification.requestPermission().catch(() => {});
-    }
+    requestNotificationPermission().catch(() => {});
 
     const interval = setInterval(() => {
-      if (Notification.permission !== "granted") return;
-
       const now = new Date();
       const currentHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
       const todayStr = getClientDateString();
@@ -65,7 +63,7 @@ export function useHabitProgress() {
                 const key = `${todayStr}-${prog.id}-${prayer.name}`;
                 if (!notifiedSetRef.current.has(key)) {
                   notifiedSetRef.current.add(key);
-                  new Notification(`🕌 Time for ${prayer.name} Salah`, {
+                  showBrowserNotification(`🕌 Time for ${prayer.name} Salah`, {
                     body: `It is now ${prayer.time}. Don't forget to perform your ${prayer.name} prayer.`,
                     icon: "/favicon.ico",
                   });
@@ -89,7 +87,7 @@ export function useHabitProgress() {
             ) {
               if (!notifiedSetRef.current.has(key)) {
                 notifiedSetRef.current.add(key);
-                new Notification(`💧 Hydration Reminder`, {
+                showBrowserNotification(`💧 Hydration Reminder`, {
                   body: `You've drunk ${current} ml of ${target} ml today. Remember to drink a glass of water!`,
                   icon: "/favicon.ico",
                 });

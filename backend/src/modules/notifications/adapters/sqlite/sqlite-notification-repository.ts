@@ -67,7 +67,7 @@ export class SqliteNotificationRepository implements NotificationRepository {
           t.date as taskDate,
           t.start_time as taskStartTime
         FROM notifications n
-        JOIN tasks t ON n.task_id = t.id
+        LEFT JOIN tasks t ON n.task_id = t.id
         WHERE (n.user_id = ? OR n.user_id = 'default' OR ? = 'default')
         ORDER BY n.reminder_time ASC
       `,
@@ -96,7 +96,7 @@ export class SqliteNotificationRepository implements NotificationRepository {
           t.date as taskDate,
           t.start_time as taskStartTime
         FROM notifications n
-        JOIN tasks t ON n.task_id = t.id
+        LEFT JOIN tasks t ON n.task_id = t.id
         WHERE n.status = 'scheduled'
           AND n.reminder_time <= ?
         ORDER BY n.reminder_time ASC

@@ -1,5 +1,6 @@
 import { Router } from "express";
 
+import type { AuthenticatedRequest } from "../../auth/middleware.js";
 import { createFeedService } from "../application/feed-service.js";
 import type { createRssFetchService } from "../application/rss-fetch-service.js";
 import type { RssFeedRepository } from "../ports/repositories.js";
@@ -20,18 +21,20 @@ export function createFeedsRouter(
   const router = Router();
   const feedService = createFeedService(feedRepository);
 
-  router.get("/", async (_req, res) => {
-    const feeds = await feedService.getAllFeeds();
+  router.get("/", async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const feeds = await feedService.getAllFeeds(userId);
     res.json(feeds);
   });
 
-  router.post("/refresh-all", async (_req, res) => {
+  router.post("/refresh-all", async (req: AuthenticatedRequest, res) => {
     if (!rssFetchService) {
       res.status(500).json({ error: "RSS fetch service not available" });
       return;
     }
 
-    const result = await rssFetchService.fetchAllActiveFeeds();
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const result = await rssFetchService.fetchAllActiveFeeds(userId);
     res.json({
       success: true,
       totalFeeds: result.totalFeeds,
@@ -39,8 +42,9 @@ export function createFeedsRouter(
     });
   });
 
-  router.get("/:id", async (req, res) => {
-    const feed = await feedService.getFeedById(req.params.id);
+  router.get("/:id", async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const feed = await feedService.getFeedById(req.params.id as string, userId);
     if (!feed) {
       res.status(404).json({ error: "Feed not found" });
       return;
@@ -48,7 +52,8 @@ export function createFeedsRouter(
     res.json(feed);
   });
 
-  router.post("/", async (req, res) => {
+  router.post("/", async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.body.userId as string) || (req.query.userId as string) || "default";
     const { title, url } = req.body;
     const cleanUrl = url?.trim();
 
@@ -63,7 +68,7 @@ export function createFeedsRouter(
     }
 
     const cleanTitle = title?.trim() || cleanUrl;
-    const result = await feedService.createFeed({ title: cleanTitle, url: cleanUrl });
+    const result = await feedService.createFeed({ title: cleanTitle, url: cleanUrl }, userId);
     if (!result.success) {
       res.status(400).json({ error: result.error });
       return;
@@ -76,7 +81,8 @@ export function createFeedsRouter(
     res.status(201).json(result.feed);
   });
 
-  router.patch("/:id", async (req, res) => {
+  router.patch("/:id", async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     const { title, url } = req.body;
     const patch: { title?: string; url?: string } = {};
 
@@ -90,7 +96,7 @@ export function createFeedsRouter(
       patch.url = cleanUrl;
     }
 
-    const result = await feedService.updateFeed(req.params.id, patch);
+    const result = await feedService.updateFeed(req.params.id as string, patch, userId);
 
     if (!result.success) {
       res.status(400).json({ error: result.error });
@@ -100,8 +106,9 @@ export function createFeedsRouter(
     res.json(result.feed);
   });
 
-  router.delete("/:id", async (req, res) => {
-    const result = await feedService.deleteFeed(req.params.id);
+  router.delete("/:id", async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const result = await feedService.deleteFeed(req.params.id as string, userId);
     if (!result.success) {
       res.status(400).json({ error: result.error });
       return;
@@ -110,8 +117,9 @@ export function createFeedsRouter(
     res.status(204).send();
   });
 
-  router.patch("/:id/toggle", async (req, res) => {
-    const result = await feedService.toggleFeedStatus(req.params.id);
+  router.patch("/:id/toggle", async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const result = await feedService.toggleFeedStatus(req.params.id as string, userId);
     if (!result.success) {
       res.status(400).json({ error: result.error });
       return;
@@ -120,13 +128,20 @@ export function createFeedsRouter(
     res.json(result.feed);
   });
 
-  router.post("/:id/refresh", async (req, res) => {
+  router.post("/:id/refresh", async (req: AuthenticatedRequest, res) => {
     if (!rssFetchService) {
       res.status(500).json({ error: "RSS fetch service not available" });
       return;
     }
 
-    const result = await rssFetchService.fetchFeed(req.params.id);
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const feed = await feedService.getFeedById(req.params.id as string, userId);
+    if (!feed) {
+      res.status(404).json({ error: "Feed not found" });
+      return;
+    }
+
+    const result = await rssFetchService.fetchFeed(req.params.id as string);
     if (!result.success) {
       res.status(400).json({ error: result.error });
       return;

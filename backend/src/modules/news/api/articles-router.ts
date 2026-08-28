@@ -1,21 +1,25 @@
 import { Router } from "express";
 
+import type { AuthenticatedRequest } from "../../auth/middleware.js";
 import { createArticleService } from "../application/article-service.js";
 import type { createNewsScheduler } from "../application/news-scheduler.js";
+import type { createRssFetchService } from "../application/rss-fetch-service.js";
 import type { NewsArticleRepository, RssFeedRepository } from "../ports/repositories.js";
 
 export function createArticlesRouter(
   articleRepository: NewsArticleRepository,
   feedRepository: RssFeedRepository,
   newsScheduler?: ReturnType<typeof createNewsScheduler>,
+  rssFetchService?: ReturnType<typeof createRssFetchService>,
 ): Router {
   const router = Router();
   const articleService = createArticleService(articleRepository, feedRepository);
 
-  router.get("/", async (req, res) => {
+  router.get("/", async (req: AuthenticatedRequest, res) => {
     if (newsScheduler) {
       await newsScheduler.runFetchCycleIfNeeded();
     }
+    const userId = req.user?.id || (req.query.userId as string) || "default";
     const { feedId, search, limit, offset } = req.query;
     const parsedLimit = Number.parseInt(limit as string, 10);
     const parsedOffset = Number.parseInt(offset as string, 10);
@@ -29,26 +33,48 @@ export function createArticlesRouter(
     if (targetSearch) {
       articles = await articleService.searchArticles(
         targetSearch,
+        userId,
         targetFeedId,
         limitNum,
         offsetNum,
       );
     } else if (targetFeedId) {
-      articles = await articleService.getArticlesByFeedId(targetFeedId, limitNum, offsetNum);
+      articles = await articleService.getArticlesByFeedId(targetFeedId, userId, limitNum, offsetNum);
     } else {
-      articles = await articleService.getArticles(limitNum, offsetNum);
+      articles = await articleService.getArticles(userId, limitNum, offsetNum);
+    }
+
+    if (articles.length === 0 && rssFetchService && !targetSearch) {
+      const feeds = await feedRepository.getAll(userId);
+      if (feeds.length > 0) {
+        await rssFetchService.fetchAllActiveFeeds(userId);
+        if (targetFeedId) {
+          articles = await articleService.getArticlesByFeedId(targetFeedId, userId, limitNum, offsetNum);
+        } else {
+          articles = await articleService.getArticles(userId, limitNum, offsetNum);
+        }
+      }
     }
 
     res.json(articles);
   });
 
-  router.get("/ticker", async (_req, res) => {
-    const articles = await articleService.getRecentArticles(5);
+  router.get("/ticker", async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    let articles = await articleService.getRecentArticles(5, userId);
+    if (articles.length === 0 && rssFetchService) {
+      const feeds = await feedRepository.getAll(userId);
+      if (feeds.length > 0) {
+        await rssFetchService.fetchAllActiveFeeds(userId);
+        articles = await articleService.getRecentArticles(5, userId);
+      }
+    }
     res.json(articles);
   });
 
-  router.get("/:id", async (req, res) => {
-    const article = await articleService.getArticleById(req.params.id);
+  router.get("/:id", async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const article = await articleService.getArticleById(req.params.id as string, userId);
     if (!article) {
       res.status(404).json({ error: "Article not found" });
       return;
@@ -56,8 +82,9 @@ export function createArticlesRouter(
     res.json(article);
   });
 
-  router.patch("/:id/read", async (req, res) => {
-    const result = await articleService.markAsRead(req.params.id);
+  router.patch("/:id/read", async (req: AuthenticatedRequest, res) => {
+    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const result = await articleService.markAsRead(req.params.id as string, userId);
     if (!result.success) {
       res.status(400).json({ error: result.error });
       return;

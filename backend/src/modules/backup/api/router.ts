@@ -66,6 +66,8 @@ export function createBackupRouter(dbPath: string, client?: Client): Router {
       let skillAreasData: unknown[] = [];
       let learningLogsData: unknown[] = [];
       let remindersData: unknown[] = [];
+      let rssFeedsData: unknown[] = [];
+      let newsArticlesData: unknown[] = [];
       let settingsData: unknown[] = [];
 
       if (client) {
@@ -139,6 +141,20 @@ export function createBackupRouter(dbPath: string, client?: Client): Router {
               args: [userId],
             })
           ).rows || [];
+        rssFeedsData =
+          (
+            await client.execute({
+              sql: "SELECT * FROM rss_feeds WHERE user_id = ? OR user_id = '' OR user_id = 'default'",
+              args: [userId],
+            })
+          ).rows || [];
+        newsArticlesData =
+          (
+            await client.execute({
+              sql: "SELECT * FROM news_articles WHERE user_id = ? OR user_id = '' OR user_id = 'default'",
+              args: [userId],
+            })
+          ).rows || [];
         settingsData = (await client.execute("SELECT * FROM settings")).rows || [];
       }
 
@@ -158,6 +174,8 @@ export function createBackupRouter(dbPath: string, client?: Client): Router {
           skillAreas: skillAreasData,
           learningLogs: learningLogsData,
           reminders: remindersData,
+          rssFeeds: rssFeedsData,
+          newsArticles: newsArticlesData,
           settings: settingsData,
         },
       };

@@ -31,10 +31,13 @@ const SYNCABLE_TABLES = [
   "accounts",
   "categories",
   "transactions",
+  "rss_feeds",
+  "news_articles",
   "skill_areas",
   "learning_resources",
   "learning_logs",
   "reminders",
+  "notifications",
   "settings",
 ] as const;
 
@@ -51,10 +54,13 @@ const TABLE_TIMESTAMP_COLUMN: Record<string, string> = {
   accounts: "updated_at",
   categories: "updated_at",
   transactions: "updated_at",
+  rss_feeds: "updated_at",
+  news_articles: "fetched_at",
   skill_areas: "updated_at",
   learning_resources: "updated_at",
   learning_logs: "updated_at",
   reminders: "updated_at",
+  notifications: "updated_at",
   settings: "updated_at",
 };
 
@@ -135,32 +141,49 @@ export function createSyncRouter(client: Client): Router {
       const syncedAt = new Date().toISOString();
 
       for (const table of SYNCABLE_TABLES) {
-        const hasUserId = TABLES_WITH_USER_ID.has(table);
-        const timeCol = TABLE_TIMESTAMP_COLUMN[table] || "updated_at";
+        const cols = await getTableColumns(table);
+        const hasUserId = TABLES_WITH_USER_ID.has(table) && cols.has("user_id");
+        const hasDeletedAt = cols.has("deleted_at");
+        const targetTimeCol = TABLE_TIMESTAMP_COLUMN[table] || "updated_at";
+        const timeCol = cols.has(targetTimeCol) ? targetTimeCol : "created_at";
 
         let sql = "";
         const args: (string | number | null)[] = [];
 
         if (hasUserId) {
           if (lastSyncAt) {
-            sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) > datetime(?) OR deleted_at > ?)))`;
-            args.push(userId, lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
+            if (hasDeletedAt) {
+              sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) > datetime(?) OR deleted_at > ?)))`;
+              args.push(userId, lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
+            } else {
+              sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ?)`;
+              args.push(userId, lastSyncAt, lastSyncAt);
+            }
           } else {
             sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL)`;
             args.push(userId);
           }
         } else {
           if (lastSyncAt) {
-            sql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) > datetime(?) OR deleted_at > ?)))`;
-            args.push(lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
+            if (hasDeletedAt) {
+              sql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) > datetime(?) OR deleted_at > ?)))`;
+              args.push(lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
+            } else {
+              sql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ?)`;
+              args.push(lastSyncAt, lastSyncAt);
+            }
           } else {
             sql = `SELECT * FROM ${table}`;
           }
         }
 
-        const result = await client.execute({ sql, args });
-        if (result.rows.length > 0) {
-          serverChanges[table] = result.rows.map((row) => ({ ...row }));
+        try {
+          const result = await client.execute({ sql, args });
+          if (result.rows.length > 0) {
+            serverChanges[table] = result.rows.map((row) => ({ ...row }));
+          }
+        } catch (err) {
+          console.warn(`Failed to pull server changes for ${table}:`, err);
         }
       }
 
