@@ -1,4 +1,6 @@
 import type { AccountType, CategoryKind } from "@lifeos/contracts";
+import { useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../../lib/queryKeys.js";
 import {
   createAccount,
   createCategory,
@@ -39,6 +41,7 @@ export interface FinanceBackupData {
 }
 
 export function useFinanceBackup(onImportComplete?: () => void) {
+  const queryClient = useQueryClient();
   const exportCsv = async () => {
     const startDate = "1900-01-01";
     const endDate = "2100-01-01";
@@ -169,6 +172,9 @@ export function useFinanceBackup(onImportComplete?: () => void) {
         } catch {}
       }
     }
+
+    await queryClient.invalidateQueries({ queryKey: ["finance"] });
+    await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
 
     onImportComplete?.();
 

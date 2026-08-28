@@ -49,12 +49,12 @@ export class SqliteAccountRepository implements AccountRepository {
     return rows.map(rowToAccount);
   }
 
-  async create(id: string, input: NewAccountInput): Promise<Account> {
+  async create(id: string, input: NewAccountInput, userId = ""): Promise<Account> {
     const now = new Date().toISOString();
     await this.client.execute({
-      sql: `INSERT INTO accounts (id, name, type, archived, created_at, updated_at)
-            VALUES (?, ?, ?, 0, ?, ?)`,
-      args: [id, input.name, input.type, now, now],
+      sql: `INSERT INTO accounts (id, user_id, name, type, archived, created_at, updated_at)
+            VALUES (?, ?, ?, ?, 0, ?, ?)`,
+      args: [id, userId, input.name, input.type, now, now],
     });
 
     return (await this.getById(id)) as Account;

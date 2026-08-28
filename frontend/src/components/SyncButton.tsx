@@ -25,7 +25,7 @@ export function SyncButton({ compact = false }: { compact?: boolean }) {
 
       <button
         type="button"
-        onClick={triggerSync}
+        onClick={() => triggerSync({ forceFull: true })}
         disabled={syncState === "syncing"}
         className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium border transition-colors w-full ${
           syncState === "error"

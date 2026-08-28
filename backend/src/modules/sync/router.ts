@@ -86,7 +86,8 @@ export function createSyncRouter(client: Client): Router {
   router.post("/", async (req, res, next) => {
     try {
       const userId = (req as unknown as { user: { id: string } }).user?.id || "";
-      const { lastSyncAt, changes } = req.body || {};
+      const { lastSyncAt, changes, forceFull } = req.body || {};
+      const shouldFilterByTime = Boolean(lastSyncAt) && !forceFull;
 
       // 1. Apply incoming client changes (Last-write-wins)
       if (changes && typeof changes === "object") {
@@ -151,12 +152,12 @@ export function createSyncRouter(client: Client): Router {
         const args: (string | number | null)[] = [];
 
         if (hasUserId) {
-          if (lastSyncAt) {
+          if (shouldFilterByTime) {
             if (hasDeletedAt) {
-              sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) > datetime(?) OR deleted_at > ?)))`;
+              sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) >= datetime(?) OR deleted_at >= ?)))`;
               args.push(userId, lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
             } else {
-              sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ?)`;
+              sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ?)`;
               args.push(userId, lastSyncAt, lastSyncAt);
             }
           } else {
@@ -164,12 +165,12 @@ export function createSyncRouter(client: Client): Router {
             args.push(userId);
           }
         } else {
-          if (lastSyncAt) {
+          if (shouldFilterByTime) {
             if (hasDeletedAt) {
-              sql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) > datetime(?) OR deleted_at > ?)))`;
+              sql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) >= datetime(?) OR deleted_at >= ?)))`;
               args.push(lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
             } else {
-              sql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) > datetime(?) OR ${timeCol} > ?)`;
+              sql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ?)`;
               args.push(lastSyncAt, lastSyncAt);
             }
           } else {

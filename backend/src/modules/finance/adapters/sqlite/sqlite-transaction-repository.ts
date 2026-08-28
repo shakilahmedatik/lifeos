@@ -45,8 +45,13 @@ export class SqliteTransactionRepository implements TransactionRepository {
 
   async getByDateRange(startDate: string, endDate: string): Promise<Transaction[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM transactions WHERE date >= ? AND date <= ? ORDER BY date ASC",
-      args: [startDate, endDate],
+      sql: `SELECT * FROM transactions 
+            WHERE (
+              substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?
+              OR (date >= ? AND (date <= ? OR date <= ? || 'T23:59:59.999Z' OR date <= ? || ' 23:59:59'))
+            ) 
+            ORDER BY date ASC`,
+      args: [startDate, endDate, startDate, endDate, endDate, endDate],
     });
     const rows = res.rows as unknown as TransactionRow[];
     return rows.map(rowToTransaction);
@@ -67,8 +72,14 @@ export class SqliteTransactionRepository implements TransactionRepository {
     endDate: string,
   ): Promise<Transaction[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM transactions WHERE account_id = ? AND date >= ? AND date <= ? ORDER BY date ASC",
-      args: [accountId, startDate, endDate],
+      sql: `SELECT * FROM transactions 
+            WHERE account_id = ? 
+              AND (
+                substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?
+                OR (date >= ? AND (date <= ? OR date <= ? || 'T23:59:59.999Z' OR date <= ? || ' 23:59:59'))
+              ) 
+            ORDER BY date ASC`,
+      args: [accountId, startDate, endDate, startDate, endDate, endDate, endDate],
     });
     const rows = res.rows as unknown as TransactionRow[];
     return rows.map(rowToTransaction);
@@ -83,13 +94,14 @@ export class SqliteTransactionRepository implements TransactionRepository {
     return rows.map(rowToTransaction);
   }
 
-  async create(id: string, input: NewTransactionInput): Promise<Transaction> {
+  async create(id: string, input: NewTransactionInput, userId = ""): Promise<Transaction> {
     const now = new Date().toISOString();
     await this.client.execute({
-      sql: `INSERT INTO transactions (id, account_id, category_id, date, amount_minor, currency, note, transfer_pair_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      sql: `INSERT INTO transactions (id, user_id, account_id, category_id, date, amount_minor, currency, note, transfer_pair_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       args: [
         id,
+        userId,
         input.accountId,
         input.categoryId,
         input.date,

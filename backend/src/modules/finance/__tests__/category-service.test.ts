@@ -28,6 +28,7 @@ function createMockCategoryRepo(): CategoryRepository & { categories: Map<string
         id,
         name: input.name,
         kind: input.kind,
+        isSystem: Boolean(input.isSystem),
         archived: false,
         createdAt: now,
         updatedAt: now,
@@ -118,6 +119,15 @@ describe("CategoryService", () => {
     expect(category.archived).toBe(false);
   });
 
+  it("rejects creating category with reserved system name", async () => {
+    await expect(service.createCategory({ name: "Transfer In", kind: "income" })).rejects.toThrow(
+      "reserved system categories",
+    );
+    await expect(service.createCategory({ name: "transfer out", kind: "expense" })).rejects.toThrow(
+      "reserved system categories",
+    );
+  });
+
   it("lists categories by kind", async () => {
     await service.createCategory({ name: "Salary", kind: "income" });
     await service.createCategory({ name: "Groceries", kind: "expense" });
@@ -138,6 +148,34 @@ describe("CategoryService", () => {
     const cat = await service.createCategory({ name: "Groceries", kind: "expense" });
     const updated = await service.updateCategory(cat.id, { name: "Supermarket" });
     expect(updated?.name).toBe("Supermarket");
+  });
+
+  it("rejects updating a category to a reserved system name", async () => {
+    const cat = await service.createCategory({ name: "Groceries", kind: "expense" });
+    await expect(service.updateCategory(cat.id, { name: "Transfer Out" })).rejects.toThrow(
+      "Cannot rename to reserved system category name",
+    );
+  });
+
+  it("rejects modifying or archiving or deleting system category", async () => {
+    const systemCat = await categoryRepo.create("cat-system-transfer-in", {
+      name: "Transfer In",
+      kind: "income",
+      isSystem: true,
+    });
+
+    await expect(service.updateCategory(systemCat.id, { name: "My Transfer" })).rejects.toThrow(
+      "Cannot modify system category",
+    );
+    await expect(service.archiveCategory(systemCat.id)).rejects.toThrow(
+      "Cannot archive system category",
+    );
+    await expect(service.unarchiveCategory(systemCat.id)).rejects.toThrow(
+      "Cannot modify system category",
+    );
+    await expect(service.deleteCategory(systemCat.id)).rejects.toThrow(
+      "Cannot delete system category",
+    );
   });
 
   it("archives a category", async () => {

@@ -1,4 +1,8 @@
 import { randomUUID } from "node:crypto";
+import {
+  SYSTEM_CATEGORY_TRANSFER_IN_ID,
+  SYSTEM_CATEGORY_TRANSFER_OUT_ID,
+} from "@lifeos/contracts";
 
 import type { NewTransactionInput, Transaction } from "../domain/types.js";
 import type { AccountRepository } from "../ports/account-repository.js";
@@ -12,7 +16,7 @@ export class TransactionService {
     private readonly categoryRepo: CategoryRepository,
   ) {}
 
-  async createTransaction(input: NewTransactionInput): Promise<Transaction> {
+  async createTransaction(input: NewTransactionInput, userId?: string): Promise<Transaction> {
     const account = await this.accountRepo.getById(input.accountId);
     if (!account) {
       throw new Error("Account not found");
@@ -34,7 +38,7 @@ export class TransactionService {
     }
 
     const id = randomUUID();
-    return await this.transactionRepo.create(id, input);
+    return await this.transactionRepo.create(id, input, userId);
   }
 
   async listTransactionsByDateRange(startDate: string, endDate: string): Promise<Transaction[]> {
@@ -92,7 +96,7 @@ export class TransactionService {
     return await this.transactionRepo.delete(id);
   }
 
-  private async ensureCategoryExists(
+  private async getSystemCategory(
     id: string,
     name: string,
     kind: "income" | "expense",
@@ -100,12 +104,11 @@ export class TransactionService {
     const existing = await this.categoryRepo.getById(id);
     if (existing) return existing.id;
 
-    const activeKindCats = await this.categoryRepo.getByKind(kind);
-    if (activeKindCats.length > 0) {
-      return activeKindCats[0].id;
-    }
+    const byKind = await this.categoryRepo.getByKind(kind);
+    const found = byKind.find((c) => c.name.toLowerCase() === name.toLowerCase());
+    if (found) return found.id;
 
-    const created = await this.categoryRepo.create(id, { name, kind });
+    const created = await this.categoryRepo.create(id, { name, kind, isSystem: true });
     return created.id;
   }
 
@@ -115,6 +118,7 @@ export class TransactionService {
     amountMinor: number,
     date: string,
     note?: string,
+    userId?: string,
   ): Promise<{ from: Transaction; to: Transaction }> {
     const fromAccount = await this.accountRepo.getById(fromAccountId);
     if (!fromAccount) {
@@ -133,38 +137,46 @@ export class TransactionService {
       throw new Error("Amount must be positive");
     }
 
-    const expenseCatId = await this.ensureCategoryExists(
-      "cat-expense-other",
+    const expenseCatId = await this.getSystemCategory(
+      SYSTEM_CATEGORY_TRANSFER_OUT_ID,
       "Transfer Out",
       "expense",
     );
-    const incomeCatId = await this.ensureCategoryExists(
-      "cat-income-other",
+    const incomeCatId = await this.getSystemCategory(
+      SYSTEM_CATEGORY_TRANSFER_IN_ID,
       "Transfer In",
       "income",
     );
 
     const transferPairId = randomUUID();
 
-    const fromTransaction = await this.transactionRepo.create(randomUUID(), {
-      accountId: fromAccountId,
-      categoryId: expenseCatId,
-      date,
-      amountMinor,
-      note: note ? `Transfer to ${toAccount.name}: ${note}` : `Transfer to ${toAccount.name}`,
-      transferPairId,
-    });
+    const fromTransaction = await this.transactionRepo.create(
+      randomUUID(),
+      {
+        accountId: fromAccountId,
+        categoryId: expenseCatId,
+        date,
+        amountMinor,
+        note: note ? `Transfer to ${toAccount.name}: ${note}` : `Transfer to ${toAccount.name}`,
+        transferPairId,
+      },
+      userId,
+    );
 
-    const toTransaction = await this.transactionRepo.create(randomUUID(), {
-      accountId: toAccountId,
-      categoryId: incomeCatId,
-      date,
-      amountMinor,
-      note: note
-        ? `Transfer from ${fromAccount.name}: ${note}`
-        : `Transfer from ${fromAccount.name}`,
-      transferPairId,
-    });
+    const toTransaction = await this.transactionRepo.create(
+      randomUUID(),
+      {
+        accountId: toAccountId,
+        categoryId: incomeCatId,
+        date,
+        amountMinor,
+        note: note
+          ? `Transfer from ${fromAccount.name}: ${note}`
+          : `Transfer from ${fromAccount.name}`,
+        transferPairId,
+      },
+      userId,
+    );
 
     return { from: fromTransaction, to: toTransaction };
   }

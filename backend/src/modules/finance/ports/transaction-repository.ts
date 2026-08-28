@@ -10,7 +10,7 @@ export interface TransactionRepository {
     endDate: string,
   ): Promise<Transaction[]>;
   getByCategoryId(categoryId: string): Promise<Transaction[]>;
-  create(id: string, input: NewTransactionInput): Promise<Transaction>;
+  create(id: string, input: NewTransactionInput, userId?: string): Promise<Transaction>;
   update(id: string, patch: Partial<NewTransactionInput>): Promise<Transaction | undefined>;
   delete(id: string): Promise<boolean>;
   getMonthlyTotals(yearMonth: string): Promise<{ totalIncome: number; totalExpense: number }>;

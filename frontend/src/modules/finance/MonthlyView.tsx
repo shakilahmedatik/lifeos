@@ -28,13 +28,9 @@ const EXPENSE_BAR_SHADES = ["#f59e0b", "#d97706", "#fbbf24", "#eab308", "#b45309
 export function MonthlyView({ refreshTrigger }: MonthlyViewProps) {
   const [yearMonth, setYearMonth] = useState(getClientMonthString());
   const { summary, breakdown, balances, loading, refresh } = useFinanceSummary(yearMonth);
-  const prevRefreshTrigger = useRef(refreshTrigger);
 
   useEffect(() => {
-    if (refreshTrigger !== prevRefreshTrigger.current) {
-      prevRefreshTrigger.current = refreshTrigger;
-      refresh();
-    }
+    refresh();
   }, [refreshTrigger, refresh]);
 
   const expenseBreakdown = useMemo(

@@ -10,16 +10,22 @@ export function useFinanceSummary(yearMonth?: string) {
   const summaryQuery = useQuery<MonthlySummary>({
     queryKey: queryKeys.finance.monthlySummary(ym),
     queryFn: () => api.fetchMonthlySummary(ym),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   const breakdownQuery = useQuery<CategoryBreakdown[]>({
     queryKey: queryKeys.finance.categoryBreakdown(ym),
     queryFn: () => api.fetchCategoryBreakdown(ym),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   const balancesQuery = useQuery<AccountWithBalance[]>({
     queryKey: queryKeys.finance.balances(),
     queryFn: () => api.fetchAccountBalances(),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   const isLoading = summaryQuery.isLoading || breakdownQuery.isLoading || balancesQuery.isLoading;

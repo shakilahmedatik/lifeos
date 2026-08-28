@@ -10,6 +10,7 @@ import {
   type DashboardSkillProgress,
   type DashboardSummary,
   type DashboardWorkoutDay,
+  DEFAULT_FINANCE_CATEGORIES,
   type FinanceDashboardWidget,
   getClientDateString,
   type HabitAnalyticsData,
@@ -36,11 +37,14 @@ import {
   type NotificationSoundType,
   type NotificationWithTask,
   type Reminder,
+  RESERVED_CATEGORY_NAMES,
   type ResourceWithProgress,
   type RoutineCategory,
   type RoutineStats,
   type SkillArea,
   type SkillAreaSummary,
+  SYSTEM_CATEGORY_TRANSFER_IN_ID,
+  SYSTEM_CATEGORY_TRANSFER_OUT_ID,
   type Task,
   type TaskCategory,
   type TaskHistoryQuery,
@@ -136,6 +140,28 @@ async function getDashboardNewsItems(): Promise<DashboardNewsItem[]> {
   }
 
   return _cachedNewsItems;
+}
+
+async function ensureFinanceCategories(db: Awaited<ReturnType<typeof getLocalDb>>): Promise<void> {
+  const now = new Date().toISOString();
+  for (const cat of DEFAULT_FINANCE_CATEGORIES) {
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT id, is_system FROM categories WHERE (id = ? OR lower(name) = lower(?)) AND deleted_at IS NULL",
+      [cat.id, cat.name],
+    );
+    if (rows.length === 0) {
+      await db.execute(
+        `INSERT OR IGNORE INTO categories (id, name, kind, is_system, archived, created_at, updated_at, _sync_status)
+         VALUES (?, ?, ?, 1, 0, ?, ?, 'synced')`,
+        [cat.id, cat.name, cat.kind, now, now],
+      );
+    } else if (!rows[0].is_system) {
+      await db.execute("UPDATE categories SET is_system = 1, updated_at = ? WHERE id = ?", [
+        now,
+        rows[0].id,
+      ]);
+    }
+  }
 }
 
 export const localDal = {
@@ -1452,13 +1478,15 @@ export const localDal = {
 
   getCategories: async (): Promise<Category[]> => {
     const db = await getLocalDb();
+    await ensureFinanceCategories(db);
     const rows = await db.select<SqliteRow[]>(
-      "SELECT * FROM categories WHERE deleted_at IS NULL ORDER BY name ASC",
+      "SELECT * FROM categories WHERE deleted_at IS NULL ORDER BY is_system DESC, name ASC",
     );
     return rows.map((r) => ({
       id: String(r.id),
       name: String(r.name),
       kind: r.kind as CategoryKind,
+      isSystem: Boolean(r.is_system),
       archived: Boolean(r.archived),
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
@@ -1467,13 +1495,15 @@ export const localDal = {
 
   getActiveCategories: async (): Promise<Category[]> => {
     const db = await getLocalDb();
+    await ensureFinanceCategories(db);
     const rows = await db.select<SqliteRow[]>(
-      "SELECT * FROM categories WHERE deleted_at IS NULL AND archived = 0 ORDER BY name ASC",
+      "SELECT * FROM categories WHERE deleted_at IS NULL AND archived = 0 ORDER BY is_system DESC, name ASC",
     );
     return rows.map((r) => ({
       id: String(r.id),
       name: String(r.name),
       kind: r.kind as CategoryKind,
+      isSystem: Boolean(r.is_system),
       archived: false,
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
@@ -1482,13 +1512,15 @@ export const localDal = {
 
   getIncomeCategories: async (): Promise<Category[]> => {
     const db = await getLocalDb();
+    await ensureFinanceCategories(db);
     const rows = await db.select<SqliteRow[]>(
-      "SELECT * FROM categories WHERE deleted_at IS NULL AND kind = 'income' AND archived = 0 ORDER BY name ASC",
+      "SELECT * FROM categories WHERE deleted_at IS NULL AND kind = 'income' AND archived = 0 ORDER BY is_system DESC, name ASC",
     );
     return rows.map((r) => ({
       id: String(r.id),
       name: String(r.name),
       kind: "income",
+      isSystem: Boolean(r.is_system),
       archived: false,
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
@@ -1497,13 +1529,15 @@ export const localDal = {
 
   getExpenseCategories: async (): Promise<Category[]> => {
     const db = await getLocalDb();
+    await ensureFinanceCategories(db);
     const rows = await db.select<SqliteRow[]>(
-      "SELECT * FROM categories WHERE deleted_at IS NULL AND kind = 'expense' AND archived = 0 ORDER BY name ASC",
+      "SELECT * FROM categories WHERE deleted_at IS NULL AND kind = 'expense' AND archived = 0 ORDER BY is_system DESC, name ASC",
     );
     return rows.map((r) => ({
       id: String(r.id),
       name: String(r.name),
       kind: "expense",
+      isSystem: Boolean(r.is_system),
       archived: false,
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
@@ -1522,6 +1556,7 @@ export const localDal = {
       id: String(r.id),
       name: String(r.name),
       kind: r.kind as CategoryKind,
+      isSystem: Boolean(r.is_system),
       archived: Boolean(r.archived),
       createdAt: String(r.created_at),
       updatedAt: String(r.updated_at),
@@ -1529,23 +1564,31 @@ export const localDal = {
   },
 
   createCategory: async (input: NewCategoryInput): Promise<Category> => {
+    if (
+      !input.isSystem &&
+      RESERVED_CATEGORY_NAMES.some((n) => n.toLowerCase() === input.name.trim().toLowerCase())
+    ) {
+      throw new Error("Transfer In and Transfer Out are reserved system categories");
+    }
     const db = await getLocalDb();
     const id = crypto.randomUUID();
     const now = new Date().toISOString();
+    const isSystem = Boolean(input.isSystem);
 
     const category: Category = {
       id,
       name: input.name,
       kind: input.kind,
+      isSystem,
       archived: false,
       createdAt: now,
       updatedAt: now,
     };
 
     await db.execute(
-      `INSERT INTO categories (id, name, kind, archived, created_at, updated_at, _sync_status)
-       VALUES (?, ?, ?, 0, ?, ?, 'pending')`,
-      [category.id, category.name, category.kind, now, now],
+      `INSERT INTO categories (id, name, kind, is_system, archived, created_at, updated_at, _sync_status)
+       VALUES (?, ?, ?, ?, 0, ?, ?, 'pending')`,
+      [category.id, category.name, category.kind, isSystem ? 1 : 0, now, now],
     );
 
     return category;
@@ -1556,6 +1599,13 @@ export const localDal = {
     const now = new Date().toISOString();
     const existing = await localDal.getCategory(id);
     if (!existing) throw new Error("Category not found");
+    if (existing.isSystem) throw new Error("Cannot modify system category");
+    if (
+      patch.name &&
+      RESERVED_CATEGORY_NAMES.some((n) => n.toLowerCase() === patch.name!.trim().toLowerCase())
+    ) {
+      throw new Error("Cannot rename to reserved system category name");
+    }
 
     const name = patch.name ?? existing.name;
     const kind = patch.kind ?? existing.kind;
@@ -1574,6 +1624,9 @@ export const localDal = {
   },
 
   archiveCategory: async (id: string): Promise<void> => {
+    const existing = await localDal.getCategory(id);
+    if (!existing) throw new Error("Category not found");
+    if (existing.isSystem) throw new Error("Cannot archive system category");
     const db = await getLocalDb();
     const now = new Date().toISOString();
     await db.execute(
@@ -1583,6 +1636,9 @@ export const localDal = {
   },
 
   unarchiveCategory: async (id: string): Promise<void> => {
+    const existing = await localDal.getCategory(id);
+    if (!existing) throw new Error("Category not found");
+    if (existing.isSystem) throw new Error("Cannot modify system category");
     const db = await getLocalDb();
     const now = new Date().toISOString();
     await db.execute(
@@ -1592,6 +1648,9 @@ export const localDal = {
   },
 
   deleteCategory: async (id: string): Promise<void> => {
+    const existing = await localDal.getCategory(id);
+    if (!existing) throw new Error("Category not found");
+    if (existing.isSystem) throw new Error("Cannot delete system category");
     const db = await getLocalDb();
     const now = new Date().toISOString();
     await db.execute(
@@ -1632,8 +1691,14 @@ export const localDal = {
   ): Promise<Transaction[]> => {
     const db = await getLocalDb();
     const rows = await db.select<SqliteRow[]>(
-      "SELECT * FROM transactions WHERE deleted_at IS NULL AND date >= ? AND date <= ? ORDER BY date DESC, created_at DESC",
-      [startDate, endDate],
+      `SELECT * FROM transactions 
+       WHERE deleted_at IS NULL 
+         AND (
+           substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?
+           OR (date >= ? AND (date <= ? OR date <= ? || 'T23:59:59.999Z' OR date <= ? || ' 23:59:59'))
+         ) 
+       ORDER BY date DESC, created_at DESC`,
+      [startDate, endDate, startDate, endDate, endDate, endDate],
     );
     return rows.map((r) => ({
       id: String(r.id),
@@ -1792,6 +1857,7 @@ export const localDal = {
     note?: string,
   ): Promise<{ from: Transaction; to: Transaction }> => {
     const db = await getLocalDb();
+    await ensureFinanceCategories(db);
     const fromAccount = await localDal.getAccount(fromAccountId);
     if (!fromAccount) throw new Error("Source account not found");
     const toAccount = await localDal.getAccount(toAccountId);
@@ -1800,20 +1866,30 @@ export const localDal = {
     if (amountMinor <= 0) throw new Error("Amount must be positive");
 
     const expenseCats = await db.select<SqliteRow[]>(
-      "SELECT id FROM categories WHERE deleted_at IS NULL AND kind = 'expense' AND archived = 0 ORDER BY (name = 'Transfer Out') DESC LIMIT 1",
+      "SELECT id FROM categories WHERE deleted_at IS NULL AND (id = ? OR lower(name) = 'transfer out') AND kind = 'expense' LIMIT 1",
+      [SYSTEM_CATEGORY_TRANSFER_OUT_ID],
     );
     let expenseCatId = expenseCats[0]?.id ? String(expenseCats[0].id) : "";
     if (!expenseCatId) {
-      const created = await localDal.createCategory({ name: "Transfer Out", kind: "expense" });
+      const created = await localDal.createCategory({
+        name: "Transfer Out",
+        kind: "expense",
+        isSystem: true,
+      });
       expenseCatId = created.id;
     }
 
     const incomeCats = await db.select<SqliteRow[]>(
-      "SELECT id FROM categories WHERE deleted_at IS NULL AND kind = 'income' AND archived = 0 ORDER BY (name = 'Transfer In') DESC LIMIT 1",
+      "SELECT id FROM categories WHERE deleted_at IS NULL AND (id = ? OR lower(name) = 'transfer in') AND kind = 'income' LIMIT 1",
+      [SYSTEM_CATEGORY_TRANSFER_IN_ID],
     );
     let incomeCatId = incomeCats[0]?.id ? String(incomeCats[0].id) : "";
     if (!incomeCatId) {
-      const created = await localDal.createCategory({ name: "Transfer In", kind: "income" });
+      const created = await localDal.createCategory({
+        name: "Transfer In",
+        kind: "income",
+        isSystem: true,
+      });
       incomeCatId = created.id;
     }
 

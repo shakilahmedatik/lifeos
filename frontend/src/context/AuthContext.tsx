@@ -102,6 +102,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setToken(newToken);
       if (isTauri()) {
         setTauriStoredSession({ token: newToken, user: newUser });
+        import("../lib/local-db/index.js").then(({ getLocalDb }) => {
+          getLocalDb().then((db) => {
+            db.execute("UPDATE _sync_meta SET last_sync_at = NULL, user_id = ? WHERE id = 1", [
+              newUser.id,
+            ]).catch(() => {});
+          });
+        });
       }
     } else {
       removeToken();
@@ -127,6 +134,13 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     removeUser();
     if (isTauri()) {
       clearTauriStoredSession();
+      import("../lib/local-db/index.js").then(({ getLocalDb }) => {
+        getLocalDb().then((db) => {
+          db.execute("UPDATE _sync_meta SET last_sync_at = NULL, user_id = NULL WHERE id = 1").catch(
+            () => {},
+          );
+        });
+      });
     }
   };
 

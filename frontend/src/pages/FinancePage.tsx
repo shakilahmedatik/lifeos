@@ -55,7 +55,14 @@ export default function FinancePage() {
         }
       />
 
-      <Tabs value={activeTab} onValueChange={(val) => setActiveTab(val as Tab)} variant="underline">
+      <Tabs
+        value={activeTab}
+        onValueChange={(val) => {
+          setActiveTab(val as Tab);
+          handleRefresh();
+        }}
+        variant="underline"
+      >
         <TabsList className="w-full">
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="transactions">Transactions</TabsTrigger>

@@ -55,12 +55,13 @@ function createMockCategoryRepo(): CategoryRepository & { categories: Map<string
     async getByKind(kind: Category["kind"]) {
       return Array.from(categories.values()).filter((c) => c.kind === kind && !c.archived);
     },
-    async create(id: string, input: { name: string; kind: Category["kind"] }) {
+    async create(id: string, input: { name: string; kind: Category["kind"]; isSystem?: boolean }) {
       const now = new Date().toISOString();
       const category: Category = {
         id,
         name: input.name,
         kind: input.kind,
+        isSystem: Boolean(input.isSystem),
         archived: false,
         createdAt: now,
         updatedAt: now,

@@ -10,9 +10,9 @@ export class AccountService {
     private readonly transactionRepo: TransactionRepository,
   ) {}
 
-  async createAccount(input: NewAccountInput): Promise<Account> {
+  async createAccount(input: NewAccountInput, userId?: string): Promise<Account> {
     const id = randomUUID();
-    return await this.accountRepo.create(id, input);
+    return await this.accountRepo.create(id, input, userId);
   }
 
   async listAccounts(): Promise<Account[]> {

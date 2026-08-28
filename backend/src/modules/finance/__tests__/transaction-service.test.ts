@@ -1,3 +1,7 @@
+import {
+  SYSTEM_CATEGORY_TRANSFER_IN_ID,
+  SYSTEM_CATEGORY_TRANSFER_OUT_ID,
+} from "@lifeos/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { TransactionService } from "../application/transaction-service.js";
@@ -67,12 +71,13 @@ function createMockCategoryRepo(): CategoryRepository & { categories: Map<string
     async getByKind(kind: Category["kind"]) {
       return Array.from(categories.values()).filter((c) => c.kind === kind && !c.archived);
     },
-    async create(id: string, input: { name: string; kind: Category["kind"] }) {
+    async create(id: string, input: { name: string; kind: Category["kind"]; isSystem?: boolean }) {
       const now = new Date().toISOString();
       const category: Category = {
         id,
         name: input.name,
         kind: input.kind,
+        isSystem: Boolean(input.isSystem),
         archived: false,
         createdAt: now,
         updatedAt: now,
@@ -234,7 +239,7 @@ describe("TransactionService", () => {
     ).rejects.toThrow("Amount must be positive");
   });
 
-  it("creates a transfer between accounts", async () => {
+  it("creates a transfer between accounts using dedicated transfer categories", async () => {
     await accountRepo.create("acc-2", { name: "Cash", type: "cash" });
     const result = await service.createTransfer(
       "acc-1",
@@ -245,6 +250,8 @@ describe("TransactionService", () => {
     );
     expect(result.from.accountId).toBe("acc-1");
     expect(result.to.accountId).toBe("acc-2");
+    expect(result.from.categoryId).toBe(SYSTEM_CATEGORY_TRANSFER_OUT_ID);
+    expect(result.to.categoryId).toBe(SYSTEM_CATEGORY_TRANSFER_IN_ID);
     expect(result.from.amountMinor).toBe(100000);
     expect(result.to.amountMinor).toBe(100000);
     expect(result.from.transferPairId).toBe(result.to.transferPairId);

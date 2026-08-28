@@ -146,4 +146,40 @@ describe("Sync Router Integration Tests", () => {
     expect(body.serverChanges.routine_categories[0].id).toBe("habit");
     expect(body.serverChanges.routine_categories[0].icon).toBe("⚡");
   });
+
+  it("should pull accounts created on web when syncing", async () => {
+    const now = new Date().toISOString();
+    // Insert accounts on remote server
+    await client.execute({
+      sql: `INSERT INTO accounts (id, user_id, name, type, archived, created_at, updated_at)
+            VALUES (?, ?, ?, ?, 0, ?, ?)`,
+      args: ["acc_web_1", "test-user-1", "Bank Account", "bank", now, now],
+    });
+    await client.execute({
+      sql: `INSERT INTO accounts (id, user_id, name, type, archived, created_at, updated_at)
+            VALUES (?, '', ?, ?, 0, ?, ?)`,
+      args: ["acc_web_2", "Cash Wallet", "cash", now, now],
+    });
+
+    const response = await fetch(`${baseUrl}/api/sync`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        lastSyncAt: null,
+        forceFull: true,
+        changes: {},
+      }),
+    });
+
+    expect(response.status).toBe(200);
+    const body = (await response.json()) as {
+      serverChanges: Record<string, Array<{ id: string; name: string }>>;
+    };
+    expect(body.serverChanges).toBeDefined();
+    expect(body.serverChanges.accounts).toBeDefined();
+    expect(body.serverChanges.accounts.length).toBe(2);
+    const accountIds = body.serverChanges.accounts.map((a) => a.id);
+    expect(accountIds).toContain("acc_web_1");
+    expect(accountIds).toContain("acc_web_2");
+  });
 });

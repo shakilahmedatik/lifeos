@@ -1,10 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  CategorySchema,
+  NewCategoryInputSchema,
   NewExerciseInputSchema,
   NewNotificationInputSchema,
   NewRoutineCategoryInputSchema,
   NewTransactionInputSchema,
   TransferInputSchema,
+  UpdateCategorySchema,
   UpdateNotificationInputSchema,
   UpdateRoutineCategoryInputSchema,
 } from "../schemas.js";
@@ -250,6 +253,60 @@ describe("RoutineCategory Schemas", () => {
     const result = UpdateRoutineCategoryInputSchema.safeParse({
       name: "Focus Time",
       color: "#8b5cf6",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("Finance Category Schemas", () => {
+  it("accepts valid CategorySchema", () => {
+    const result = CategorySchema.safeParse({
+      id: "cat-1",
+      name: "Food",
+      kind: "expense",
+      isSystem: false,
+      archived: false,
+      createdAt: "2026-08-28T00:00:00.000Z",
+      updatedAt: "2026-08-28T00:00:00.000Z",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid NewCategoryInput", () => {
+    const result = NewCategoryInputSchema.safeParse({
+      name: "Freelance",
+      kind: "income",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects NewCategoryInput with reserved name 'Transfer In'", () => {
+    const result = NewCategoryInputSchema.safeParse({
+      name: "Transfer In",
+      kind: "income",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects NewCategoryInput with reserved name 'transfer out' (case insensitive)", () => {
+    const result = NewCategoryInputSchema.safeParse({
+      name: "  transfer out  ",
+      kind: "expense",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects UpdateCategorySchema with reserved name 'Transfer In'", () => {
+    const result = UpdateCategorySchema.safeParse({
+      name: "Transfer In",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts UpdateCategorySchema with valid name", () => {
+    const result = UpdateCategorySchema.safeParse({
+      name: "Groceries",
+      kind: "expense",
     });
     expect(result.success).toBe(true);
   });

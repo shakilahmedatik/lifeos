@@ -7,6 +7,8 @@ export function useCategories() {
   const query = useQuery<Category[]>({
     queryKey: queryKeys.finance.categories(),
     queryFn: () => api.fetchCategories(),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   return {
@@ -21,6 +23,8 @@ export function useActiveCategories() {
   const query = useQuery<Category[]>({
     queryKey: queryKeys.finance.activeCategories(),
     queryFn: () => api.fetchActiveCategories(),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   return {

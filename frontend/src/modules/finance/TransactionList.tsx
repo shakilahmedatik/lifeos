@@ -1,5 +1,6 @@
-import type { Transaction } from "@lifeos/contracts";
+import { DEFAULT_FINANCE_CATEGORIES, type Transaction } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
+import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
@@ -11,6 +12,7 @@ import { Input } from "../../components/ui/Input.js";
 import { Select } from "../../components/ui/Select.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
 import { TiltCard } from "../../components/ui/TiltCard.js";
+import { queryKeys } from "../../lib/queryKeys.js";
 import { deleteTransaction as apiDeleteTransaction } from "./api.js";
 import { useAccounts } from "./hooks/useAccounts.js";
 import { useCategories } from "./hooks/useCategories.js";
@@ -154,29 +156,31 @@ export function TransactionList({
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`;
   });
-  const [endDate, setEndDate] = useState(() => getClientDateString());
+  const [endDate, setEndDate] = useState(() => {
+    const now = new Date();
+    const lastDay = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(lastDay).padStart(2, "0")}`;
+  });
   const [selectedAccountId, setSelectedAccountId] = useState("");
   const [selectedCategoryId, setSelectedCategoryId] = useState("");
   const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
 
+  const queryClient = useQueryClient();
   const { transactions, loading, refresh } = useTransactions(startDate, endDate);
   const { categories } = useCategories();
   const { accounts } = useAccounts();
-
-  const prevRefreshTrigger = useRef(refreshTrigger);
   const toast = useAppToast();
 
   useEffect(() => {
-    if (refreshTrigger !== prevRefreshTrigger.current) {
-      prevRefreshTrigger.current = refreshTrigger;
-      refresh();
-    }
+    refresh();
   }, [refreshTrigger, refresh]);
 
   const handleDelete = useCallback(
     async (id: string) => {
       try {
         await apiDeleteTransaction(id);
+        await queryClient.invalidateQueries({ queryKey: ["finance"] });
+        await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
         toast.success("Transaction deleted");
         refresh();
         onDataChange?.();
@@ -184,12 +188,24 @@ export function TransactionList({
         toast.error("Failed to delete transaction");
       }
     },
-    [toast, refresh, onDataChange],
+    [toast, refresh, onDataChange, queryClient],
   );
 
   const handleDeleteTarget = useCallback((id: string) => setDeleteTargetId(id), []);
 
-  const categoryMap = useMemo(() => new Map(categories.map((c) => [c.id, c])), [categories]);
+  const categoryMap = useMemo(() => {
+    const map = new Map<string, { id: string; name: string; kind: "income" | "expense" }>();
+    for (const def of DEFAULT_FINANCE_CATEGORIES) {
+      map.set(def.id, { id: def.id, name: def.name, kind: def.kind });
+      map.set(def.name.toLowerCase(), { id: def.id, name: def.name, kind: def.kind });
+    }
+    for (const c of categories) {
+      map.set(c.id, { id: c.id, name: c.name, kind: c.kind });
+      map.set(c.name.toLowerCase(), { id: c.id, name: c.name, kind: c.kind });
+    }
+    return map;
+  }, [categories]);
+
   const accountMap = useMemo(() => new Map(accounts.map((a) => [a.id, a])), [accounts]);
 
   const filteredTransactions = useMemo(
@@ -205,8 +221,10 @@ export function TransactionList({
   const incomeTransactions = useMemo(
     () =>
       filteredTransactions.filter((t) => {
-        const cat = categoryMap.get(t.categoryId);
-        return cat?.kind === "income";
+        const cat = categoryMap.get(t.categoryId) || categoryMap.get(t.categoryId.toLowerCase());
+        if (cat) return cat.kind === "income";
+        if (t.transferPairId) return t.note?.toLowerCase().includes("from") ?? false;
+        return false;
       }),
     [filteredTransactions, categoryMap],
   );
@@ -214,10 +232,12 @@ export function TransactionList({
   const expenseTransactions = useMemo(
     () =>
       filteredTransactions.filter((t) => {
-        const cat = categoryMap.get(t.categoryId);
-        return cat?.kind === "expense";
+        const cat = categoryMap.get(t.categoryId) || categoryMap.get(t.categoryId.toLowerCase());
+        if (cat) return cat.kind === "expense";
+        if (t.transferPairId) return t.note?.toLowerCase().includes("to") ?? true;
+        return !incomeTransactions.includes(t);
       }),
-    [filteredTransactions, categoryMap],
+    [filteredTransactions, categoryMap, incomeTransactions],
   );
 
   const totalIncomeMinor = useMemo(

@@ -7,6 +7,8 @@ export function useAccounts() {
   const query = useQuery<Account[]>({
     queryKey: queryKeys.finance.accounts(),
     queryFn: () => api.fetchAccounts(),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   return {
@@ -20,6 +22,8 @@ export function useActiveAccounts() {
   const query = useQuery<Account[]>({
     queryKey: queryKeys.finance.activeAccounts(),
     queryFn: () => api.fetchActiveAccounts(),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   return {
@@ -33,6 +37,8 @@ export function useAccountBalances() {
   const query = useQuery<AccountWithBalance[]>({
     queryKey: queryKeys.finance.balances(),
     queryFn: () => api.fetchAccountBalances(),
+    refetchOnMount: "always",
+    staleTime: 0,
   });
 
   return {

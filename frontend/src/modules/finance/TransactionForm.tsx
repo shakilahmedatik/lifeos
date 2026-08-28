@@ -1,11 +1,13 @@
 import type { Transaction } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
+import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
 import Button from "../../components/ui/Button.js";
 import { Input } from "../../components/ui/Input.js";
 import { Select } from "../../components/ui/Select.js";
+import { queryKeys } from "../../lib/queryKeys.js";
 import * as api from "./api.js";
 import { useAccounts } from "./hooks/useAccounts.js";
 import { useCategories } from "./hooks/useCategories.js";
@@ -21,6 +23,7 @@ export function TransactionForm({
   onClose,
   editTransaction,
 }: TransactionFormProps) {
+  const queryClient = useQueryClient();
   const { accounts, loading: accountsLoading } = useAccounts();
   const { categories, loading: categoriesLoading } = useCategories();
   const [submitting, setSubmitting] = useState(false);
@@ -61,7 +64,12 @@ export function TransactionForm({
 
   const filteredCategories = useMemo(
     () =>
-      categories.filter((c) => c.kind === transactionKind && (!c.archived || c.id === categoryId)),
+      categories.filter(
+        (c) =>
+          c.kind === transactionKind &&
+          (!c.archived || c.id === categoryId) &&
+          (!c.isSystem || c.id === categoryId),
+      ),
     [categories, transactionKind, categoryId],
   );
 
@@ -79,7 +87,7 @@ export function TransactionForm({
 
   function handleKindChange(kind: "expense" | "income") {
     setTransactionKind(kind);
-    const matching = categories.filter((c) => c.kind === kind && !c.archived);
+    const matching = categories.filter((c) => c.kind === kind && !c.archived && !c.isSystem);
     if (matching.length > 0) {
       setCategoryId(matching[0].id);
     } else {
@@ -90,7 +98,7 @@ export function TransactionForm({
   function resetForm() {
     setTransactionKind("expense");
     setAccountId(activeAccounts[0]?.id ?? "");
-    const defaultCats = categories.filter((c) => c.kind === "expense" && !c.archived);
+    const defaultCats = categories.filter((c) => c.kind === "expense" && !c.archived && !c.isSystem);
     setCategoryId(defaultCats[0]?.id ?? "");
     setDate(getClientDateString());
     setAmount("");
@@ -153,6 +161,8 @@ export function TransactionForm({
         });
         toast.success("Transaction recorded");
       }
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       resetForm();
       onTransactionCreated();
       onClose?.();

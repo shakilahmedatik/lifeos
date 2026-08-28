@@ -1,3 +1,7 @@
+import {
+  SYSTEM_CATEGORY_TRANSFER_IN_ID,
+  SYSTEM_CATEGORY_TRANSFER_OUT_ID,
+} from "@lifeos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // In-memory tables
@@ -17,6 +21,7 @@ interface CategoryRow {
   id: string;
   name: string;
   kind: string;
+  is_system: number;
   archived: number;
   created_at: string;
   updated_at: string;
@@ -63,6 +68,30 @@ const mockDb = {
 
     // Categories
     if (sql.includes("FROM categories")) {
+      if (sql.includes("SELECT id, is_system FROM categories WHERE (id = ? OR lower(name) = lower(?))")) {
+        const [id, name] = args as [string, string];
+        return categoriesTable.filter(
+          (c) => !c.deleted_at && (c.id === id || c.name.toLowerCase() === name.toLowerCase()),
+        );
+      }
+      if (sql.includes("lower(name) = 'transfer out'")) {
+        const [id] = args as [string];
+        return categoriesTable.filter(
+          (c) =>
+            !c.deleted_at &&
+            (c.id === id || c.name.toLowerCase() === "transfer out") &&
+            c.kind === "expense",
+        );
+      }
+      if (sql.includes("lower(name) = 'transfer in'")) {
+        const [id] = args as [string];
+        return categoriesTable.filter(
+          (c) =>
+            !c.deleted_at &&
+            (c.id === id || c.name.toLowerCase() === "transfer in") &&
+            c.kind === "income",
+        );
+      }
       if (sql.includes("WHERE id = ? AND deleted_at IS NULL")) {
         const id = args[0] as string;
         return categoriesTable.filter((c) => c.id === id && !c.deleted_at);
@@ -258,7 +287,7 @@ const mockDb = {
     }
 
     // INSERT INTO categories
-    if (sql.includes("INSERT INTO categories")) {
+    if (sql.includes("INSERT OR IGNORE INTO categories")) {
       const [id, name, kind, createdAt, updatedAt] = args as [
         string,
         string,
@@ -270,6 +299,7 @@ const mockDb = {
         id,
         name,
         kind,
+        is_system: 1,
         archived: 0,
         created_at: createdAt,
         updated_at: updatedAt,
@@ -279,9 +309,60 @@ const mockDb = {
       return { rowsAffected: 1 };
     }
 
+    if (sql.includes("INSERT INTO categories")) {
+      if (args.length >= 6) {
+        const [id, name, kind, isSystem, createdAt, updatedAt] = args as [
+          string,
+          string,
+          string,
+          number,
+          string,
+          string,
+        ];
+        categoriesTable.push({
+          id,
+          name,
+          kind,
+          is_system: Number(isSystem) || 0,
+          archived: 0,
+          created_at: createdAt,
+          updated_at: updatedAt,
+          deleted_at: null,
+          _sync_status: "pending",
+        });
+      } else {
+        const [id, name, kind, createdAt, updatedAt] = args as [
+          string,
+          string,
+          string,
+          string,
+          string,
+        ];
+        categoriesTable.push({
+          id,
+          name,
+          kind,
+          is_system: 0,
+          archived: 0,
+          created_at: createdAt,
+          updated_at: updatedAt,
+          deleted_at: null,
+          _sync_status: "pending",
+        });
+      }
+      return { rowsAffected: 1 };
+    }
+
     // UPDATE categories
     if (sql.includes("UPDATE categories")) {
-      if (sql.includes("SET name = ?, kind = ?, updated_at = ?")) {
+      if (sql.includes("SET is_system = 1")) {
+        const [updatedAt, id] = args as [string, string];
+        const cat = categoriesTable.find((c) => c.id === id);
+        if (cat) {
+          cat.is_system = 1;
+          cat.updated_at = updatedAt;
+        }
+      } else if (sql.includes("SET name = ?, kind = ?, updated_at = ?")) {
         const [name, kind, updatedAt, id] = args as [string, string, string, string];
         const cat = categoriesTable.find((c) => c.id === id);
         if (cat) {
@@ -477,18 +558,23 @@ describe("localDal Finance operations", () => {
       const food = await localDal.createCategory({ name: "Food & Dining", kind: "expense" });
 
       expect(salary.id).toBeDefined();
+      expect(salary.isSystem).toBe(false);
       expect(food.id).toBeDefined();
+      expect(food.isSystem).toBe(false);
 
+      // 2 system defaults (Transfer In, Transfer Out) + 2 user categories = 4
       const all = await localDal.getCategories();
-      expect(all).toHaveLength(2);
+      expect(all).toHaveLength(4);
 
+      // Transfer In + Salary = 2
       const incomeCats = await localDal.getIncomeCategories();
-      expect(incomeCats).toHaveLength(1);
-      expect(incomeCats[0].name).toBe("Salary");
+      expect(incomeCats).toHaveLength(2);
+      expect(incomeCats.some((c) => c.name === "Salary")).toBe(true);
 
+      // Transfer Out + Food & Dining = 2
       const expenseCats = await localDal.getExpenseCategories();
-      expect(expenseCats).toHaveLength(1);
-      expect(expenseCats[0].name).toBe("Food & Dining");
+      expect(expenseCats).toHaveLength(2);
+      expect(expenseCats.some((c) => c.name === "Food & Dining")).toBe(true);
 
       const updated = await localDal.updateCategory(food.id, {
         name: "Groceries & Food",
@@ -497,10 +583,36 @@ describe("localDal Finance operations", () => {
       expect(updated.name).toBe("Groceries & Food");
 
       await localDal.archiveCategory(salary.id);
-      expect(await localDal.getActiveCategories()).toHaveLength(1);
+      expect(await localDal.getActiveCategories()).toHaveLength(3);
 
       await localDal.deleteCategory(food.id);
-      expect(await localDal.getCategories()).toHaveLength(1);
+      expect(await localDal.getCategories()).toHaveLength(3);
+    });
+
+    it("should prevent creating reserved categories and modifying/deleting system categories", async () => {
+      await expect(
+        localDal.createCategory({ name: "Transfer In", kind: "income" }),
+      ).rejects.toThrow("reserved system categories");
+
+      await expect(
+        localDal.createCategory({ name: "Transfer Out", kind: "expense" }),
+      ).rejects.toThrow("reserved system categories");
+
+      const all = await localDal.getCategories();
+      const systemCat = all.find((c) => c.isSystem);
+      expect(systemCat).toBeDefined();
+
+      await expect(
+        localDal.updateCategory(systemCat!.id, { name: "Custom Transfer" }),
+      ).rejects.toThrow("Cannot modify system category");
+
+      await expect(localDal.archiveCategory(systemCat!.id)).rejects.toThrow(
+        "Cannot archive system category",
+      );
+
+      await expect(localDal.deleteCategory(systemCat!.id)).rejects.toThrow(
+        "Cannot delete system category",
+      );
     });
   });
 
@@ -543,7 +655,7 @@ describe("localDal Finance operations", () => {
       expect(balance).toBe(50000);
     });
 
-    it("should handle transfers between two accounts properly", async () => {
+    it("should handle transfers between two accounts properly with dedicated categories", async () => {
       const bank = await localDal.createAccount({ name: "Bank", type: "bank" });
       const cash = await localDal.createAccount({ name: "Cash", type: "cash" });
 
@@ -557,6 +669,8 @@ describe("localDal Finance operations", () => {
 
       expect(transferResult.from.accountId).toBe(bank.id);
       expect(transferResult.to.accountId).toBe(cash.id);
+      expect(transferResult.from.categoryId).toBe(SYSTEM_CATEGORY_TRANSFER_OUT_ID);
+      expect(transferResult.to.categoryId).toBe(SYSTEM_CATEGORY_TRANSFER_IN_ID);
       expect(transferResult.from.transferPairId).toBe(transferResult.to.transferPairId);
 
       const bankBalance = await localDal.getAccountBalance(bank.id);

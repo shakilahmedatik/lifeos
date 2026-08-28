@@ -1,4 +1,5 @@
 import type { AccountWithBalance } from "@lifeos/contracts";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRightLeft, Pencil, Plus, Trash2 } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
@@ -11,6 +12,7 @@ import Modal from "../../components/ui/Modal.js";
 import ModalFooter from "../../components/ui/ModalFooter.js";
 import { Select } from "../../components/ui/Select.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
+import { queryKeys } from "../../lib/queryKeys.js";
 import {
   archiveAccount as apiArchiveAccount,
   createAccount as apiCreateAccount,
@@ -28,6 +30,7 @@ interface AccountListProps {
 }
 
 export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) {
+  const queryClient = useQueryClient();
   const { accounts, loading, refresh } = useAccountBalances();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -42,15 +45,10 @@ export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) 
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<"bank" | "cash" | "card" | "savings" | "mfs">("bank");
   const [submitting, setSubmitting] = useState(false);
-
-  const prevRefreshTrigger = useRef(refreshTrigger);
   const toast = useAppToast();
 
   useEffect(() => {
-    if (refreshTrigger !== prevRefreshTrigger.current) {
-      prevRefreshTrigger.current = refreshTrigger;
-      refresh();
-    }
+    refresh();
   }, [refreshTrigger, refresh]);
 
   function resetForm() {
@@ -64,6 +62,8 @@ export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) 
     setSubmitting(true);
     try {
       await apiCreateAccount({ name: newName.trim(), type: newType });
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       toast.success("Account created successfully");
       resetForm();
       setShowAddModal(false);
@@ -82,6 +82,8 @@ export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) 
     setSubmitting(true);
     try {
       await apiUpdateAccount(editAccount.id, { name: newName.trim(), type: newType });
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       toast.success("Account updated");
       setShowEditModal(false);
       setEditAccount(null);
@@ -105,6 +107,8 @@ export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) 
   async function handleArchive(id: string, name: string) {
     try {
       await apiArchiveAccount(id);
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       toast.success(`Archived account "${name}"`);
       refresh();
       onDataChange?.();
@@ -116,6 +120,8 @@ export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) 
   async function handleUnarchive(id: string, name: string) {
     try {
       await apiUnarchiveAccount(id);
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       toast.success(`Restored account "${name}"`);
       refresh();
       onDataChange?.();
@@ -127,6 +133,8 @@ export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) 
   async function handleDelete(id: string, name: string) {
     try {
       await apiDeleteAccount(id);
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       toast.success(`Deleted account "${name}"`);
       refresh();
       onDataChange?.();

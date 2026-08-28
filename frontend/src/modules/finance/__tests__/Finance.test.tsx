@@ -80,6 +80,7 @@ const mockCategories: Category[] = [
     id: "cat-uuid-1",
     name: "Custom Freelance",
     kind: "income",
+    isSystem: false,
     archived: false,
     createdAt: "",
     updatedAt: "",
@@ -88,6 +89,7 @@ const mockCategories: Category[] = [
     id: "cat-uuid-2",
     name: "Custom Groceries",
     kind: "expense",
+    isSystem: false,
     archived: false,
     createdAt: "",
     updatedAt: "",
@@ -96,6 +98,7 @@ const mockCategories: Category[] = [
     id: "cat-uuid-3",
     name: "Archived Income",
     kind: "income",
+    isSystem: false,
     archived: true,
     createdAt: "",
     updatedAt: "",
@@ -291,6 +294,44 @@ describe("Finance Frontend Components", () => {
 
     const unarchiveButtons = screen.getAllByText("Unarchive");
     expect(unarchiveButtons.length).toBeGreaterThanOrEqual(1);
+  });
+
+  it("CategoryList renders system categories with System badge and disabled modification buttons", async () => {
+    const categoriesWithSystem: Category[] = [
+      {
+        id: "cat-system-transfer-in",
+        name: "Transfer In",
+        kind: "income",
+        isSystem: true,
+        archived: false,
+        createdAt: "",
+        updatedAt: "",
+      },
+      {
+        id: "cat-system-transfer-out",
+        name: "Transfer Out",
+        kind: "expense",
+        isSystem: true,
+        archived: false,
+        createdAt: "",
+        updatedAt: "",
+      },
+      ...mockCategories,
+    ];
+    vi.spyOn(financeApi, "fetchCategories").mockResolvedValue(categoriesWithSystem);
+
+    renderWithProviders(<CategoryList />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Transfer In")).toBeDefined();
+      expect(screen.getByText("Transfer Out")).toBeDefined();
+    });
+
+    const systemBadges = screen.getAllByText("System");
+    expect(systemBadges.length).toBe(2);
+
+    const defaultLabels = screen.getAllByText("Default");
+    expect(defaultLabels.length).toBe(2);
   });
 
   it("MonthlyView renders summary and breakdown sections", async () => {

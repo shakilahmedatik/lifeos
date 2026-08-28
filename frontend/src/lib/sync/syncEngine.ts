@@ -16,6 +16,8 @@ const SYNCABLE_TABLES = [
   "accounts",
   "categories",
   "transactions",
+  "rss_feeds",
+  "news_articles",
   "skill_areas",
   "learning_resources",
   "learning_logs",
@@ -26,6 +28,10 @@ const SYNCABLE_TABLES = [
 
 type SyncableTableName = (typeof SYNCABLE_TABLES)[number];
 
+export interface SyncOptions {
+  forceFull?: boolean;
+}
+
 export interface SyncResult {
   status: "success" | "already-syncing" | "skipped-web-mode" | "error";
   pushedCount?: number;
@@ -35,8 +41,22 @@ export interface SyncResult {
 
 export class SyncEngine {
   private syncing = false;
+  private tableColumnsCache = new Map<string, Set<string>>();
 
-  async sync(): Promise<SyncResult> {
+  private async getLocalTableColumns(db: Database, table: string): Promise<Set<string>> {
+    const cached = this.tableColumnsCache.get(table);
+    if (cached) return cached;
+    try {
+      const res = await db.select<{ name: string }[]>(`PRAGMA table_info(${table})`);
+      const cols = new Set(res.map((r) => r.name));
+      this.tableColumnsCache.set(table, cols);
+      return cols;
+    } catch {
+      return new Set();
+    }
+  }
+
+  async sync(options?: SyncOptions): Promise<SyncResult> {
     if (!isTauri()) return { status: "skipped-web-mode" };
     if (this.syncing) return { status: "already-syncing" };
 
@@ -45,11 +65,29 @@ export class SyncEngine {
     try {
       const db = await getLocalDb();
 
+      let currentUserId: string | null = null;
+      try {
+        const rawUser =
+          typeof localStorage !== "undefined" ? localStorage.getItem("lifeos_user") : null;
+        if (rawUser) {
+          const parsed = JSON.parse(rawUser);
+          currentUserId = parsed?.id || null;
+        }
+      } catch {}
+
       // 1. Fetch metadata
-      const meta = await db.select<{ last_sync_at: string | null }[]>(
-        "SELECT last_sync_at FROM _sync_meta WHERE id = 1",
+      const meta = await db.select<{ last_sync_at: string | null; user_id: string | null }[]>(
+        "SELECT last_sync_at, user_id FROM _sync_meta WHERE id = 1",
       );
-      const lastSyncAt = meta[0]?.last_sync_at || null;
+      const lastSyncAtMeta = meta[0]?.last_sync_at || null;
+      const lastSyncedUser = meta[0]?.user_id || null;
+
+      // If user changed or forceFull was requested, pull all data
+      const userChanged = Boolean(
+        currentUserId && lastSyncedUser && currentUserId !== lastSyncedUser,
+      );
+      const isFullSync = Boolean(options?.forceFull || userChanged || !lastSyncAtMeta);
+      const lastSyncAt = isFullSync ? null : lastSyncAtMeta;
 
       // 2. Gather local pending changes
       const localChanges: Record<string, Record<string, unknown>[]> = {};
@@ -78,6 +116,7 @@ export class SyncEngine {
         method: "POST",
         body: JSON.stringify({
           lastSyncAt,
+          forceFull: isFullSync,
           changes: localChanges,
         }),
       });
@@ -112,7 +151,10 @@ export class SyncEngine {
       }
 
       // 6. Update sync metadata
-      await db.execute("UPDATE _sync_meta SET last_sync_at = ? WHERE id = 1", [response.syncedAt]);
+      await db.execute(
+        "UPDATE _sync_meta SET last_sync_at = ?, user_id = ? WHERE id = 1",
+        [response.syncedAt, currentUserId],
+      );
 
       // 7. Cleanup old soft-deleted records (> 30 days)
       const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();
@@ -145,18 +187,27 @@ export class SyncEngine {
     const keys = Object.keys(row);
     if (keys.length === 0) return;
 
+    const validColumns = await this.getLocalTableColumns(db, table);
+
     // Standardize object fields into stringified JSON if needed
     const processedRow: Record<string, unknown> = {};
     for (const [k, v] of Object.entries(row)) {
+      if (validColumns.size > 0 && !validColumns.has(k)) {
+        continue;
+      }
       if (v !== null && typeof v === "object") {
         processedRow[k] = JSON.stringify(v);
       } else {
         processedRow[k] = v;
       }
     }
-    processedRow._sync_status = "synced";
+    if (validColumns.size === 0 || validColumns.has("_sync_status")) {
+      processedRow._sync_status = "synced";
+    }
 
     const procKeys = Object.keys(processedRow);
+    if (procKeys.length === 0) return;
+
     const placeholders = procKeys.map(() => "?").join(", ");
     const columns = procKeys.join(", ");
     const values = procKeys.map((k) => processedRow[k]);

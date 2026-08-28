@@ -1,4 +1,5 @@
-import type { Category } from "@lifeos/contracts";
+import { type Category, RESERVED_CATEGORY_NAMES } from "@lifeos/contracts";
+import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2, TrendingDown, TrendingUp } from "lucide-react";
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
@@ -12,6 +13,7 @@ import Modal from "../../components/ui/Modal.js";
 import ModalFooter from "../../components/ui/ModalFooter.js";
 import { Select } from "../../components/ui/Select.js";
 import { Skeleton } from "../../components/ui/Skeleton.js";
+import { queryKeys } from "../../lib/queryKeys.js";
 import {
   archiveCategory as apiArchiveCategory,
   createCategory as apiCreateCategory,
@@ -70,13 +72,22 @@ const CategorySection = memo(function CategorySection({
                 key={cat.id}
                 className="flex items-center justify-between p-2 glass rounded-lg border border-border hover:border-accent/30 transition-colors"
               >
-                <span
-                  className={`text-xs ${cat.archived ? "text-muted line-through" : "text-primary"}`}
-                >
-                  {cat.name}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    className={`text-xs ${cat.archived ? "text-muted line-through" : "text-primary"}`}
+                  >
+                    {cat.name}
+                  </span>
+                  {cat.isSystem && (
+                    <Badge variant="info" className="text-[9px] py-0 px-1.5 font-normal">
+                      System
+                    </Badge>
+                  )}
+                </div>
                 <div className="flex items-center gap-1 relative z-10">
-                  {cat.archived ? (
+                  {cat.isSystem ? (
+                    <span className="text-[11px] text-muted italic px-2 py-0.5">Default</span>
+                  ) : cat.archived ? (
                     <Button
                       size="sm"
                       variant="secondary"
@@ -115,21 +126,19 @@ const CategorySection = memo(function CategorySection({
                       >
                         Archive
                       </Button>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="p-1 text-muted hover:text-amber-400"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onDelete(cat.id, cat.name);
+                        }}
+                        title="Delete Category"
+                      >
+                        <Trash2 size={12} />
+                      </Button>
                     </>
-                  )}
-                  {!cat.archived && (
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      className="p-1 text-muted hover:text-amber-400"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onDelete(cat.id, cat.name);
-                      }}
-                      title="Delete Category"
-                    >
-                      <Trash2 size={12} />
-                    </Button>
                   )}
                 </div>
               </div>
@@ -142,6 +151,7 @@ const CategorySection = memo(function CategorySection({
 });
 
 export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps) {
+  const queryClient = useQueryClient();
   const { categories, loading, refresh } = useCategories();
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
@@ -155,14 +165,10 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
     name: string;
   } | null>(null);
 
-  const prevRefreshTrigger = useRef(refreshTrigger);
   const toast = useAppToast();
 
   useEffect(() => {
-    if (refreshTrigger !== prevRefreshTrigger.current) {
-      prevRefreshTrigger.current = refreshTrigger;
-      refresh();
-    }
+    refresh();
   }, [refreshTrigger, refresh]);
 
   const handleArchive = useCallback((id: string, name: string) => {
@@ -180,11 +186,18 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
-    if (!newName.trim()) return;
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    if (RESERVED_CATEGORY_NAMES.some((n) => n.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("Transfer In and Transfer Out are reserved system categories");
+      return;
+    }
     setSubmitting(true);
     try {
-      await apiCreateCategory({ name: newName.trim(), kind: newKind });
-      toast.success(`Category "${newName.trim()}" created`);
+      await apiCreateCategory({ name: trimmed, kind: newKind });
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
+      toast.success(`Category "${trimmed}" created`);
       resetForm();
       setShowAddModal(false);
       refresh();
@@ -205,10 +218,18 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
 
   async function handleUpdate(e: React.FormEvent) {
     e.preventDefault();
-    if (!editCategory || !newName.trim()) return;
+    if (!editCategory) return;
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    if (RESERVED_CATEGORY_NAMES.some((n) => n.toLowerCase() === trimmed.toLowerCase())) {
+      toast.error("Transfer In and Transfer Out are reserved system categories");
+      return;
+    }
     setSubmitting(true);
     try {
-      await apiUpdateCategory(editCategory.id, { name: newName.trim(), kind: newKind });
+      await apiUpdateCategory(editCategory.id, { name: trimmed, kind: newKind });
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       toast.success("Category updated");
       setShowEditModal(false);
       setEditCategory(null);
@@ -225,6 +246,8 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
   async function confirmArchive(id: string, name: string) {
     try {
       await apiArchiveCategory(id);
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       toast.success(`Archived category "${name}"`);
       refresh();
       onDataChange?.();
@@ -236,6 +259,8 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
   async function handleUnarchive(id: string, name: string) {
     try {
       await apiUnarchiveCategory(id);
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       toast.success(`Restored category "${name}"`);
       refresh();
       onDataChange?.();
@@ -247,6 +272,8 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
   async function confirmDelete(id: string, name: string) {
     try {
       await apiDeleteCategory(id);
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       toast.success(`Deleted category "${name}"`);
       refresh();
       onDataChange?.();

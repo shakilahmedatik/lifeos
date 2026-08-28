@@ -9,6 +9,7 @@ import {
 } from "@lifeos/contracts";
 import { Router } from "express";
 import { validateBody } from "../../../shared/validate.js";
+import type { AuthenticatedRequest } from "../../auth/middleware.js";
 import type { AccountService } from "../application/account-service.js";
 import type { CategoryService } from "../application/category-service.js";
 import type { FinanceReportService } from "../application/finance-report-service.js";
@@ -42,9 +43,10 @@ export function createFinanceRouter(
     res.json(account);
   });
 
-  router.post("/accounts", validateBody(NewAccountInputSchema), async (req, res) => {
+  router.post("/accounts", validateBody(NewAccountInputSchema), async (req: AuthenticatedRequest, res) => {
     try {
-      const account = await accountService.createAccount(req.body);
+      const userId = req.user?.id || "";
+      const account = await accountService.createAccount(req.body, userId);
       res.status(201).json(account);
     } catch (error) {
       if (error instanceof Error) {
@@ -170,21 +172,37 @@ export function createFinanceRouter(
   });
 
   router.post("/categories/:id/archive", async (req, res) => {
-    const archived = await categoryService.archiveCategory(req.params.id);
-    if (!archived) {
-      res.status(404).json({ error: "Category not found" });
-      return;
+    try {
+      const archived = await categoryService.archiveCategory(req.params.id);
+      if (!archived) {
+        res.status(404).json({ error: "Category not found" });
+        return;
+      }
+      res.status(204).send();
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      throw error;
     }
-    res.status(204).send();
   });
 
   router.post("/categories/:id/unarchive", async (req, res) => {
-    const unarchived = await categoryService.unarchiveCategory(req.params.id);
-    if (!unarchived) {
-      res.status(404).json({ error: "Category not found" });
-      return;
+    try {
+      const unarchived = await categoryService.unarchiveCategory(req.params.id);
+      if (!unarchived) {
+        res.status(404).json({ error: "Category not found" });
+        return;
+      }
+      res.status(204).send();
+    } catch (error) {
+      if (error instanceof Error) {
+        res.status(400).json({ error: error.message });
+        return;
+      }
+      throw error;
     }
-    res.status(204).send();
   });
 
   router.delete("/categories/:id", async (req, res) => {
@@ -245,9 +263,10 @@ export function createFinanceRouter(
     res.json(transaction);
   });
 
-  router.post("/transactions", validateBody(NewTransactionInputSchema), async (req, res) => {
+  router.post("/transactions", validateBody(NewTransactionInputSchema), async (req: AuthenticatedRequest, res) => {
     try {
-      const transaction = await transactionService.createTransaction(req.body);
+      const userId = req.user?.id || "";
+      const transaction = await transactionService.createTransaction(req.body, userId);
       res.status(201).json(transaction);
     } catch (error) {
       if (error instanceof Error) {
@@ -287,8 +306,9 @@ export function createFinanceRouter(
     res.status(204).send();
   });
 
-  router.post("/transfers", validateBody(TransferInputSchema), async (req, res) => {
+  router.post("/transfers", validateBody(TransferInputSchema), async (req: AuthenticatedRequest, res) => {
     try {
+      const userId = req.user?.id || "";
       const { fromAccountId, toAccountId, amountMinor, date, note } = req.body;
       const result = await transactionService.createTransfer(
         fromAccountId,
@@ -296,6 +316,7 @@ export function createFinanceRouter(
         amountMinor,
         date,
         note,
+        userId,
       );
       res.status(201).json(result);
     } catch (error) {

@@ -444,10 +444,29 @@ export interface NewAccountInput {
   type: AccountType;
 }
 
+export const SYSTEM_CATEGORY_TRANSFER_IN_ID = "cat-system-transfer-in";
+export const SYSTEM_CATEGORY_TRANSFER_OUT_ID = "cat-system-transfer-out";
+
+export const DEFAULT_FINANCE_CATEGORIES = [
+  {
+    id: SYSTEM_CATEGORY_TRANSFER_IN_ID,
+    name: "Transfer In",
+    kind: "income" as const,
+    isSystem: true,
+  },
+  {
+    id: SYSTEM_CATEGORY_TRANSFER_OUT_ID,
+    name: "Transfer Out",
+    kind: "expense" as const,
+    isSystem: true,
+  },
+] as const;
+
 export interface Category {
   id: string;
   name: string;
   kind: CategoryKind;
+  isSystem: boolean;
   archived: boolean;
   createdAt: string;
   updatedAt: string;
@@ -456,6 +475,7 @@ export interface Category {
 export interface NewCategoryInput {
   name: string;
   kind: CategoryKind;
+  isSystem?: boolean;
 }
 
 export interface Transaction {

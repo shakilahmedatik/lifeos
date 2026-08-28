@@ -248,9 +248,28 @@ export const NewAccountInputSchema = z.object({
 
 export const CategoryKindSchema = z.enum(["income", "expense"]);
 
-export const NewCategoryInputSchema = z.object({
-  name: z.string().min(1, "Category name is required"),
+export const RESERVED_CATEGORY_NAMES = ["Transfer In", "Transfer Out"] as const;
+
+export const CategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
   kind: CategoryKindSchema,
+  isSystem: z.boolean().default(false),
+  archived: z.boolean().default(false),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const NewCategoryInputSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Category name is required")
+    .refine(
+      (val) => !RESERVED_CATEGORY_NAMES.some((n) => n.toLowerCase() === val.trim().toLowerCase()),
+      { message: "Transfer In and Transfer Out are reserved system categories" },
+    ),
+  kind: CategoryKindSchema,
+  isSystem: z.boolean().optional(),
 });
 
 export const NewTransactionInputSchema = z.object({
@@ -284,7 +303,14 @@ export const UpdateAccountSchema = z.object({
 });
 
 export const UpdateCategorySchema = z.object({
-  name: z.string().min(1, "Category name is required").optional(),
+  name: z
+    .string()
+    .min(1, "Category name is required")
+    .refine(
+      (val) => !RESERVED_CATEGORY_NAMES.some((n) => n.toLowerCase() === val.trim().toLowerCase()),
+      { message: "Transfer In and Transfer Out are reserved system categories" },
+    )
+    .optional(),
   kind: CategoryKindSchema.optional(),
   archived: z.boolean().optional(),
 });
