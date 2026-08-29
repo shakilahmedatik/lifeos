@@ -39,7 +39,12 @@ export function createArticlesRouter(
         offsetNum,
       );
     } else if (targetFeedId) {
-      articles = await articleService.getArticlesByFeedId(targetFeedId, userId, limitNum, offsetNum);
+      articles = await articleService.getArticlesByFeedId(
+        targetFeedId,
+        userId,
+        limitNum,
+        offsetNum,
+      );
     } else {
       articles = await articleService.getArticles(userId, limitNum, offsetNum);
     }
@@ -49,7 +54,12 @@ export function createArticlesRouter(
       if (feeds.length > 0) {
         await rssFetchService.fetchAllActiveFeeds(userId);
         if (targetFeedId) {
-          articles = await articleService.getArticlesByFeedId(targetFeedId, userId, limitNum, offsetNum);
+          articles = await articleService.getArticlesByFeedId(
+            targetFeedId,
+            userId,
+            limitNum,
+            offsetNum,
+          );
         } else {
           articles = await articleService.getArticles(userId, limitNum, offsetNum);
         }

@@ -1,8 +1,5 @@
 import { randomUUID } from "node:crypto";
-import {
-  SYSTEM_CATEGORY_TRANSFER_IN_ID,
-  SYSTEM_CATEGORY_TRANSFER_OUT_ID,
-} from "@lifeos/contracts";
+import { SYSTEM_CATEGORY_TRANSFER_IN_ID, SYSTEM_CATEGORY_TRANSFER_OUT_ID } from "@lifeos/contracts";
 
 import type { NewTransactionInput, Transaction } from "../domain/types.js";
 import type { AccountRepository } from "../ports/account-repository.js";

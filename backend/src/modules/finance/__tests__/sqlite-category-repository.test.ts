@@ -31,8 +31,12 @@ describe("SqliteCategoryRepository", () => {
   it("seeds default system categories automatically", async () => {
     const all = await repo.getAll();
     expect(all).toHaveLength(2);
-    expect(all.some((c) => c.name === "Transfer In" && c.isSystem && c.kind === "income")).toBe(true);
-    expect(all.some((c) => c.name === "Transfer Out" && c.isSystem && c.kind === "expense")).toBe(true);
+    expect(all.some((c) => c.name === "Transfer In" && c.isSystem && c.kind === "income")).toBe(
+      true,
+    );
+    expect(all.some((c) => c.name === "Transfer Out" && c.isSystem && c.kind === "expense")).toBe(
+      true,
+    );
   });
 
   it("creates and retrieves a user category", async () => {

@@ -1,7 +1,7 @@
 import { type Category, RESERVED_CATEGORY_NAMES } from "@lifeos/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, Plus, Trash2, TrendingDown, TrendingUp } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
 import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
@@ -168,7 +168,9 @@ export function CategoryList({ refreshTrigger, onDataChange }: CategoryListProps
   const toast = useAppToast();
 
   useEffect(() => {
-    refresh();
+    if (refreshTrigger !== undefined) {
+      refresh();
+    }
   }, [refreshTrigger, refresh]);
 
   const handleArchive = useCallback((id: string, name: string) => {

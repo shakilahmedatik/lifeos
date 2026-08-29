@@ -151,10 +151,10 @@ export class SyncEngine {
       }
 
       // 6. Update sync metadata
-      await db.execute(
-        "UPDATE _sync_meta SET last_sync_at = ?, user_id = ? WHERE id = 1",
-        [response.syncedAt, currentUserId],
-      );
+      await db.execute("UPDATE _sync_meta SET last_sync_at = ?, user_id = ? WHERE id = 1", [
+        response.syncedAt,
+        currentUserId,
+      ]);
 
       // 7. Cleanup old soft-deleted records (> 30 days)
       const cutoff = new Date(Date.now() - 30 * 86400000).toISOString();

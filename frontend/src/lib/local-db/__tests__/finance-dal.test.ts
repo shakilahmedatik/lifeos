@@ -1,7 +1,4 @@
-import {
-  SYSTEM_CATEGORY_TRANSFER_IN_ID,
-  SYSTEM_CATEGORY_TRANSFER_OUT_ID,
-} from "@lifeos/contracts";
+import { SYSTEM_CATEGORY_TRANSFER_IN_ID, SYSTEM_CATEGORY_TRANSFER_OUT_ID } from "@lifeos/contracts";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // In-memory tables
@@ -68,7 +65,11 @@ const mockDb = {
 
     // Categories
     if (sql.includes("FROM categories")) {
-      if (sql.includes("SELECT id, is_system FROM categories WHERE (id = ? OR lower(name) = lower(?))")) {
+      if (
+        sql.includes(
+          "SELECT id, is_system FROM categories WHERE (id = ? OR lower(name) = lower(?))",
+        )
+      ) {
         const [id, name] = args as [string, string];
         return categoriesTable.filter(
           (c) => !c.deleted_at && (c.id === id || c.name.toLowerCase() === name.toLowerCase()),

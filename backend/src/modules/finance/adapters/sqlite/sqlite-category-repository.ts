@@ -67,7 +67,9 @@ export class SqliteCategoryRepository implements CategoryRepository {
 
   async getAll(): Promise<Category[]> {
     await this.ensureDefaults();
-    const res = await this.client.execute("SELECT * FROM categories ORDER BY is_system DESC, kind, name");
+    const res = await this.client.execute(
+      "SELECT * FROM categories ORDER BY is_system DESC, kind, name",
+    );
     const rows = res.rows as unknown as CategoryRow[];
     return rows.map(rowToCategory);
   }

@@ -136,9 +136,9 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       clearTauriStoredSession();
       import("../lib/local-db/index.js").then(({ getLocalDb }) => {
         getLocalDb().then((db) => {
-          db.execute("UPDATE _sync_meta SET last_sync_at = NULL, user_id = NULL WHERE id = 1").catch(
-            () => {},
-          );
+          db.execute(
+            "UPDATE _sync_meta SET last_sync_at = NULL, user_id = NULL WHERE id = 1",
+          ).catch(() => {});
         });
       });
     }

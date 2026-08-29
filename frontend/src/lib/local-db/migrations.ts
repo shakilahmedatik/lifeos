@@ -173,6 +173,44 @@ export const localMigrations = [
     _sync_status TEXT NOT NULL DEFAULT 'synced'
   );
 
+  INSERT OR IGNORE INTO categories (id, name, kind, is_system, archived, created_at, updated_at)
+  VALUES ('cat-system-transfer-in', 'Transfer In', 'income', 1, 0, datetime('now'), datetime('now'));
+
+  INSERT OR IGNORE INTO categories (id, name, kind, is_system, archived, created_at, updated_at)
+  VALUES ('cat-system-transfer-out', 'Transfer Out', 'expense', 1, 0, datetime('now'), datetime('now'));
+
+  CREATE TABLE IF NOT EXISTS rss_feeds (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL DEFAULT '',
+    name TEXT NOT NULL DEFAULT '',
+    title TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL,
+    category TEXT NOT NULL DEFAULT 'general',
+    icon_url TEXT,
+    enabled INTEGER NOT NULL DEFAULT 1,
+    status TEXT NOT NULL DEFAULT 'active',
+    last_fetched_at TEXT,
+    last_fetch_error TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+    deleted_at TEXT,
+    _sync_status TEXT NOT NULL DEFAULT 'synced'
+  );
+
+  CREATE TABLE IF NOT EXISTS news_articles (
+    id TEXT PRIMARY KEY,
+    user_id TEXT NOT NULL DEFAULT '',
+    feed_id TEXT NOT NULL,
+    title TEXT NOT NULL,
+    url TEXT NOT NULL,
+    summary TEXT,
+    published_at TEXT,
+    fetched_at TEXT NOT NULL DEFAULT (datetime('now')),
+    is_read INTEGER NOT NULL DEFAULT 0,
+    deleted_at TEXT,
+    _sync_status TEXT NOT NULL DEFAULT 'synced'
+  );
+
   CREATE TABLE IF NOT EXISTS skill_areas (
     id TEXT PRIMARY KEY,
     user_id TEXT NOT NULL DEFAULT '',
@@ -304,5 +342,11 @@ export const localMigrations = [
   CREATE INDEX IF NOT EXISTS idx_notifications_reminder_time ON notifications(reminder_time);
   CREATE INDEX IF NOT EXISTS idx_notifications_task_id ON notifications(task_id);
   CREATE INDEX IF NOT EXISTS idx_notifications_sync_status ON notifications(_sync_status);
+
+  CREATE INDEX IF NOT EXISTS idx_rss_feeds_user_id ON rss_feeds(user_id);
+  CREATE INDEX IF NOT EXISTS idx_rss_feeds_sync_status ON rss_feeds(_sync_status);
+  CREATE INDEX IF NOT EXISTS idx_news_articles_user_id ON news_articles(user_id);
+  CREATE INDEX IF NOT EXISTS idx_news_articles_feed_id ON news_articles(feed_id);
+  CREATE INDEX IF NOT EXISTS idx_news_articles_sync_status ON news_articles(_sync_status);
   `,
 ];

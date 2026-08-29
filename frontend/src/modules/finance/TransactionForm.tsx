@@ -98,7 +98,9 @@ export function TransactionForm({
   function resetForm() {
     setTransactionKind("expense");
     setAccountId(activeAccounts[0]?.id ?? "");
-    const defaultCats = categories.filter((c) => c.kind === "expense" && !c.archived && !c.isSystem);
+    const defaultCats = categories.filter(
+      (c) => c.kind === "expense" && !c.archived && !c.isSystem,
+    );
     setCategoryId(defaultCats[0]?.id ?? "");
     setDate(getClientDateString());
     setAmount("");

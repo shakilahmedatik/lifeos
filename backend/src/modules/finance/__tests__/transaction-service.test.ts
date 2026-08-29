@@ -1,7 +1,4 @@
-import {
-  SYSTEM_CATEGORY_TRANSFER_IN_ID,
-  SYSTEM_CATEGORY_TRANSFER_OUT_ID,
-} from "@lifeos/contracts";
+import { SYSTEM_CATEGORY_TRANSFER_IN_ID, SYSTEM_CATEGORY_TRANSFER_OUT_ID } from "@lifeos/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { TransactionService } from "../application/transaction-service.js";

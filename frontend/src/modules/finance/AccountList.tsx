@@ -1,7 +1,7 @@
 import type { AccountWithBalance } from "@lifeos/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRightLeft, Pencil, Plus, Trash2 } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
 import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
@@ -48,7 +48,9 @@ export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) 
   const toast = useAppToast();
 
   useEffect(() => {
-    refresh();
+    if (refreshTrigger !== undefined) {
+      refresh();
+    }
   }, [refreshTrigger, refresh]);
 
   function resetForm() {

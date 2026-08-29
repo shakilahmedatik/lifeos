@@ -1,8 +1,7 @@
 import { DEFAULT_FINANCE_CATEGORIES, type Transaction } from "@lifeos/contracts";
-import { getClientDateString } from "@lifeos/contracts";
 import { useQueryClient } from "@tanstack/react-query";
 import { Pencil, Trash2 } from "lucide-react";
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
 import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
@@ -172,7 +171,9 @@ export function TransactionList({
   const toast = useAppToast();
 
   useEffect(() => {
-    refresh();
+    if (refreshTrigger !== undefined) {
+      refresh();
+    }
   }, [refreshTrigger, refresh]);
 
   const handleDelete = useCallback(

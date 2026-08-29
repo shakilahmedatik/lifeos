@@ -9,7 +9,7 @@
   },
   "scripts": {
     "dev": "turso dev --db-file ./backend/local.db --port 8081 & pnpm --filter @lifeos/backend dev & pnpm --filter @lifeos/frontend dev",
-    "build": "pnpm --filter @lifeos/frontend build",
+    "build": "pnpm --filter @lifeos/contracts build && pnpm --filter @lifeos/backend build && pnpm --filter @lifeos/frontend build",
     "check": "biome check backend/src frontend/src packages",
     "format": "biome format backend/src frontend/src packages --write",
     "test": "vitest run"

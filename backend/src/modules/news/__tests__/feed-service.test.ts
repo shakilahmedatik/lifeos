@@ -176,8 +176,14 @@ describe("FeedService", () => {
 
   describe("getAllFeeds", () => {
     it("should return only user's feeds", async () => {
-      await feedService.createFeed({ title: "Feed 1", url: "https://example.com/feed1.xml" }, "user-1");
-      await feedService.createFeed({ title: "Feed 2", url: "https://example.com/feed2.xml" }, "user-2");
+      await feedService.createFeed(
+        { title: "Feed 1", url: "https://example.com/feed1.xml" },
+        "user-1",
+      );
+      await feedService.createFeed(
+        { title: "Feed 2", url: "https://example.com/feed2.xml" },
+        "user-2",
+      );
 
       const feedsUser1 = await feedService.getAllFeeds("user-1");
       expect(feedsUser1).toHaveLength(1);

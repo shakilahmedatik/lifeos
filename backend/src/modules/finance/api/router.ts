@@ -43,19 +43,23 @@ export function createFinanceRouter(
     res.json(account);
   });
 
-  router.post("/accounts", validateBody(NewAccountInputSchema), async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user?.id || "";
-      const account = await accountService.createAccount(req.body, userId);
-      res.status(201).json(account);
-    } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-        return;
+  router.post(
+    "/accounts",
+    validateBody(NewAccountInputSchema),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const userId = req.user?.id || "";
+        const account = await accountService.createAccount(req.body, userId);
+        res.status(201).json(account);
+      } catch (error) {
+        if (error instanceof Error) {
+          res.status(400).json({ error: error.message });
+          return;
+        }
+        throw error;
       }
-      throw error;
-    }
-  });
+    },
+  );
 
   router.patch("/accounts/:id", validateBody(UpdateAccountSchema), async (req, res) => {
     const account = await accountService.updateAccount(req.params.id as string, req.body);
@@ -263,19 +267,23 @@ export function createFinanceRouter(
     res.json(transaction);
   });
 
-  router.post("/transactions", validateBody(NewTransactionInputSchema), async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user?.id || "";
-      const transaction = await transactionService.createTransaction(req.body, userId);
-      res.status(201).json(transaction);
-    } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-        return;
+  router.post(
+    "/transactions",
+    validateBody(NewTransactionInputSchema),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const userId = req.user?.id || "";
+        const transaction = await transactionService.createTransaction(req.body, userId);
+        res.status(201).json(transaction);
+      } catch (error) {
+        if (error instanceof Error) {
+          res.status(400).json({ error: error.message });
+          return;
+        }
+        throw error;
       }
-      throw error;
-    }
-  });
+    },
+  );
 
   router.patch("/transactions/:id", validateBody(UpdateTransactionSchema), async (req, res) => {
     try {
@@ -306,27 +314,31 @@ export function createFinanceRouter(
     res.status(204).send();
   });
 
-  router.post("/transfers", validateBody(TransferInputSchema), async (req: AuthenticatedRequest, res) => {
-    try {
-      const userId = req.user?.id || "";
-      const { fromAccountId, toAccountId, amountMinor, date, note } = req.body;
-      const result = await transactionService.createTransfer(
-        fromAccountId,
-        toAccountId,
-        amountMinor,
-        date,
-        note,
-        userId,
-      );
-      res.status(201).json(result);
-    } catch (error) {
-      if (error instanceof Error) {
-        res.status(400).json({ error: error.message });
-        return;
+  router.post(
+    "/transfers",
+    validateBody(TransferInputSchema),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const userId = req.user?.id || "";
+        const { fromAccountId, toAccountId, amountMinor, date, note } = req.body;
+        const result = await transactionService.createTransfer(
+          fromAccountId,
+          toAccountId,
+          amountMinor,
+          date,
+          note,
+          userId,
+        );
+        res.status(201).json(result);
+      } catch (error) {
+        if (error instanceof Error) {
+          res.status(400).json({ error: error.message });
+          return;
+        }
+        throw error;
       }
-      throw error;
-    }
-  });
+    },
+  );
 
   // Report routes
   router.get("/monthly/:yearMonth", async (req, res) => {

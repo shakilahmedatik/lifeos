@@ -53,7 +53,8 @@ export function createFeedsRouter(
   });
 
   router.post("/", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.body.userId as string) || (req.query.userId as string) || "default";
+    const userId =
+      req.user?.id || (req.body.userId as string) || (req.query.userId as string) || "default";
     const { title, url } = req.body;
     const cleanUrl = url?.trim();
 

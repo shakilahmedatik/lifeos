@@ -148,10 +148,10 @@ export function createSqliteNewsArticleRepository(client: Client): NewsArticleRe
       const uid =
         userId !== undefined && userId.trim().length > 0
           ? userId.trim()
-          : (article.userId?.trim() || "default");
+          : article.userId?.trim() || "default";
 
       await client.execute({
-        sql: "INSERT INTO news_articles (id, user_id, feed_id, title, url, summary, published_at, fetched_at, is_read) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        sql: "INSERT OR IGNORE INTO news_articles (id, user_id, feed_id, title, url, summary, published_at, fetched_at, is_read) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
         args: [
           id,
           uid,
