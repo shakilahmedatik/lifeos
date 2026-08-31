@@ -4,6 +4,9 @@ import type {
   Category,
   CategoryBreakdown,
   DashboardSummary,
+  Exercise,
+  ExerciseLog,
+  ExerciseProgressPoint,
   FinanceDashboardWidget,
   HabitAnalyticsData,
   HabitDefinition,
@@ -13,23 +16,35 @@ import type {
   MonthlySummary,
   NewAccountInput,
   NewCategoryInput,
+  NewExerciseInput,
+  NewExerciseLogInput,
   NewHabitDefinitionInput,
   NewNotificationInput,
   NewReminderInput,
   NewRoutineCategoryInput,
+  NewsArticle,
   NewTransactionInput,
+  NewWorkoutExerciseInput,
+  NewWorkoutInput,
   Notification,
   NotificationSoundType,
   NotificationWithTask,
   Reminder,
   RoutineCategory,
   RoutineStats,
+  RssFeed,
   Task,
   TaskHistoryQuery,
   Transaction,
   UpdateReminderInput,
   UpdateRoutineCategoryInput,
   WeeklySummary,
+  Workout,
+  WorkoutExercise,
+  WorkoutSession,
+  WorkoutSessionWithLogs,
+  WorkoutStats,
+  WorkoutWithExercises,
 } from "@lifeos/contracts";
 
 import { log } from "./logger.js";
@@ -179,6 +194,7 @@ export const api = {
 
   // Habits
   getHabits: () => request<HabitDefinition[]>("/api/habits"),
+  getHabit: (id: string) => request<HabitDefinition>(`/api/habits/${id}`),
   createHabit: (input: NewHabitDefinitionInput) =>
     request<HabitDefinition>("/api/habits", {
       method: "POST",
@@ -192,6 +208,18 @@ export const api = {
       body: JSON.stringify(patch),
     }),
   deleteHabit: (id: string) => request<void>(`/api/habits/${id}`, { method: "DELETE" }),
+  archiveHabit: (id: string, archived: boolean) =>
+    request<void>(`/api/habits/${id}/archive`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ archived }),
+    }),
+  reorderHabits: (orders: { id: string; sortOrder: number }[]) =>
+    request<void>("/api/habits/reorder", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orders }),
+    }),
   logHabit: (habitId: string, date?: string, value = 1, meta?: string) =>
     request<HabitLogEntry>(`/api/habits/${habitId}/log`, {
       method: "POST",
@@ -215,6 +243,13 @@ export const api = {
     request<WeeklySummary>(
       `/api/habits/weekly-review${weekStart ? `?weekStart=${weekStart}` : ""}`,
     ),
+  exportHabits: () => request<{ habits: HabitDefinition[] }>("/api/habits/export"),
+  importHabits: (data: unknown) =>
+    request<void>("/api/habits/import", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(data),
+    }),
 
   // Skills
   getSkillAreas: () => request<import("@lifeos/contracts").SkillArea[]>("/api/skills/areas"),
@@ -468,6 +503,141 @@ export const api = {
       body: JSON.stringify(patch),
     }),
   deleteReminder: (id: string) => request<void>(`/api/reminders/${id}`, { method: "DELETE" }),
+
+  // Workouts
+  getWorkouts: () => request<Workout[]>("/api/workouts"),
+  getWorkout: (id: string) => request<WorkoutWithExercises>(`/api/workouts/${id}`),
+  createWorkout: (input: NewWorkoutInput) =>
+    request<Workout>("/api/workouts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  updateWorkout: (id: string, patch: Partial<NewWorkoutInput>) =>
+    request<Workout>(`/api/workouts/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  deleteWorkout: (id: string) => request<void>(`/api/workouts/${id}`, { method: "DELETE" }),
+  addExerciseToWorkout: (workoutId: string, exerciseId: string, input: NewWorkoutExerciseInput) =>
+    request<WorkoutExercise>(`/api/workouts/${workoutId}/exercises`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...input, exerciseId }),
+    }),
+  updateWorkoutExercise: (
+    workoutId: string,
+    exerciseId: string,
+    patch: Partial<NewWorkoutExerciseInput>,
+  ) =>
+    request<WorkoutExercise>(`/api/workouts/${workoutId}/exercises/${exerciseId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  removeExerciseFromWorkout: (workoutId: string, exerciseId: string) =>
+    request<void>(`/api/workouts/${workoutId}/exercises/${exerciseId}`, { method: "DELETE" }),
+  reorderWorkoutExercises: (workoutId: string, exerciseIds: string[]) =>
+    request<void>(`/api/workouts/${workoutId}/exercises/reorder`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ exerciseIds }),
+    }),
+  getExercises: () => request<Exercise[]>("/api/workouts/exercises"),
+  getExercise: (id: string) => request<Exercise>(`/api/workouts/exercises/${id}`),
+  createExercise: (input: NewExerciseInput) =>
+    request<Exercise>("/api/workouts/exercises", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  updateExercise: (id: string, patch: Partial<NewExerciseInput>) =>
+    request<Exercise>(`/api/workouts/exercises/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  deleteExercise: (id: string) =>
+    request<void>(`/api/workouts/exercises/${id}`, { method: "DELETE" }),
+  getWorkoutSessions: () => request<WorkoutSession[]>("/api/workouts/sessions"),
+  getWorkoutSession: (id: string) =>
+    request<WorkoutSessionWithLogs>(`/api/workouts/sessions/${id}`),
+  startWorkoutSession: (workoutId: string) =>
+    request<WorkoutSession>("/api/workouts/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ workoutId }),
+    }),
+  completeWorkoutSession: (id: string, durationSeconds: number, notes?: string) =>
+    request<WorkoutSession>(`/api/workouts/sessions/${id}/complete`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ durationSeconds, notes }),
+    }),
+  deleteWorkoutSession: (id: string) =>
+    request<void>(`/api/workouts/sessions/${id}`, { method: "DELETE" }),
+  cancelWorkoutSession: (sessionId: string) =>
+    request<void>(`/api/workouts/sessions/${sessionId}`, { method: "DELETE" }),
+  addExerciseLog: (sessionId: string, input: NewExerciseLogInput) =>
+    request<ExerciseLog>(`/api/workouts/sessions/${sessionId}/logs`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  getExerciseLogs: (sessionId: string) =>
+    request<ExerciseLog[]>(`/api/workouts/sessions/${sessionId}/logs`),
+  getWorkoutHistory: () => request<WorkoutSession[]>("/api/workouts/history"),
+  getWorkoutStats: () => request<WorkoutStats>("/api/workouts/history/stats"),
+  getRecentWorkoutSessions: (limit = 10) =>
+    request<WorkoutSession[]>(`/api/workouts/history/recent?limit=${limit}`),
+  getExerciseProgress: (exerciseId: string) =>
+    request<ExerciseProgressPoint[]>(`/api/workouts/exercises/${exerciseId}/progress`),
+
+  // News
+  getNewsFeeds: () => request<RssFeed[]>("/api/news/feeds"),
+  getNewsFeed: (id: string) => request<RssFeed>(`/api/news/feeds/${id}`),
+  createNewsFeed: (input: { title: string; url: string }) =>
+    request<RssFeed>("/api/news/feeds", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(input),
+    }),
+  updateNewsFeed: (id: string, patch: { title?: string; url?: string }) =>
+    request<RssFeed>(`/api/news/feeds/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    }),
+  deleteNewsFeed: (id: string) => request<void>(`/api/news/feeds/${id}`, { method: "DELETE" }),
+  toggleNewsFeedStatus: (id: string) =>
+    request<RssFeed>(`/api/news/feeds/${id}/toggle`, { method: "PATCH" }),
+  refreshNewsFeed: (id: string) =>
+    request<{ newArticles: number }>(`/api/news/feeds/${id}/refresh`, { method: "POST" }),
+  refreshAllNewsFeeds: () =>
+    request<{ success: boolean; totalFeeds: number; newArticles: number }>(
+      "/api/news/feeds/refresh-all",
+      {
+        method: "POST",
+      },
+    ),
+  getNewsArticles: (params?: {
+    feedId?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const searchParams = new URLSearchParams();
+    if (params?.feedId) searchParams.set("feedId", params.feedId);
+    if (params?.search) searchParams.set("search", params.search);
+    if (params?.limit) searchParams.set("limit", params.limit.toString());
+    if (params?.offset) searchParams.set("offset", params.offset.toString());
+    const queryString = searchParams.toString();
+    return request<NewsArticle[]>(`/api/news/articles${queryString ? `?${queryString}` : ""}`);
+  },
+  getTickerArticles: () => request<NewsArticle[]>("/api/news/articles/ticker"),
+  markNewsArticleAsRead: (id: string) =>
+    request<NewsArticle>(`/api/news/articles/${id}/read`, { method: "PATCH" }),
 
   // User Profile & System Settings
   updateProfile: (input: { name?: string; email?: string }) =>

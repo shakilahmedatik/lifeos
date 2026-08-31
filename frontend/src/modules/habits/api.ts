@@ -7,101 +7,104 @@ import type {
   WeeklySummary,
 } from "@lifeos/contracts";
 
-import { request } from "../../lib/api.js";
-
-const BASE = "/api/habits";
+import { getDataSource } from "../../lib/dataSource.js";
 
 export const habitApi = {
   getHabits: async (activeOnly?: boolean): Promise<HabitDefinition[]> => {
-    const query = activeOnly ? "?active=true" : "";
-    return request<HabitDefinition[]>(`${BASE}${query}`);
+    const ds = await getDataSource();
+    const habits = await ds.getHabits();
+    return activeOnly ? habits.filter((h) => !h.archived) : habits;
   },
 
   getHabit: async (id: string): Promise<HabitDefinition> => {
-    return request<HabitDefinition>(`${BASE}/${id}`);
+    const ds = await getDataSource();
+    return ds.getHabit(id);
   },
 
   createHabit: async (data: NewHabitDefinitionInput): Promise<HabitDefinition> => {
-    return request<HabitDefinition>(BASE, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    const ds = await getDataSource();
+    return ds.createHabit(data);
   },
 
   updateHabit: async (id: string, data: Partial<HabitDefinition>): Promise<HabitDefinition> => {
-    return request<HabitDefinition>(`${BASE}/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    const ds = await getDataSource();
+    return ds.updateHabit(id, data);
   },
 
   deleteHabit: async (id: string): Promise<void> => {
-    return request<void>(`${BASE}/${id}`, { method: "DELETE" });
+    const ds = await getDataSource();
+    return ds.deleteHabit(id);
   },
 
   toggleArchive: async (id: string, archived: boolean): Promise<void> => {
-    return request<void>(`${BASE}/${id}/archive`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ archived }),
-    });
+    const ds = await getDataSource();
+    return ds.archiveHabit(id, archived);
   },
 
   reorderHabits: async (orders: { id: string; sortOrder: number }[]): Promise<void> => {
-    return request<void>(`${BASE}/reorder`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ orders }),
-    });
+    const ds = await getDataSource();
+    return ds.reorderHabits(orders);
   },
 
   addLog: async (
     habitId: string,
     data: { date: string; value: number; meta?: string },
   ): Promise<HabitLogEntry> => {
-    return request<HabitLogEntry>(`${BASE}/${habitId}/log`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    const ds = await getDataSource();
+    return ds.logHabit(habitId, data.date, data.value, data.meta);
   },
 
   removeLog: async (logId: string): Promise<void> => {
-    return request<void>(`${BASE}/log/${logId}`, { method: "DELETE" });
+    const ds = await getDataSource();
+    return ds.unlogHabitByLogId(logId);
   },
 
   removeLogByDate: async (habitId: string, date: string): Promise<void> => {
-    return request<void>(`${BASE}/${habitId}/log/${date}`, { method: "DELETE" });
+    const ds = await getDataSource();
+    return ds.unlogHabit(habitId, date);
   },
 
   getLogs: async (habitId: string, date: string): Promise<HabitLogEntry[]> => {
-    return request<HabitLogEntry[]>(`${BASE}/${habitId}/logs?date=${date}`);
+    const ds = await getDataSource();
+    return ds.getHabitLogs(habitId, date);
   },
 
   getTodayProgress: async (): Promise<HabitDailyProgress[]> => {
-    return request<HabitDailyProgress[]>(`${BASE}/today`);
+    const ds = await getDataSource();
+    const todayHabits = await ds.getTodayHabits();
+    return todayHabits.map((h) => ({
+      habit: h,
+      date: new Date().toISOString().split("T")[0],
+      currentValue: h.todayValue || 0,
+      targetValue: h.todayTarget || 1,
+      progress: h.todayProgress || 0,
+      logs: h.logs || [],
+      currentStreak: h.currentStreak || 0,
+      longestStreak: h.longestStreak || 0,
+    }));
   },
 
-  getAnalytics: async (id: string, period: "week" | "month"): Promise<HabitAnalyticsData> => {
-    return request<HabitAnalyticsData>(`${BASE}/${id}/analytics?period=${period}`);
+  getAnalytics: async (
+    id: string,
+    period: "week" | "month",
+  ): Promise<HabitAnalyticsData | undefined> => {
+    const ds = await getDataSource();
+    return ds.getHabitAnalytics(id, period);
   },
 
   getWeeklySummary: async (): Promise<WeeklySummary> => {
-    return request<WeeklySummary>(`${BASE}/weekly-review`);
+    const ds = await getDataSource();
+    return ds.getWeeklyReview();
   },
 
   exportData: async (): Promise<{ habits: HabitDefinition[] }> => {
-    return request<{ habits: HabitDefinition[] }>(`${BASE}/export`);
+    const ds = await getDataSource();
+    return ds.exportHabits();
   },
 
   importData: async (data: unknown): Promise<void> => {
-    return request<void>(`${BASE}/import`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    });
+    const ds = await getDataSource();
+    return ds.importHabits(data);
   },
 };
 

@@ -1,4 +1,3 @@
-import { api } from "../../lib/api.js";
 import { getDataSource } from "../../lib/dataSource.js";
 import type { LearningBackup } from "./types";
 
@@ -8,7 +7,7 @@ const BACKUP_SCHEMA = "lifeos-learning-backup";
 const STORAGE_KEY = "lifeos_last_backup_date";
 
 export async function createBackup(): Promise<LearningBackup> {
-  const ds = getDataSource();
+  const ds = await getDataSource();
   const [areas, resources, logs] = await Promise.all([
     ds.getSkillAreas(),
     ds.getLearningResources(),
@@ -69,7 +68,8 @@ export async function importBackup(data: unknown): Promise<{ success: boolean; m
       return { success: false, message: "Invalid backup file format" };
     }
 
-    const result = await api.importBackup({
+    const ds = await getDataSource();
+    const result = await ds.importBackup({
       areas: backupData.data.areas as import("@lifeos/contracts").NewSkillAreaInput[],
       resources: backupData.data
         .resources as import("@lifeos/contracts").NewLearningResourceInput[],

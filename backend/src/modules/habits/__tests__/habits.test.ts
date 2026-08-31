@@ -126,7 +126,8 @@ describe("Habit Module Services Integration", () => {
         archived INTEGER NOT NULL DEFAULT 0,
         sort_order INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        deleted_at TEXT
       );
     `);
     await client.execute(`
@@ -138,6 +139,8 @@ describe("Habit Module Services Integration", () => {
         value REAL NOT NULL DEFAULT 1,
         meta TEXT,
         logged_at TEXT NOT NULL DEFAULT (datetime('now')),
+        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+        deleted_at TEXT,
         FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
       );
     `);

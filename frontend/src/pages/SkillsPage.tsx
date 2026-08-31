@@ -4,7 +4,7 @@ import { useAppToast } from "../components/Toast.js";
 import BackupPanel from "../components/ui/BackupPanel.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
-import { api } from "../lib/api.js";
+import { getDataSource } from "../lib/dataSource.js";
 import {
   exportBackup,
   importBackup,
@@ -70,15 +70,14 @@ export default function SkillsPage() {
   >({});
 
   const refreshProgresses = useCallback(async () => {
-    // Reference logs length to satisfy hook dependency tracking
-    if (logs.length < 0) return;
     if (resources.length === 0) {
       setProgressesByResource({});
       return;
     }
     const ids = resources.map((r) => r.id);
     try {
-      const progArr = await api.getProgressBatch(ids);
+      const ds = getDataSource();
+      const progArr = await ds.getProgressBatch(ids);
       const byId: Record<string, ResourceWithProgress | null> = {};
       for (const p of progArr) {
         if (p) byId[p.id] = p;
@@ -90,7 +89,7 @@ export default function SkillsPage() {
     } catch (err) {
       console.error("Failed to load progress batch:", err);
     }
-  }, [resources, logs]);
+  }, [resources]);
 
   useEffect(() => {
     refreshProgresses();
@@ -122,7 +121,7 @@ export default function SkillsPage() {
       }
       if (taskId) {
         setAutomationTaskId(taskId);
-        api.updateTaskStatus(taskId, "in_progress").catch(console.error);
+        getDataSource().updateTaskStatus(taskId, "in_progress").catch(console.error);
       }
       navigate("/skills", { replace: true });
     }

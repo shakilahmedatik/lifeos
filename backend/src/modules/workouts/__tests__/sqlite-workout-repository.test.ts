@@ -17,7 +17,8 @@ describe("SqliteWorkoutRepository.reorderExercises", () => {
         scheduled_day TEXT,
         scheduled_time TEXT,
         created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
+        updated_at TEXT NOT NULL,
+        deleted_at TEXT
       );
     `);
     await client.execute(`
@@ -33,6 +34,7 @@ describe("SqliteWorkoutRepository.reorderExercises", () => {
         rest_seconds INTEGER NOT NULL DEFAULT 60,
         order_index INTEGER NOT NULL DEFAULT 0,
         created_at TEXT NOT NULL,
+        deleted_at TEXT,
         FOREIGN KEY (workout_id) REFERENCES workouts(id) ON DELETE CASCADE
       );
     `);

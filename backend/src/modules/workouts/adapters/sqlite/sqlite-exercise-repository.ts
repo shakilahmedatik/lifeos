@@ -31,7 +31,7 @@ export class SqliteExerciseRepository implements ExerciseRepository {
 
   async getById(id: string, _userId?: string): Promise<Exercise | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM exercises WHERE id = ?",
+      sql: "SELECT * FROM exercises WHERE id = ? AND deleted_at IS NULL",
       args: [id],
     });
     const row = res.rows[0] as unknown as ExerciseRow | undefined;
@@ -39,14 +39,14 @@ export class SqliteExerciseRepository implements ExerciseRepository {
   }
 
   async getAll(_userId?: string): Promise<Exercise[]> {
-    const res = await this.client.execute("SELECT * FROM exercises ORDER BY name");
+    const res = await this.client.execute("SELECT * FROM exercises WHERE deleted_at IS NULL ORDER BY name");
     const rows = res.rows as unknown as ExerciseRow[];
     return rows.map(rowToExercise);
   }
 
   async getByMuscleGroup(muscleGroup: string, _userId?: string): Promise<Exercise[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM exercises WHERE category = ? ORDER BY name",
+      sql: "SELECT * FROM exercises WHERE category = ? AND deleted_at IS NULL ORDER BY name",
       args: [muscleGroup],
     });
     const rows = res.rows as unknown as ExerciseRow[];
@@ -107,7 +107,7 @@ export class SqliteExerciseRepository implements ExerciseRepository {
     values.push(id);
 
     await this.client.execute({
-      sql: `UPDATE exercises SET ${fields.join(", ")} WHERE id = ?`,
+      sql: `UPDATE exercises SET ${fields.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
       args: values,
     });
 
@@ -115,16 +115,17 @@ export class SqliteExerciseRepository implements ExerciseRepository {
   }
 
   async delete(id: string, _userId?: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM exercises WHERE id = ?",
-      args: [id],
+      sql: "UPDATE exercises SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, now, id],
     });
     return res.rowsAffected > 0;
   }
 
   async getByName(name: string, _userId?: string): Promise<Exercise | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM exercises WHERE name = ?",
+      sql: "SELECT * FROM exercises WHERE name = ? AND deleted_at IS NULL",
       args: [name],
     });
     const row = res.rows[0] as unknown as ExerciseRow | undefined;

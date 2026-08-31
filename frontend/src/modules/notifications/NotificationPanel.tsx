@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState } from "react";
 import { EmptyState } from "../../components/ui/EmptyState.js";
 import { ErrorBanner } from "../../components/ui/ErrorBanner.js";
 import { RelativeTime } from "../../components/ui/RelativeTime.js";
-import { api } from "../../lib/api.js";
+import { getDataSource } from "../../lib/dataSource.js";
 
 type Notification = NotificationWithTask;
 
@@ -17,7 +17,8 @@ export function NotificationPanel() {
     try {
       setLoading(true);
       setError(null);
-      const data = await api.getNotifications();
+      const ds = await getDataSource();
+      const data = await ds.getNotifications();
       setNotifications(data);
     } catch (error) {
       console.error("Error fetching notifications:", error);
@@ -34,7 +35,8 @@ export function NotificationPanel() {
   const deleteNotification = async (id: string) => {
     try {
       setDeleting(id);
-      await api.deleteNotification(id);
+      const ds = await getDataSource();
+      await ds.deleteNotification(id);
       setNotifications(notifications.filter((n) => n.id !== id));
     } catch (error) {
       console.error("Error deleting notification:", error);

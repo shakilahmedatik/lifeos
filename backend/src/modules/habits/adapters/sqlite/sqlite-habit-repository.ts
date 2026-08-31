@@ -52,7 +52,7 @@ export class SqliteHabitRepository implements HabitRepository {
 
   async getById(id: string, userId: string): Promise<HabitDefinition | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM habits WHERE id = ? AND (user_id = ? OR user_id = '')",
+      sql: "SELECT * FROM habits WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
       args: [id, userId],
     });
     const row = res.rows[0] as unknown as HabitRow | undefined;
@@ -61,7 +61,7 @@ export class SqliteHabitRepository implements HabitRepository {
 
   async getByName(name: string, userId: string): Promise<HabitDefinition | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM habits WHERE LOWER(name) = LOWER(?) AND (user_id = ? OR user_id = '')",
+      sql: "SELECT * FROM habits WHERE LOWER(name) = LOWER(?) AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
       args: [name, userId],
     });
     const row = res.rows[0] as unknown as HabitRow | undefined;
@@ -69,7 +69,7 @@ export class SqliteHabitRepository implements HabitRepository {
   }
 
   async getAll(includeArchived = false, userId: string): Promise<HabitDefinition[]> {
-    let sql = "SELECT * FROM habits WHERE (user_id = ? OR user_id = '')";
+    let sql = "SELECT * FROM habits WHERE (user_id = ? OR user_id = '') AND deleted_at IS NULL";
     if (!includeArchived) {
       sql += " AND archived = 0";
     }
@@ -183,7 +183,7 @@ export class SqliteHabitRepository implements HabitRepository {
 
     try {
       await this.client.execute({
-        sql: `UPDATE habits SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '')`,
+        sql: `UPDATE habits SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL`,
         args: values,
       });
     } catch (err) {
@@ -199,7 +199,7 @@ export class SqliteHabitRepository implements HabitRepository {
             await this.client.execute("ALTER TABLE habits ADD COLUMN updated_at TEXT");
           }
           await this.client.execute({
-            sql: `UPDATE habits SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '')`,
+            sql: `UPDATE habits SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL`,
             args: values,
           });
         } catch {
@@ -216,7 +216,7 @@ export class SqliteHabitRepository implements HabitRepository {
           cleanValues.push(userId);
 
           await this.client.execute({
-            sql: `UPDATE habits SET ${cleanFields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '')`,
+            sql: `UPDATE habits SET ${cleanFields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL`,
             args: cleanValues,
           });
         }
@@ -229,9 +229,10 @@ export class SqliteHabitRepository implements HabitRepository {
   }
 
   async delete(id: string, userId: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM habits WHERE id = ? AND (user_id = ? OR user_id = '')",
-      args: [id, userId],
+      sql: "UPDATE habits SET deleted_at = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
+      args: [now, now, id, userId],
     });
     return res.rowsAffected > 0;
   }
@@ -239,12 +240,12 @@ export class SqliteHabitRepository implements HabitRepository {
   async archive(id: string, archived: boolean, userId: string): Promise<void> {
     try {
       await this.client.execute({
-        sql: "UPDATE habits SET archived = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
+        sql: "UPDATE habits SET archived = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
         args: [archived ? 1 : 0, new Date().toISOString(), id, userId],
       });
     } catch {
       await this.client.execute({
-        sql: "UPDATE habits SET archived = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
+        sql: "UPDATE habits SET archived = ? WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
         args: [archived ? 1 : 0, id, userId],
       });
     }
@@ -257,13 +258,13 @@ export class SqliteHabitRepository implements HabitRepository {
     const now = new Date().toISOString();
     try {
       const statements = updates.map((update) => ({
-        sql: "UPDATE habits SET sort_order = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
+        sql: "UPDATE habits SET sort_order = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
         args: [update.sortOrder, now, update.id, userId],
       }));
       await this.client.batch(statements, "write");
     } catch {
       const statements = updates.map((update) => ({
-        sql: "UPDATE habits SET sort_order = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
+        sql: "UPDATE habits SET sort_order = ? WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
         args: [update.sortOrder, update.id, userId],
       }));
       await this.client.batch(statements, "write");

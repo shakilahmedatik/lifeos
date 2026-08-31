@@ -60,7 +60,7 @@ export class SqliteTaskRepository implements TaskRepository {
 
   async getById(id: string, userId: string): Promise<Task | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      sql: "SELECT * FROM tasks WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL",
       args: [id, userId],
     });
     const row = res.rows[0] as unknown as TaskRow | undefined;
@@ -70,7 +70,7 @@ export class SqliteTaskRepository implements TaskRepository {
   async getByDate(date: string, userId: string): Promise<Task[]> {
     // 1. Direct date tasks
     const directRes = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE date = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      sql: "SELECT * FROM tasks WHERE date = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL",
       args: [date, userId],
     });
     const directRows = directRes.rows as unknown as TaskRow[];
@@ -82,7 +82,7 @@ export class SqliteTaskRepository implements TaskRepository {
 
     // 2. Recurring tasks starting on or before date
     const recurringRes = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE recurrence != 'none' AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      sql: "SELECT * FROM tasks WHERE recurrence != 'none' AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL",
       args: [date, userId],
     });
     const recurringRows = recurringRes.rows as unknown as TaskRow[];
@@ -113,7 +113,7 @@ export class SqliteTaskRepository implements TaskRepository {
 
   async getByDateRange(startDate: string, endDate: string, userId: string): Promise<Task[]> {
     const directRes = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE date >= ? AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      sql: "SELECT * FROM tasks WHERE date >= ? AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL",
       args: [startDate, endDate, userId],
     });
     const directRows = directRes.rows as unknown as TaskRow[];
@@ -124,7 +124,7 @@ export class SqliteTaskRepository implements TaskRepository {
     }
 
     const recurringRes = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE recurrence != 'none' AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      sql: "SELECT * FROM tasks WHERE recurrence != 'none' AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL",
       args: [endDate, userId],
     });
     const recurringRows = recurringRes.rows as unknown as TaskRow[];
@@ -169,7 +169,7 @@ export class SqliteTaskRepository implements TaskRepository {
 
   async getAll(userId: string): Promise<Task[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE user_id = ? OR user_id = '' OR user_id IS NULL ORDER BY date DESC, start_time ASC",
+      sql: "SELECT * FROM tasks WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL ORDER BY date DESC, start_time ASC",
       args: [userId],
     });
     const rows = res.rows as unknown as TaskRow[];
@@ -269,7 +269,7 @@ export class SqliteTaskRepository implements TaskRepository {
     values.push(userId);
 
     await this.client.execute({
-      sql: `UPDATE tasks SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)`,
+      sql: `UPDATE tasks SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL`,
       args: values,
     });
 
@@ -285,7 +285,7 @@ export class SqliteTaskRepository implements TaskRepository {
     if (!existing) return undefined;
 
     await this.client.execute({
-      sql: "UPDATE tasks SET status = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
+      sql: "UPDATE tasks SET status = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL",
       args: [status, new Date().toISOString(), id, userId],
     });
 
@@ -293,9 +293,10 @@ export class SqliteTaskRepository implements TaskRepository {
   }
 
   async delete(id: string, userId: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM tasks WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
-      args: [id, userId],
+      sql: "UPDATE tasks SET deleted_at = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL",
+      args: [now, now, id, userId],
     });
     return res.rowsAffected > 0;
   }

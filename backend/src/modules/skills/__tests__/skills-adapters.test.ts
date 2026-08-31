@@ -13,7 +13,8 @@ async function createTestClient(): Promise<Client> {
       name TEXT NOT NULL UNIQUE,
       weekly_goal_hours REAL NOT NULL DEFAULT 5,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      deleted_at TEXT
     );
   `);
   await client.execute(`
@@ -25,7 +26,8 @@ async function createTestClient(): Promise<Client> {
       total_units REAL,
       unit TEXT CHECK (unit IN ('chapters', 'videos', 'hours')),
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      deleted_at TEXT
     );
   `);
   await client.execute(`
@@ -37,7 +39,8 @@ async function createTestClient(): Promise<Client> {
       units_completed REAL,
       notes TEXT,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      deleted_at TEXT
     );
   `);
 

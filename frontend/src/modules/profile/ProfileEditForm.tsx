@@ -6,7 +6,7 @@ import ErrorBanner from "../../components/ui/ErrorBanner.js";
 import { FormField } from "../../components/ui/FormField.js";
 import { Input } from "../../components/ui/Input.js";
 import { type UserSession, useAuth } from "../../context/AuthContext.js";
-import { api } from "../../lib/api.js";
+import { getDataSource } from "../../lib/dataSource.js";
 
 interface ProfileEditFormProps {
   user: UserSession;
@@ -27,7 +27,7 @@ export const ProfileEditForm: FC<ProfileEditFormProps> = ({ user }) => {
     setLoading(true);
 
     try {
-      const res = await api.updateProfile({ name, email });
+      const res = await getDataSource().updateProfile({ name, email });
       if (res.user) {
         updateUser(res.user);
         setSuccess("Profile details updated successfully!");

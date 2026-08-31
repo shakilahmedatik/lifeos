@@ -2,7 +2,7 @@ import { Activity, Database, Download, Server } from "lucide-react";
 import { type FC, useEffect, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
-import { api } from "../../lib/api.js";
+import { getDataSource } from "../../lib/dataSource.js";
 
 export const SystemManagementCard: FC = () => {
   const [healthStatus, setHealthStatus] = useState<string>("Checking...");
@@ -12,7 +12,7 @@ export const SystemManagementCard: FC = () => {
   useEffect(() => {
     const fetchHealth = async () => {
       try {
-        const res = await api.getHealth();
+        const res = await getDataSource().getHealth();
         setHealthStatus(
           res.status === "ok" || res.status === "healthy" ? "Healthy (Online)" : res.status,
         );
@@ -27,7 +27,7 @@ export const SystemManagementCard: FC = () => {
     setDownloading(true);
     setDownloadMsg(null);
     try {
-      const blob = await api.exportBackupJson();
+      const blob = await getDataSource().exportBackupJson();
       const filename = `lifeos-backup-${new Date().toISOString().split("T")[0]}.json`;
 
       const url = URL.createObjectURL(blob);

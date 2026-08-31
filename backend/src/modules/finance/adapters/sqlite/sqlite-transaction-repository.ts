@@ -36,7 +36,7 @@ export class SqliteTransactionRepository implements TransactionRepository {
 
   async getById(id: string): Promise<Transaction | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM transactions WHERE id = ?",
+      sql: "SELECT * FROM transactions WHERE id = ? AND deleted_at IS NULL",
       args: [id],
     });
     const row = res.rows[0] as unknown as TransactionRow | undefined;
@@ -46,7 +46,7 @@ export class SqliteTransactionRepository implements TransactionRepository {
   async getByDateRange(startDate: string, endDate: string): Promise<Transaction[]> {
     const res = await this.client.execute({
       sql: `SELECT * FROM transactions 
-            WHERE (
+            WHERE deleted_at IS NULL AND (
               substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?
               OR (date >= ? AND (date <= ? OR date <= ? || 'T23:59:59.999Z' OR date <= ? || ' 23:59:59'))
             ) 
@@ -59,7 +59,7 @@ export class SqliteTransactionRepository implements TransactionRepository {
 
   async getByAccountId(accountId: string): Promise<Transaction[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM transactions WHERE account_id = ? ORDER BY date ASC",
+      sql: "SELECT * FROM transactions WHERE account_id = ? AND deleted_at IS NULL ORDER BY date ASC",
       args: [accountId],
     });
     const rows = res.rows as unknown as TransactionRow[];
@@ -74,6 +74,7 @@ export class SqliteTransactionRepository implements TransactionRepository {
     const res = await this.client.execute({
       sql: `SELECT * FROM transactions 
             WHERE account_id = ? 
+              AND deleted_at IS NULL
               AND (
                 substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?
                 OR (date >= ? AND (date <= ? OR date <= ? || 'T23:59:59.999Z' OR date <= ? || ' 23:59:59'))
@@ -87,7 +88,7 @@ export class SqliteTransactionRepository implements TransactionRepository {
 
   async getByCategoryId(categoryId: string): Promise<Transaction[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM transactions WHERE category_id = ? ORDER BY date ASC",
+      sql: "SELECT * FROM transactions WHERE category_id = ? AND deleted_at IS NULL ORDER BY date ASC",
       args: [categoryId],
     });
     const rows = res.rows as unknown as TransactionRow[];
@@ -160,7 +161,7 @@ export class SqliteTransactionRepository implements TransactionRepository {
     values.push(id);
 
     await this.client.execute({
-      sql: `UPDATE transactions SET ${fields.join(", ")} WHERE id = ?`,
+      sql: `UPDATE transactions SET ${fields.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
       args: values,
     });
 
@@ -171,17 +172,18 @@ export class SqliteTransactionRepository implements TransactionRepository {
     const tx = await this.getById(id);
     if (!tx) return false;
 
+    const now = new Date().toISOString();
     if (tx.transferPairId) {
       const res = await this.client.execute({
-        sql: "DELETE FROM transactions WHERE id = ? OR transfer_pair_id = ?",
-        args: [id, tx.transferPairId],
+        sql: "UPDATE transactions SET deleted_at = ?, updated_at = ? WHERE (id = ? OR transfer_pair_id = ?) AND deleted_at IS NULL",
+        args: [now, now, id, tx.transferPairId],
       });
       return res.rowsAffected > 0;
     }
 
     const res = await this.client.execute({
-      sql: "DELETE FROM transactions WHERE id = ?",
-      args: [id],
+      sql: "UPDATE transactions SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, now, id],
     });
     return res.rowsAffected > 0;
   }
@@ -208,7 +210,7 @@ export class SqliteTransactionRepository implements TransactionRepository {
       sql: `SELECT COALESCE(SUM(amount_minor), 0) as total
             FROM transactions t
             JOIN categories c ON t.category_id = c.id
-            WHERE t.date >= ? AND t.date <= ? AND c.kind = 'income' AND t.transfer_pair_id IS NULL`,
+            WHERE t.date >= ? AND t.date <= ? AND c.kind = 'income' AND t.transfer_pair_id IS NULL AND t.deleted_at IS NULL AND c.deleted_at IS NULL`,
       args: [startDate, endDate],
     });
 
@@ -216,7 +218,7 @@ export class SqliteTransactionRepository implements TransactionRepository {
       sql: `SELECT COALESCE(SUM(amount_minor), 0) as total
             FROM transactions t
             JOIN categories c ON t.category_id = c.id
-            WHERE t.date >= ? AND t.date <= ? AND c.kind = 'expense' AND t.transfer_pair_id IS NULL`,
+            WHERE t.date >= ? AND t.date <= ? AND c.kind = 'expense' AND t.transfer_pair_id IS NULL AND t.deleted_at IS NULL AND c.deleted_at IS NULL`,
       args: [startDate, endDate],
     });
 
@@ -235,7 +237,7 @@ export class SqliteTransactionRepository implements TransactionRepository {
     const res = await this.client.execute({
       sql: `SELECT category_id as categoryId, SUM(amount_minor) as total
             FROM transactions
-            WHERE date >= ? AND date <= ? AND transfer_pair_id IS NULL
+            WHERE date >= ? AND date <= ? AND transfer_pair_id IS NULL AND deleted_at IS NULL
             GROUP BY category_id
             ORDER BY total DESC`,
       args: [startDate, endDate],
@@ -258,7 +260,7 @@ export class SqliteTransactionRepository implements TransactionRepository {
              ), 0) as balance
              FROM transactions t
              JOIN categories c ON t.category_id = c.id
-             WHERE t.account_id = ?`,
+             WHERE t.account_id = ? AND t.deleted_at IS NULL AND c.deleted_at IS NULL`,
       args: [accountId],
     });
 

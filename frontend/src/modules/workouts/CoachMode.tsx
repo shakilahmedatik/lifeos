@@ -4,7 +4,8 @@ import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
 import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { Input } from "../../components/ui/Input.js";
-import { api, request } from "../../lib/api.js";
+import { request } from "../../lib/api.js";
+import { getDataSource } from "../../lib/dataSource.js";
 import { playNotificationSound } from "../notifications/sound-player.js";
 import { addExerciseLog, cancelSession, completeSession, startSession } from "./api.js";
 import { CoachStartModal } from "./components/CoachStartModal.js";
@@ -72,7 +73,7 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
       if (sessionId && !isFinishedRef.current) {
         cancelSession(sessionId).catch(console.error);
         if (taskId) {
-          api.updateTaskStatus(taskId, "planned").catch(console.error);
+          getDataSource().updateTaskStatus(taskId, "planned").catch(console.error);
         }
       }
     };
@@ -88,7 +89,7 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
       const weightForSet = currentExercise.weights?.[currentSet - 1];
       setActualWeight(weightForSet !== undefined ? weightForSet : currentExercise.weight || 0);
     }
-  }, [currentExercise, currentSet]);
+  }, [currentSet, currentExercise]);
 
   const startTimer = useCallback((duration: number, isRest: boolean) => {
     setTimer({
@@ -142,7 +143,7 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
       await cancelSession(sessionId);
     }
     if (taskId) {
-      await api.updateTaskStatus(taskId, "planned").catch(console.error);
+      await getDataSource().updateTaskStatus(taskId, "planned").catch(console.error);
     }
     onExit();
   };
@@ -167,7 +168,7 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
         startTimer(firstExercise.restSeconds || 60, true);
       }
       if (taskId) {
-        await api.updateTaskStatus(taskId, "in_progress").catch(console.error);
+        await getDataSource().updateTaskStatus(taskId, "in_progress").catch(console.error);
       }
     } catch (err) {
       console.error("Failed to start session", err);
@@ -182,7 +183,7 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
       await completeSession(sessionId, durationSeconds);
       isFinishedRef.current = true;
       if (taskId) {
-        await api.updateTaskStatus(taskId, "done").catch(console.error);
+        await getDataSource().updateTaskStatus(taskId, "done").catch(console.error);
       }
       playNotificationSound("workout_complete");
       onComplete();
@@ -372,7 +373,7 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
 
         {/* Right Column on Desktop / Top on Mobile: Video Player */}
         <div className="order-1 lg:order-2 lg:col-span-6 xl:col-span-5 flex flex-col justify-center min-h-0 shrink-0 mb-2 lg:mb-0 lg:h-full">
-          <div className="w-full h-36 sm:h-48 lg:h-full lg:max-h-[500px] flex items-center justify-center">
+          <div className="w-full h-36 sm:h-48 lg:h-full lg:max-h-125 flex items-center justify-center">
             <VideoPlayer url={exercise.videoUrl} isRunning={timer.isRunning} />
           </div>
         </div>

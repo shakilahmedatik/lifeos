@@ -28,7 +28,7 @@ export class SqliteAccountRepository implements AccountRepository {
 
   async getById(id: string): Promise<Account | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM accounts WHERE id = ?",
+      sql: "SELECT * FROM accounts WHERE id = ? AND deleted_at IS NULL",
       args: [id],
     });
     const row = res.rows[0] as unknown as AccountRow | undefined;
@@ -36,14 +36,16 @@ export class SqliteAccountRepository implements AccountRepository {
   }
 
   async getAll(): Promise<Account[]> {
-    const res = await this.client.execute("SELECT * FROM accounts ORDER BY created_at DESC");
+    const res = await this.client.execute(
+      "SELECT * FROM accounts WHERE deleted_at IS NULL ORDER BY created_at DESC",
+    );
     const rows = res.rows as unknown as AccountRow[];
     return rows.map(rowToAccount);
   }
 
   async getActive(): Promise<Account[]> {
     const res = await this.client.execute(
-      "SELECT * FROM accounts WHERE archived = 0 ORDER BY name",
+      "SELECT * FROM accounts WHERE archived = 0 AND deleted_at IS NULL ORDER BY name",
     );
     const rows = res.rows as unknown as AccountRow[];
     return rows.map(rowToAccount);
@@ -83,7 +85,7 @@ export class SqliteAccountRepository implements AccountRepository {
     values.push(id);
 
     await this.client.execute({
-      sql: `UPDATE accounts SET ${fields.join(", ")} WHERE id = ?`,
+      sql: `UPDATE accounts SET ${fields.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
       args: values,
     });
 
@@ -92,7 +94,7 @@ export class SqliteAccountRepository implements AccountRepository {
 
   async archive(id: string): Promise<boolean> {
     const res = await this.client.execute({
-      sql: "UPDATE accounts SET archived = 1, updated_at = ? WHERE id = ?",
+      sql: "UPDATE accounts SET archived = 1, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
       args: [new Date().toISOString(), id],
     });
     return res.rowsAffected > 0;
@@ -100,16 +102,17 @@ export class SqliteAccountRepository implements AccountRepository {
 
   async unarchive(id: string): Promise<boolean> {
     const res = await this.client.execute({
-      sql: "UPDATE accounts SET archived = 0, updated_at = ? WHERE id = ?",
+      sql: "UPDATE accounts SET archived = 0, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
       args: [new Date().toISOString(), id],
     });
     return res.rowsAffected > 0;
   }
 
   async delete(id: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM accounts WHERE id = ?",
-      args: [id],
+      sql: "UPDATE accounts SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, now, id],
     });
     return res.rowsAffected > 0;
   }

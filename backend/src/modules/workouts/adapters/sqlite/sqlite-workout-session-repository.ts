@@ -57,7 +57,7 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
 
   async getById(id: string, userId = "default"): Promise<WorkoutSession | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM workout_sessions WHERE id = ? AND (user_id = ? OR user_id = '')",
+      sql: "SELECT * FROM workout_sessions WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
       args: [id, userId],
     });
     const row = res.rows[0] as unknown as WorkoutSessionRow | undefined;
@@ -66,7 +66,7 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
 
   async getAll(userId = "default"): Promise<WorkoutSession[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM workout_sessions WHERE (user_id = ? OR user_id = '') ORDER BY started_at DESC",
+      sql: "SELECT * FROM workout_sessions WHERE (user_id = ? OR user_id = '') AND deleted_at IS NULL ORDER BY started_at DESC",
       args: [userId],
     });
     const rows = res.rows as unknown as WorkoutSessionRow[];
@@ -75,7 +75,7 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
 
   async getByWorkoutId(workoutId: string): Promise<WorkoutSession[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM workout_sessions WHERE workout_id = ? ORDER BY started_at DESC",
+      sql: "SELECT * FROM workout_sessions WHERE workout_id = ? AND deleted_at IS NULL ORDER BY started_at DESC",
       args: [workoutId],
     });
     const rows = res.rows as unknown as WorkoutSessionRow[];
@@ -103,7 +103,7 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
 
     const now = new Date().toISOString();
     await this.client.execute({
-      sql: "UPDATE workout_sessions SET completed_at = ?, duration_seconds = ?, notes = ? WHERE id = ?",
+      sql: "UPDATE workout_sessions SET completed_at = ?, duration_seconds = ?, notes = ? WHERE id = ? AND deleted_at IS NULL",
       args: [now, durationSeconds, notes ?? null, id],
     });
 
@@ -111,9 +111,10 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
   }
 
   async delete(id: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM workout_sessions WHERE id = ?",
-      args: [id],
+      sql: "UPDATE workout_sessions SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, now, id],
     });
     return res.rowsAffected > 0;
   }
@@ -123,7 +124,7 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
     if (!session) return undefined;
 
     const res = await this.client.execute({
-      sql: "SELECT * FROM exercise_logs WHERE session_id = ? ORDER BY exercise_id, set_number",
+      sql: "SELECT * FROM exercise_logs WHERE session_id = ? AND deleted_at IS NULL ORDER BY exercise_id, set_number",
       args: [id],
     });
     const logRows = res.rows as unknown as ExerciseLogRow[];
@@ -153,7 +154,7 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
     });
 
     const res = await this.client.execute({
-      sql: "SELECT * FROM exercise_logs WHERE id = ?",
+      sql: "SELECT * FROM exercise_logs WHERE id = ? AND deleted_at IS NULL",
       args: [id],
     });
     const logRow = res.rows[0] as unknown as ExerciseLogRow | undefined;
@@ -165,7 +166,7 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
 
   async getLogsBySessionId(sessionId: string): Promise<ExerciseLog[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM exercise_logs WHERE session_id = ? ORDER BY exercise_id, set_number",
+      sql: "SELECT * FROM exercise_logs WHERE session_id = ? AND deleted_at IS NULL ORDER BY exercise_id, set_number",
       args: [sessionId],
     });
     const rows = res.rows as unknown as ExerciseLogRow[];
@@ -174,7 +175,7 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
 
   async getRecentSessions(limit: number): Promise<WorkoutSession[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM workout_sessions ORDER BY started_at DESC LIMIT ?",
+      sql: "SELECT * FROM workout_sessions WHERE deleted_at IS NULL ORDER BY started_at DESC LIMIT ?",
       args: [limit],
     });
     const rows = res.rows as unknown as WorkoutSessionRow[];
@@ -182,13 +183,13 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
   }
 
   async getTotalSessions(): Promise<number> {
-    const res = await this.client.execute("SELECT COUNT(*) as count FROM workout_sessions");
+    const res = await this.client.execute("SELECT COUNT(*) as count FROM workout_sessions WHERE deleted_at IS NULL");
     return Number(res.rows[0]?.count ?? 0);
   }
 
   async getTotalDuration(): Promise<number> {
     const res = await this.client.execute(
-      "SELECT COALESCE(SUM(duration_seconds), 0) as total FROM workout_sessions",
+      "SELECT COALESCE(SUM(duration_seconds), 0) as total FROM workout_sessions WHERE deleted_at IS NULL",
     );
     return Number(res.rows[0]?.total ?? 0);
   }
@@ -204,7 +205,7 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
           COUNT(*) as total_sets
         FROM exercise_logs el
         JOIN workout_sessions ws ON ws.id = el.session_id
-        WHERE el.exercise_id = ? AND ws.completed_at IS NOT NULL
+        WHERE el.exercise_id = ? AND ws.completed_at IS NOT NULL AND el.deleted_at IS NULL AND ws.deleted_at IS NULL
         GROUP BY el.session_id
         ORDER BY ws.started_at ASC
       `,

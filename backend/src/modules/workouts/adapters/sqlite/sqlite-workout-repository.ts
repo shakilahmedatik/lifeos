@@ -69,7 +69,7 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
 
   async getById(id: string, userId = "default"): Promise<Workout | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM workouts WHERE id = ? AND (user_id = ? OR user_id = '')",
+      sql: "SELECT * FROM workouts WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
       args: [id, userId],
     });
     const row = res.rows[0] as unknown as WorkoutRow | undefined;
@@ -81,8 +81,8 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
       sql: `
         SELECT w.*, COUNT(we.id) as exercise_count 
         FROM workouts w 
-        LEFT JOIN workout_exercises we ON w.id = we.workout_id 
-        WHERE (w.user_id = ? OR w.user_id = '')
+        LEFT JOIN workout_exercises we ON w.id = we.workout_id AND we.deleted_at IS NULL
+        WHERE (w.user_id = ? OR w.user_id = '') AND w.deleted_at IS NULL
         GROUP BY w.id 
         ORDER BY w.created_at DESC
       `,
@@ -97,8 +97,8 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
       sql: `
         SELECT w.*, COUNT(we.id) as exercise_count 
         FROM workouts w 
-        LEFT JOIN workout_exercises we ON w.id = we.workout_id 
-        WHERE w.scheduled_day = ? AND (w.user_id = ? OR w.user_id = '')
+        LEFT JOIN workout_exercises we ON w.id = we.workout_id AND we.deleted_at IS NULL
+        WHERE w.scheduled_day = ? AND (w.user_id = ? OR w.user_id = '') AND w.deleted_at IS NULL
         GROUP BY w.id 
         ORDER BY w.scheduled_time
       `,
@@ -159,7 +159,7 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
     values.push(id);
 
     await this.client.execute({
-      sql: `UPDATE workouts SET ${fields.join(", ")} WHERE id = ?`,
+      sql: `UPDATE workouts SET ${fields.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
       args: values,
     });
 
@@ -170,21 +170,22 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
     await this.client.execute({
       sql: `UPDATE workout_sessions
             SET completed_at = ?, duration_seconds = ?
-            WHERE id = ?`,
+            WHERE id = ? AND deleted_at IS NULL`,
       args: [new Date().toISOString(), durationSeconds, id],
     });
   }
 
   async cancelSession(id: string): Promise<void> {
+    const now = new Date().toISOString();
     await this.client.execute({
-      sql: "DELETE FROM workout_sessions WHERE id = ?",
-      args: [id],
+      sql: "UPDATE workout_sessions SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, now, id],
     });
   }
 
   async reorderExercises(workoutId: string, exerciseIds: string[]): Promise<void> {
     const currentRes = await this.client.execute({
-      sql: "SELECT id FROM workout_exercises WHERE workout_id = ?",
+      sql: "SELECT id FROM workout_exercises WHERE workout_id = ? AND deleted_at IS NULL",
       args: [workoutId],
     });
     const currentRows = currentRes.rows as unknown as Array<{ id: string }>;
@@ -200,7 +201,7 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
     }
 
     const statements = exerciseIds.map((id, i) => ({
-      sql: "UPDATE workout_exercises SET order_index = ? WHERE id = ? AND workout_id = ?",
+      sql: "UPDATE workout_exercises SET order_index = ? WHERE id = ? AND workout_id = ? AND deleted_at IS NULL",
       args: [i, id, workoutId],
     }));
 
@@ -208,9 +209,10 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
   }
 
   async delete(id: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM workouts WHERE id = ?",
-      args: [id],
+      sql: "UPDATE workouts SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, now, id],
     });
     return res.rowsAffected > 0;
   }
@@ -220,7 +222,7 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
     if (!workout) return undefined;
 
     const res = await this.client.execute({
-      sql: "SELECT * FROM workout_exercises WHERE workout_id = ? ORDER BY order_index",
+      sql: "SELECT * FROM workout_exercises WHERE workout_id = ? AND deleted_at IS NULL ORDER BY order_index",
       args: [id],
     });
     const exerciseRows = res.rows as unknown as WorkoutExerciseRow[];
@@ -304,7 +306,7 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
     values.push(id);
 
     await this.client.execute({
-      sql: `UPDATE workout_exercises SET ${fields.join(", ")} WHERE id = ?`,
+      sql: `UPDATE workout_exercises SET ${fields.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
       args: values,
     });
 
@@ -312,16 +314,17 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
   }
 
   async removeExercise(id: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM workout_exercises WHERE id = ?",
-      args: [id],
+      sql: "UPDATE workout_exercises SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, id],
     });
     return res.rowsAffected > 0;
   }
 
   async getExerciseById(id: string): Promise<WorkoutExercise | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM workout_exercises WHERE id = ?",
+      sql: "SELECT * FROM workout_exercises WHERE id = ? AND deleted_at IS NULL",
       args: [id],
     });
     const row = res.rows[0] as unknown as WorkoutExerciseRow | undefined;
@@ -330,7 +333,7 @@ export class SqliteWorkoutRepository implements WorkoutRepository {
 
   async getExercisesByWorkoutId(workoutId: string): Promise<WorkoutExercise[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM workout_exercises WHERE workout_id = ? ORDER BY order_index",
+      sql: "SELECT * FROM workout_exercises WHERE workout_id = ? AND deleted_at IS NULL ORDER BY order_index",
       args: [workoutId],
     });
     const rows = res.rows as unknown as WorkoutExerciseRow[];

@@ -13,7 +13,8 @@ async function createTestClient(): Promise<Client> {
       is_system INTEGER NOT NULL DEFAULT 0,
       archived INTEGER NOT NULL DEFAULT 0,
       created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      deleted_at TEXT
     );
   `);
   return client;
@@ -81,11 +82,12 @@ describe("SqliteCategoryRepository", () => {
     const all = await repo.getAll();
     const systemCat = all.find((c) => c.isSystem);
     expect(systemCat).toBeDefined();
+    if (!systemCat) throw new Error("Expected system category to exist");
 
-    const archived = await repo.archive(systemCat!.id);
+    const archived = await repo.archive(systemCat.id);
     expect(archived).toBe(false);
 
-    const deleted = await repo.delete(systemCat!.id);
+    const deleted = await repo.delete(systemCat.id);
     expect(deleted).toBe(false);
   });
 });

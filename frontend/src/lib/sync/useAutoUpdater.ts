@@ -1,4 +1,3 @@
-import { check } from "@tauri-apps/plugin-updater";
 import { useEffect, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
 import { isTauri } from "../dataSource.js";
@@ -14,6 +13,7 @@ export function useAutoUpdater() {
 
     const checkForUpdates = async () => {
       try {
+        const { check } = await import("@tauri-apps/plugin-updater");
         const update = await check();
         if (update?.available) {
           setUpdateAvailable(true);
@@ -32,6 +32,7 @@ export function useAutoUpdater() {
     if (!isTauri()) return;
     setIsUpdating(true);
     try {
+      const { check } = await import("@tauri-apps/plugin-updater");
       const update = await check();
       if (update?.available) {
         toast.success("Downloading and installing update...");

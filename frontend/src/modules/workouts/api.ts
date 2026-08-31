@@ -13,39 +13,29 @@ import type {
   WorkoutStats,
   WorkoutWithExercises,
 } from "@lifeos/contracts";
-import { request } from "../../lib/api.js";
+import { getDataSource } from "../../lib/dataSource.js";
 
 export type { ExerciseProgressPoint };
 
-const API_BASE = "/api/workouts";
-
 // Workout API
 export async function fetchWorkouts(): Promise<Workout[]> {
-  return request<Workout[]>(API_BASE);
+  return (await getDataSource()).getWorkouts();
 }
 
 export async function fetchWorkout(id: string): Promise<WorkoutWithExercises> {
-  return request<WorkoutWithExercises>(`${API_BASE}/${id}`);
+  return (await getDataSource()).getWorkout(id);
 }
 
 export async function createWorkout(input: NewWorkoutInput): Promise<Workout> {
-  return request<Workout>(API_BASE, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
+  return (await getDataSource()).createWorkout(input);
 }
 
 export async function updateWorkout(id: string, patch: Partial<NewWorkoutInput>): Promise<Workout> {
-  return request<Workout>(`${API_BASE}/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
+  return (await getDataSource()).updateWorkout(id, patch);
 }
 
 export async function deleteWorkout(id: string): Promise<void> {
-  return request<void>(`${API_BASE}/${id}`, { method: "DELETE" });
+  return (await getDataSource()).deleteWorkout(id);
 }
 
 // Workout Exercise API
@@ -54,11 +44,7 @@ export async function addExerciseToWorkout(
   exerciseId: string,
   input: NewWorkoutExerciseInput,
 ): Promise<WorkoutExercise> {
-  return request<WorkoutExercise>(`${API_BASE}/${workoutId}/exercises`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ ...input, exerciseId }),
-  });
+  return (await getDataSource()).addExerciseToWorkout(workoutId, exerciseId, input);
 }
 
 export async function updateWorkoutExercise(
@@ -66,80 +52,58 @@ export async function updateWorkoutExercise(
   exerciseId: string,
   patch: Partial<NewWorkoutExerciseInput>,
 ): Promise<WorkoutExercise> {
-  return request<WorkoutExercise>(`${API_BASE}/${workoutId}/exercises/${exerciseId}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
+  return (await getDataSource()).updateWorkoutExercise(workoutId, exerciseId, patch);
 }
 
 export async function removeExerciseFromWorkout(
   workoutId: string,
   exerciseId: string,
 ): Promise<void> {
-  return request<void>(`${API_BASE}/${workoutId}/exercises/${exerciseId}`, {
-    method: "DELETE",
-  });
+  return (await getDataSource()).removeExerciseFromWorkout(workoutId, exerciseId);
 }
 
 export async function reorderWorkoutExercises(
   workoutId: string,
   exerciseIds: string[],
 ): Promise<void> {
-  return request<void>(`${API_BASE}/${workoutId}/exercises/reorder`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ exerciseIds }),
-  });
+  return (await getDataSource()).reorderWorkoutExercises(workoutId, exerciseIds);
 }
 
 // Exercise Library API
 export async function fetchExercises(): Promise<Exercise[]> {
-  return request<Exercise[]>(`${API_BASE}/exercises`);
+  return (await getDataSource()).getExercises();
 }
 
 export async function fetchExercise(id: string): Promise<Exercise> {
-  return request<Exercise>(`${API_BASE}/exercises/${id}`);
+  return (await getDataSource()).getExercise(id);
 }
 
 export async function createExercise(input: NewExerciseInput): Promise<Exercise> {
-  return request<Exercise>(`${API_BASE}/exercises`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
+  return (await getDataSource()).createExercise(input);
 }
 
 export async function updateExercise(
   id: string,
   patch: Partial<NewExerciseInput>,
 ): Promise<Exercise> {
-  return request<Exercise>(`${API_BASE}/exercises/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
+  return (await getDataSource()).updateExercise(id, patch);
 }
 
 export async function deleteExercise(id: string): Promise<void> {
-  return request<void>(`${API_BASE}/exercises/${id}`, { method: "DELETE" });
+  return (await getDataSource()).deleteExercise(id);
 }
 
 // Session API
 export async function fetchSessions(): Promise<WorkoutSession[]> {
-  return request<WorkoutSession[]>(`${API_BASE}/sessions`);
+  return (await getDataSource()).getWorkoutSessions();
 }
 
 export async function fetchSession(id: string): Promise<WorkoutSessionWithLogs> {
-  return request<WorkoutSessionWithLogs>(`${API_BASE}/sessions/${id}`);
+  return (await getDataSource()).getWorkoutSession(id);
 }
 
 export async function startSession(workoutId: string): Promise<WorkoutSession> {
-  return request<WorkoutSession>(`${API_BASE}/sessions`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ workoutId }),
-  });
+  return (await getDataSource()).startWorkoutSession(workoutId);
 }
 
 export async function completeSession(
@@ -147,15 +111,11 @@ export async function completeSession(
   durationSeconds: number,
   notes?: string,
 ): Promise<WorkoutSession> {
-  return request<WorkoutSession>(`${API_BASE}/sessions/${id}/complete`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ durationSeconds, notes }),
-  });
+  return (await getDataSource()).completeWorkoutSession(id, durationSeconds, notes);
 }
 
 export async function deleteSession(id: string): Promise<void> {
-  return request<void>(`${API_BASE}/sessions/${id}`, { method: "DELETE" });
+  return (await getDataSource()).deleteWorkoutSession(id);
 }
 
 // Session Logs API
@@ -163,36 +123,30 @@ export async function addExerciseLog(
   sessionId: string,
   input: NewExerciseLogInput,
 ): Promise<ExerciseLog> {
-  return request<ExerciseLog>(`${API_BASE}/sessions/${sessionId}/logs`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(input),
-  });
+  return (await getDataSource()).addExerciseLog(sessionId, input);
 }
 
 export async function fetchSessionLogs(sessionId: string): Promise<ExerciseLog[]> {
-  return request<ExerciseLog[]>(`${API_BASE}/sessions/${sessionId}/logs`);
+  return (await getDataSource()).getExerciseLogs(sessionId);
 }
 
 // History API
 export async function fetchWorkoutHistory(): Promise<WorkoutSession[]> {
-  return request<WorkoutSession[]>(`${API_BASE}/history`);
+  return (await getDataSource()).getWorkoutHistory();
 }
 
 export async function fetchWorkoutStats(): Promise<WorkoutStats> {
-  return request<WorkoutStats>(`${API_BASE}/history/stats`);
+  return (await getDataSource()).getWorkoutStats();
 }
 
 export async function fetchRecentSessions(limit = 10): Promise<WorkoutSession[]> {
-  return request<WorkoutSession[]>(`${API_BASE}/history/recent?limit=${limit}`);
+  return (await getDataSource()).getRecentWorkoutSessions(limit);
 }
 
 export async function fetchExerciseProgress(exerciseId: string): Promise<ExerciseProgressPoint[]> {
-  return request<ExerciseProgressPoint[]>(`${API_BASE}/exercises/${exerciseId}/progress`);
+  return (await getDataSource()).getExerciseProgress(exerciseId);
 }
 
 export async function cancelSession(sessionId: string): Promise<void> {
-  return request<void>(`${API_BASE}/sessions/${sessionId}`, {
-    method: "DELETE",
-  });
+  return (await getDataSource()).cancelWorkoutSession(sessionId);
 }

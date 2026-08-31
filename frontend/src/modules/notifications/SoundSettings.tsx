@@ -1,6 +1,6 @@
 import type { NotificationSoundType } from "@lifeos/contracts";
 import { useCallback, useEffect, useState } from "react";
-import { api } from "../../lib/api.js";
+import { getDataSource } from "../../lib/dataSource.js";
 import { useLocalStorage } from "../../lib/hooks/useLocalStorage.js";
 import { playNotificationSound } from "./sound-player.js";
 import { SOUND_PRESET_OPTIONS, type SoundPreset } from "./sound-presets.js";
@@ -18,7 +18,8 @@ export function SoundSettings() {
 
   const fetchSoundPreference = useCallback(async () => {
     try {
-      const data = await api.getSoundSettings();
+      const ds = await getDataSource();
+      const data = await ds.getSoundSettings();
       if (data.soundType) {
         setSelectedSound(data.soundType as SoundPreset);
         setCachedSound(data.soundType as SoundPreset);
@@ -40,7 +41,8 @@ export function SoundSettings() {
     setSelectedSound(soundType);
     setCachedSound(soundType);
     try {
-      await api.updateSoundSettings(soundType as NotificationSoundType);
+      const ds = await getDataSource();
+      await ds.updateSoundSettings(soundType as NotificationSoundType);
       setSavedMessage("Sound preference saved");
       setTimeout(() => setSavedMessage(null), 2500);
     } catch {

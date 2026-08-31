@@ -32,7 +32,7 @@ export class SqliteLearningResourceRepository implements LearningResourceReposit
 
   async getById(id: string): Promise<LearningResource | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM learning_resources WHERE id = ?",
+      sql: "SELECT * FROM learning_resources WHERE id = ? AND deleted_at IS NULL",
       args: [id],
     });
     const row = res.rows[0] as unknown as LearningResourceRow | undefined;
@@ -41,7 +41,7 @@ export class SqliteLearningResourceRepository implements LearningResourceReposit
 
   async getBySkillArea(skillAreaId: string): Promise<LearningResource[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM learning_resources WHERE skill_area_id = ? ORDER BY title",
+      sql: "SELECT * FROM learning_resources WHERE skill_area_id = ? AND deleted_at IS NULL ORDER BY title",
       args: [skillAreaId],
     });
     const rows = res.rows as unknown as LearningResourceRow[];
@@ -49,7 +49,9 @@ export class SqliteLearningResourceRepository implements LearningResourceReposit
   }
 
   async getAll(): Promise<LearningResource[]> {
-    const res = await this.client.execute("SELECT * FROM learning_resources ORDER BY title");
+    const res = await this.client.execute(
+      "SELECT * FROM learning_resources WHERE deleted_at IS NULL ORDER BY title",
+    );
     const rows = res.rows as unknown as LearningResourceRow[];
     return rows.map(rowToResource);
   }
@@ -110,16 +112,17 @@ export class SqliteLearningResourceRepository implements LearningResourceReposit
     values.push(id);
 
     await this.client.execute({
-      sql: `UPDATE learning_resources SET ${fields.join(", ")} WHERE id = ?`,
+      sql: `UPDATE learning_resources SET ${fields.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
       args: values,
     });
     return await this.getById(id);
   }
 
   async delete(id: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM learning_resources WHERE id = ?",
-      args: [id],
+      sql: "UPDATE learning_resources SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, now, id],
     });
     return res.rowsAffected > 0;
   }

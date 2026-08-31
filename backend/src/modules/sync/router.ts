@@ -1,4 +1,4 @@
-import type { Client } from "@libsql/client";
+import type { Client, InValue } from "@libsql/client";
 import { Router } from "express";
 
 const TABLES_WITH_USER_ID = new Set([
@@ -89,11 +89,11 @@ export function createSyncRouter(client: Client): Router {
       const { lastSyncAt, changes, forceFull } = req.body || {};
       const shouldFilterByTime = Boolean(lastSyncAt) && !forceFull;
 
-      // 1. Apply incoming client changes (Last-write-wins)
+      // 1. Apply incoming client changes in topological order (Last-write-wins)
       if (changes && typeof changes === "object") {
-        for (const [table, rows] of Object.entries(changes)) {
-          if (!SYNCABLE_TABLES.includes(table as (typeof SYNCABLE_TABLES)[number])) continue;
-          if (!Array.isArray(rows)) continue;
+        for (const table of SYNCABLE_TABLES) {
+          const rows = (changes as Record<string, unknown[]>)[table];
+          if (!rows || !Array.isArray(rows)) continue;
 
           const hasUserId = TABLES_WITH_USER_ID.has(table);
           const primaryKey = table === "settings" ? "key" : "id";
@@ -101,7 +101,7 @@ export function createSyncRouter(client: Client): Router {
 
           for (const rawRow of rows) {
             if (!rawRow || typeof rawRow !== "object") continue;
-            const row = { ...rawRow };
+            const row = { ...(rawRow as Record<string, unknown>) };
             if (hasUserId) {
               row.user_id = userId;
             }
@@ -129,7 +129,7 @@ export function createSyncRouter(client: Client): Router {
               : `INSERT INTO ${table} (${columns}) VALUES (${placeholders})`;
 
             try {
-              await client.execute({ sql, args: values });
+              await client.execute({ sql, args: values as InValue[] });
             } catch (err) {
               console.warn(`Sync row insert failed for ${table}:`, err);
             }

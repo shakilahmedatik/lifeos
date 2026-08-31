@@ -123,10 +123,10 @@ export class SyncEngine {
 
       let pulledCount = 0;
 
-      // 4. Upsert remote server changes into local SQLite
+      // 4. Upsert remote server changes into local SQLite in topological order
       if (response.serverChanges) {
-        for (const [table, rows] of Object.entries(response.serverChanges)) {
-          if (!SYNCABLE_TABLES.includes(table as SyncableTableName)) continue;
+        for (const table of SYNCABLE_TABLES) {
+          const rows = response.serverChanges[table];
           if (Array.isArray(rows)) {
             for (const row of rows) {
               await this.upsertRemoteRow(db, table, row);
@@ -212,13 +212,13 @@ export class SyncEngine {
     const columns = procKeys.join(", ");
     const values = procKeys.map((k) => processedRow[k]);
 
+    const primaryKey = table === "settings" ? "key" : "id";
     const updateClause = procKeys
-      .filter((k) => k !== "id" && k !== "key")
+      .filter((k) => k !== primaryKey)
       .map((k) => `${k} = excluded.${k}`)
       .join(", ");
 
-    const primaryKey = table === "settings" ? "key" : "id";
-    const sql = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) ON CONFLICT(${primaryKey}) DO UPDATE SET ${updateClause}`;
+    const sql = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) ON CONFLICT(${primaryKey}) DO UPDATE SET ${updateClause} WHERE ${table}._sync_status != 'pending' OR ${table}._sync_status IS NULL`;
 
     await db.execute(sql, values);
   }

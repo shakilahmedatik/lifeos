@@ -66,7 +66,7 @@ export function createSqliteRssFeedRepository(
 
   return {
     async getById(id: string, userId?: string): Promise<RssFeed | undefined> {
-      let sql = "SELECT * FROM rss_feeds WHERE id = ?";
+      let sql = "SELECT * FROM rss_feeds WHERE id = ? AND deleted_at IS NULL";
       const args: (string | number)[] = [id];
 
       if (userId !== undefined) {
@@ -86,14 +86,14 @@ export function createSqliteRssFeedRepository(
         await ensureDefaults(userId);
         const filter = getUserFilter(userId);
         const res = await client.execute({
-          sql: `SELECT * FROM rss_feeds WHERE ${filter.clause} ORDER BY created_at DESC`,
+          sql: `SELECT * FROM rss_feeds WHERE ${filter.clause} AND deleted_at IS NULL ORDER BY created_at DESC`,
           args: filter.args,
         });
         const rows = res.rows as unknown as Record<string, unknown>[];
         return rows.map(mapRowToRssFeed);
       }
 
-      const res = await client.execute("SELECT * FROM rss_feeds ORDER BY created_at DESC");
+      const res = await client.execute("SELECT * FROM rss_feeds WHERE deleted_at IS NULL ORDER BY created_at DESC");
       const rows = res.rows as unknown as Record<string, unknown>[];
       return rows.map(mapRowToRssFeed);
     },
@@ -103,7 +103,7 @@ export function createSqliteRssFeedRepository(
         await ensureDefaults(userId);
         const filter = getUserFilter(userId);
         const res = await client.execute({
-          sql: `SELECT * FROM rss_feeds WHERE status = 'active' AND ${filter.clause} ORDER BY created_at DESC`,
+          sql: `SELECT * FROM rss_feeds WHERE status = 'active' AND ${filter.clause} AND deleted_at IS NULL ORDER BY created_at DESC`,
           args: filter.args,
         });
         const rows = res.rows as unknown as Record<string, unknown>[];
@@ -111,7 +111,7 @@ export function createSqliteRssFeedRepository(
       }
 
       const res = await client.execute(
-        "SELECT * FROM rss_feeds WHERE status = 'active' ORDER BY created_at DESC",
+        "SELECT * FROM rss_feeds WHERE status = 'active' AND deleted_at IS NULL ORDER BY created_at DESC",
       );
       const rows = res.rows as unknown as Record<string, unknown>[];
       return rows.map(mapRowToRssFeed);
@@ -119,14 +119,14 @@ export function createSqliteRssFeedRepository(
 
     async getAllActiveAcrossUsers(): Promise<RssFeed[]> {
       const res = await client.execute(
-        "SELECT * FROM rss_feeds WHERE status = 'active' ORDER BY created_at DESC",
+        "SELECT * FROM rss_feeds WHERE status = 'active' AND deleted_at IS NULL ORDER BY created_at DESC",
       );
       const rows = res.rows as unknown as Record<string, unknown>[];
       return rows.map(mapRowToRssFeed);
     },
 
     async getByUrl(url: string, userId?: string): Promise<RssFeed | undefined> {
-      let sql = "SELECT * FROM rss_feeds WHERE url = ?";
+      let sql = "SELECT * FROM rss_feeds WHERE url = ? AND deleted_at IS NULL";
       const args: (string | number)[] = [url];
 
       if (userId !== undefined) {
@@ -186,7 +186,7 @@ export function createSqliteRssFeedRepository(
       values.push(new Date().toISOString());
       values.push(id);
 
-      let sql = `UPDATE rss_feeds SET ${updates.join(", ")} WHERE id = ?`;
+      let sql = `UPDATE rss_feeds SET ${updates.join(", ")} WHERE id = ? AND deleted_at IS NULL`;
       if (userId !== undefined) {
         const filter = getUserFilter(userId);
         sql += ` AND ${filter.clause}`;
@@ -203,7 +203,7 @@ export function createSqliteRssFeedRepository(
       userId?: string,
     ): Promise<RssFeed | undefined> {
       const now = new Date().toISOString();
-      let sql = "UPDATE rss_feeds SET status = ?, updated_at = ? WHERE id = ?";
+      let sql = "UPDATE rss_feeds SET status = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL";
       const args: (string | number)[] = [status, now, id];
 
       if (userId !== undefined) {
@@ -223,11 +223,11 @@ export function createSqliteRssFeedRepository(
     ): Promise<RssFeed | undefined> {
       const now = new Date().toISOString();
       await client.execute({
-        sql: "UPDATE rss_feeds SET last_fetched_at = ?, last_fetch_error = ?, updated_at = ? WHERE id = ?",
+        sql: "UPDATE rss_feeds SET last_fetched_at = ?, last_fetch_error = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
         args: [lastFetchedAt, lastFetchError || null, now, id],
       });
       const res = await client.execute({
-        sql: "SELECT * FROM rss_feeds WHERE id = ?",
+        sql: "SELECT * FROM rss_feeds WHERE id = ? AND deleted_at IS NULL",
         args: [id],
       });
       const row = res.rows[0] as unknown as Record<string, unknown> | undefined;
@@ -235,9 +235,10 @@ export function createSqliteRssFeedRepository(
     },
 
     async delete(id: string, userId?: string): Promise<boolean> {
-      let articlesSql = "DELETE FROM news_articles WHERE feed_id = ?";
-      let feedsSql = "DELETE FROM rss_feeds WHERE id = ?";
-      const args: (string | number)[] = [id];
+      const now = new Date().toISOString();
+      let articlesSql = "UPDATE news_articles SET deleted_at = ?, updated_at = ? WHERE feed_id = ? AND deleted_at IS NULL";
+      let feedsSql = "UPDATE rss_feeds SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL";
+      const args: (string | number)[] = [now, now, id];
 
       if (userId !== undefined) {
         const filter = getUserFilter(userId);

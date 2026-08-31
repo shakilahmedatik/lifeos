@@ -10,7 +10,13 @@ import {
   type DashboardSkillProgress,
   type DashboardSummary,
   type DashboardWorkoutDay,
+  type DayOfWeek,
   DEFAULT_FINANCE_CATEGORIES,
+  type EquipmentType,
+  type Exercise,
+  type ExerciseLog,
+  type ExerciseProgressPoint,
+  type FeedStatus,
   type FinanceDashboardWidget,
   getClientDateString,
   type HabitAnalyticsData,
@@ -22,8 +28,11 @@ import {
   type LearningResource,
   type LearningUnit,
   type MonthlySummary,
+  type MuscleGroup,
   type NewAccountInput,
   type NewCategoryInput,
+  type NewExerciseInput,
+  type NewExerciseLogInput,
   type NewHabitDefinitionInput,
   type NewLearningLogInput,
   type NewLearningResourceInput,
@@ -31,8 +40,11 @@ import {
   type NewReminderInput,
   type NewRoutineCategoryInput,
   type NewSkillAreaInput,
+  type NewsArticle,
   type NewTaskInput,
   type NewTransactionInput,
+  type NewWorkoutExerciseInput,
+  type NewWorkoutInput,
   type Notification,
   type NotificationSoundType,
   type NotificationWithTask,
@@ -41,6 +53,7 @@ import {
   type ResourceWithProgress,
   type RoutineCategory,
   type RoutineStats,
+  type RssFeed,
   type SkillArea,
   type SkillAreaSummary,
   SYSTEM_CATEGORY_TRANSFER_IN_ID,
@@ -48,6 +61,7 @@ import {
   type Task,
   type TaskCategory,
   type TaskHistoryQuery,
+  type TaskRecurrence,
   type TaskStatus,
   type Transaction,
   type UpdateLearningLogInput,
@@ -56,6 +70,12 @@ import {
   type UpdateRoutineCategoryInput,
   type UpdateSkillAreaInput,
   type WeeklySummary,
+  type Workout,
+  type WorkoutExercise,
+  type WorkoutSession,
+  type WorkoutSessionWithLogs,
+  type WorkoutStats,
+  type WorkoutWithExercises,
 } from "@lifeos/contracts";
 import { getLocalDb } from "./index.js";
 
@@ -250,10 +270,31 @@ export const localDal = {
       "UPDATE tasks SET status = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
       [status, now, id],
     );
-    const rows = await localDal.getTasks(now.split("T")[0]);
-    const found = rows.find((t) => t.id === id);
-    if (!found) throw new Error("Task not found");
-    return found;
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM tasks WHERE id = ? AND deleted_at IS NULL",
+      [id],
+    );
+    if (rows.length === 0) throw new Error("Task not found");
+    const r = rows[0];
+    return {
+      id: String(r.id),
+      title: String(r.title),
+      category: r.category as TaskCategory,
+      date: String(r.date),
+      startTime: String(r.start_time),
+      endTime: String(r.end_time),
+      status: (r.status as TaskStatus) || "planned",
+      notes: r.notes ? String(r.notes) : undefined,
+      reminderMinutesBefore:
+        typeof r.reminder_minutes_before === "number" ? r.reminder_minutes_before : undefined,
+      reminderSilent: r.reminder_sound === 0,
+      recurrence: (r.recurrence as TaskRecurrence) || "none",
+      isOvernight: String(r.start_time) > String(r.end_time),
+      subtasks: r.subtasks ? JSON.parse(String(r.subtasks)) : [],
+      referenceId: r.reference_id ? String(r.reference_id) : undefined,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    };
   },
 
   updateTask: async (
@@ -548,7 +589,7 @@ export const localDal = {
     // Reassign tasks
     const catName = String(existing.name).toLowerCase();
     await db.execute(
-      `UPDATE tasks SET category = ?, updated_at = ?, _sync_status = 'pending' 
+      `UPDATE tasks SET category = ?, updated_at = ?, _sync_status = 'pending'
        WHERE (category = ? OR lower(category) = ?) AND deleted_at IS NULL`,
       [fallback, new Date().toISOString(), id, catName],
     );
@@ -671,6 +712,13 @@ export const localDal = {
     return found;
   },
 
+  getHabit: async (id: string): Promise<HabitDefinition> => {
+    const habits = await localDal.getHabits();
+    const habit = habits.find((h) => h.id === id);
+    if (!habit) throw new Error("Habit not found");
+    return habit;
+  },
+
   deleteHabit: async (id: string): Promise<void> => {
     const db = await getLocalDb();
     const now = new Date().toISOString();
@@ -678,6 +726,40 @@ export const localDal = {
       "UPDATE habits SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
       [now, now, id],
     );
+  },
+
+  archiveHabit: async (id: string, archived: boolean): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE habits SET archived = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [archived ? 1 : 0, now, id],
+    );
+  },
+
+  reorderHabits: async (orders: { id: string; sortOrder: number }[]): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    for (const order of orders) {
+      await db.execute(
+        "UPDATE habits SET sort_order = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+        [order.sortOrder, now, order.id],
+      );
+    }
+  },
+
+  exportHabits: async (): Promise<{ habits: HabitDefinition[] }> => {
+    const habits = await localDal.getHabits();
+    return { habits };
+  },
+
+  importHabits: async (data: unknown): Promise<void> => {
+    if (!data || typeof data !== "object") return;
+    const parsed = data as { habits?: NewHabitDefinitionInput[] };
+    if (!Array.isArray(parsed.habits)) return;
+    for (const habit of parsed.habits) {
+      await localDal.createHabit(habit);
+    }
   },
 
   logHabit: async (
@@ -1096,9 +1178,15 @@ export const localDal = {
   updateSkillArea: async (id: string, patch: UpdateSkillAreaInput): Promise<SkillArea> => {
     const db = await getLocalDb();
     const now = new Date().toISOString();
+    const existing = (await localDal.getSkillAreas()).find((a) => a.id === id);
+    if (!existing) throw new Error("Skill area not found");
+
+    const name = patch.name ?? existing.name;
+    const weeklyGoalHours = patch.weeklyGoalHours ?? existing.weeklyGoalHours;
+
     await db.execute(
-      "UPDATE skill_areas SET name = coalesce(?, name), updated_at = ?, _sync_status = 'pending' WHERE id = ?",
-      [patch.name ?? null, now, id],
+      "UPDATE skill_areas SET name = ?, weekly_goal_hours = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [name, weeklyGoalHours, now, id],
     );
     const found = (await localDal.getSkillAreas()).find((a) => a.id === id);
     if (!found) throw new Error("Skill area not found");
@@ -1188,9 +1276,18 @@ export const localDal = {
   ): Promise<LearningResource> => {
     const db = await getLocalDb();
     const now = new Date().toISOString();
+    const existing = (await localDal.getLearningResources()).find((r) => r.id === id);
+    if (!existing) throw new Error("Resource not found");
+
+    const title = patch.title ?? existing.title;
+    const type = patch.type ?? existing.type;
+    const skillAreaId = patch.skillAreaId ?? existing.skillAreaId;
+    const totalUnits = patch.totalUnits !== undefined ? patch.totalUnits : existing.totalUnits;
+    const unit = patch.unit !== undefined ? patch.unit : existing.unit;
+
     await db.execute(
-      "UPDATE learning_resources SET title = coalesce(?, title), updated_at = ?, _sync_status = 'pending' WHERE id = ?",
-      [patch.title ?? null, now, id],
+      "UPDATE learning_resources SET title = ?, type = ?, skill_area_id = ?, total_units = ?, unit = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [title, type, skillAreaId, totalUnits ?? null, unit ?? null, now, id],
     );
     const found = (await localDal.getLearningResources()).find((r) => r.id === id);
     if (!found) throw new Error("Resource not found");
@@ -1266,14 +1363,44 @@ export const localDal = {
   updateLearningLog: async (id: string, patch: UpdateLearningLogInput): Promise<LearningLog> => {
     const db = await getLocalDb();
     const now = new Date().toISOString();
-    await db.execute(
-      "UPDATE learning_logs SET minutes_spent = coalesce(?, minutes_spent), updated_at = ?, _sync_status = 'pending' WHERE id = ?",
-      [patch.minutesSpent ?? null, now, id],
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM learning_logs WHERE id = ? AND deleted_at IS NULL",
+      [id],
     );
-    const all = await localDal.getLearningLogsByRange("2000-01-01", "2099-12-31");
-    const found = all.find((l) => l.id === id);
-    if (!found) throw new Error("Log not found");
-    return found;
+    if (rows.length === 0) throw new Error("Log not found");
+    const existing = rows[0];
+
+    const date = patch.date ?? String(existing.date);
+    const minutesSpent = patch.minutesSpent ?? Number(existing.minutes_spent);
+    const unitsCompleted =
+      patch.unitsCompleted !== undefined
+        ? patch.unitsCompleted
+        : typeof existing.units_completed === "number"
+          ? existing.units_completed
+          : null;
+    const notes =
+      patch.notes !== undefined ? patch.notes : existing.notes ? String(existing.notes) : null;
+
+    await db.execute(
+      "UPDATE learning_logs SET date = ?, minutes_spent = ?, units_completed = ?, notes = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [date, minutesSpent, unitsCompleted, notes, now, id],
+    );
+    const updatedRows = await db.select<SqliteRow[]>(
+      "SELECT * FROM learning_logs WHERE id = ? AND deleted_at IS NULL",
+      [id],
+    );
+    if (updatedRows.length === 0) throw new Error("Log not found");
+    const r = updatedRows[0];
+    return {
+      id: String(r.id),
+      resourceId: String(r.resource_id),
+      date: String(r.date),
+      minutesSpent: Number(r.minutes_spent),
+      unitsCompleted: typeof r.units_completed === "number" ? r.units_completed : undefined,
+      notes: r.notes ? String(r.notes) : undefined,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    };
   },
 
   deleteLearningLog: async (id: string): Promise<void> => {
@@ -1323,6 +1450,41 @@ export const localDal = {
 
   getProgressBatch: async (resourceIds: string[]): Promise<ResourceWithProgress[]> => {
     return Promise.all(resourceIds.map((id) => localDal.getResourceProgress(id)));
+  },
+
+  importBackup: async (input: {
+    areas: NewSkillAreaInput[];
+    resources: NewLearningResourceInput[];
+    logs: NewLearningLogInput[];
+  }): Promise<{
+    success: boolean;
+    areasCreated: number;
+    resourcesCreated: number;
+    logsCreated: number;
+  }> => {
+    let areasCreated = 0;
+    let resourcesCreated = 0;
+    let logsCreated = 0;
+
+    for (const area of input.areas) {
+      await localDal.createSkillArea(area);
+      areasCreated++;
+    }
+    for (const res of input.resources) {
+      await localDal.createLearningResource(res);
+      resourcesCreated++;
+    }
+    for (const log of input.logs) {
+      await localDal.logLearningSession(log);
+      logsCreated++;
+    }
+
+    return {
+      success: true,
+      areasCreated,
+      resourcesCreated,
+      logsCreated,
+    };
   },
 
   // --- Finance ---
@@ -1602,7 +1764,7 @@ export const localDal = {
     if (existing.isSystem) throw new Error("Cannot modify system category");
     if (
       patch.name &&
-      RESERVED_CATEGORY_NAMES.some((n) => n.toLowerCase() === patch.name!.trim().toLowerCase())
+      RESERVED_CATEGORY_NAMES.some((n) => n.toLowerCase() === patch.name?.trim().toLowerCase())
     ) {
       throw new Error("Cannot rename to reserved system category name");
     }
@@ -1691,12 +1853,12 @@ export const localDal = {
   ): Promise<Transaction[]> => {
     const db = await getLocalDb();
     const rows = await db.select<SqliteRow[]>(
-      `SELECT * FROM transactions 
-       WHERE deleted_at IS NULL 
+      `SELECT * FROM transactions
+       WHERE deleted_at IS NULL
          AND (
            substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?
            OR (date >= ? AND (date <= ? OR date <= ? || 'T23:59:59.999Z' OR date <= ? || ' 23:59:59'))
-         ) 
+         )
        ORDER BY date DESC, created_at DESC`,
       [startDate, endDate, startDate, endDate, endDate, endDate],
     );
@@ -2229,9 +2391,9 @@ export const localDal = {
         const goal = Number(area.weekly_goal_hours) || 5;
 
         const logs = await db.select<SqliteRow[]>(
-          `SELECT l.minutes_spent 
-           FROM learning_logs l 
-           JOIN learning_resources r ON l.resource_id = r.id 
+          `SELECT l.minutes_spent
+           FROM learning_logs l
+           JOIN learning_resources r ON l.resource_id = r.id
            WHERE r.skill_area_id = ? AND l.date >= ? AND l.date <= ? AND l.deleted_at IS NULL`,
           [areaId, mondayStr, today],
         );
@@ -2502,6 +2664,801 @@ export const localDal = {
     return { soundType };
   },
 
+  // --- Workouts ---
+  getWorkouts: async (): Promise<Workout[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(`
+      SELECT w.*, COUNT(we.id) as exercise_count
+      FROM workouts w
+      LEFT JOIN workout_exercises we ON w.id = we.workout_id AND we.deleted_at IS NULL
+      WHERE w.deleted_at IS NULL
+      GROUP BY w.id
+      ORDER BY w.created_at DESC
+    `);
+    return rows.map((r) => ({
+      id: String(r.id),
+      name: String(r.name),
+      description: r.description ? String(r.description) : undefined,
+      scheduledDay: r.scheduled_day ? (r.scheduled_day as DayOfWeek) : undefined,
+      scheduledTime: r.scheduled_time ? String(r.scheduled_time) : undefined,
+      exerciseCount: Number(r.exercise_count) || 0,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    }));
+  },
+
+  getWorkout: async (id: string): Promise<WorkoutWithExercises> => {
+    const db = await getLocalDb();
+    const wRows = await db.select<SqliteRow[]>(
+      "SELECT * FROM workouts WHERE id = ? AND deleted_at IS NULL",
+      [id],
+    );
+    if (wRows.length === 0) throw new Error("Workout not found");
+    const w = wRows[0];
+
+    const exRows = await db.select<SqliteRow[]>(
+      "SELECT * FROM workout_exercises WHERE workout_id = ? AND deleted_at IS NULL ORDER BY order_index ASC",
+      [id],
+    );
+    const exercises: WorkoutExercise[] = exRows.map((r) => ({
+      id: String(r.id),
+      workoutId: String(r.workout_id),
+      exerciseId: String(r.exercise_id),
+      sets: Number(r.sets),
+      reps: Number(r.reps),
+      repsArray: r.reps_per_set ? JSON.parse(String(r.reps_per_set)) : undefined,
+      weight: typeof r.weight === "number" ? r.weight : undefined,
+      weights: r.weight_per_set ? JSON.parse(String(r.weight_per_set)) : undefined,
+      restSeconds: Number(r.rest_seconds) || 60,
+      orderIndex: Number(r.order_index) || 0,
+      createdAt: String(r.created_at),
+    }));
+
+    return {
+      id: String(w.id),
+      name: String(w.name),
+      description: w.description ? String(w.description) : undefined,
+      scheduledDay: w.scheduled_day ? (w.scheduled_day as DayOfWeek) : undefined,
+      scheduledTime: w.scheduled_time ? String(w.scheduled_time) : undefined,
+      exerciseCount: exercises.length,
+      exercises,
+      createdAt: String(w.created_at),
+      updatedAt: String(w.updated_at),
+    };
+  },
+
+  createWorkout: async (input: NewWorkoutInput): Promise<Workout> => {
+    const db = await getLocalDb();
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    const workout: Workout = {
+      id,
+      name: input.name,
+      description: input.description,
+      scheduledDay: input.scheduledDay,
+      scheduledTime: input.scheduledTime,
+      exerciseCount: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await db.execute(
+      `INSERT INTO workouts (id, user_id, name, description, scheduled_day, scheduled_time, created_at, updated_at, _sync_status)
+       VALUES (?, '', ?, ?, ?, ?, ?, ?, 'pending')`,
+      [
+        workout.id,
+        workout.name,
+        workout.description ?? null,
+        workout.scheduledDay ?? null,
+        workout.scheduledTime ?? null,
+        now,
+        now,
+      ],
+    );
+
+    return workout;
+  },
+
+  updateWorkout: async (id: string, patch: Partial<NewWorkoutInput>): Promise<Workout> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    const existing = await localDal.getWorkout(id);
+    if (!existing) throw new Error("Workout not found");
+
+    const name = patch.name ?? existing.name;
+    const description = patch.description !== undefined ? patch.description : existing.description;
+    const scheduledDay =
+      patch.scheduledDay !== undefined ? patch.scheduledDay : existing.scheduledDay;
+    const scheduledTime =
+      patch.scheduledTime !== undefined ? patch.scheduledTime : existing.scheduledTime;
+
+    await db.execute(
+      `UPDATE workouts SET name = ?, description = ?, scheduled_day = ?, scheduled_time = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?`,
+      [name, description ?? null, scheduledDay ?? null, scheduledTime ?? null, now, id],
+    );
+
+    return {
+      id,
+      name,
+      description,
+      scheduledDay,
+      scheduledTime,
+      exerciseCount: existing.exerciseCount,
+      createdAt: existing.createdAt,
+      updatedAt: now,
+    };
+  },
+
+  deleteWorkout: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE workouts SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, now, id],
+    );
+  },
+
+  addExerciseToWorkout: async (
+    workoutId: string,
+    exerciseId: string,
+    input: NewWorkoutExerciseInput,
+  ): Promise<WorkoutExercise> => {
+    const db = await getLocalDb();
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    const we: WorkoutExercise = {
+      id,
+      workoutId,
+      exerciseId,
+      sets: input.sets ?? 3,
+      reps: input.reps ?? 10,
+      repsArray: input.repsArray,
+      weight: input.weight,
+      weights: input.weights,
+      restSeconds: input.restSeconds ?? 60,
+      orderIndex: input.orderIndex ?? 0,
+      createdAt: now,
+    };
+
+    await db.execute(
+      `INSERT INTO workout_exercises (id, workout_id, exercise_id, sets, reps, reps_per_set, weight, weight_per_set, rest_seconds, order_index, created_at, _sync_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [
+        we.id,
+        we.workoutId,
+        we.exerciseId,
+        we.sets,
+        we.reps,
+        we.repsArray ? JSON.stringify(we.repsArray) : null,
+        we.weight ?? null,
+        we.weights ? JSON.stringify(we.weights) : null,
+        we.restSeconds,
+        we.orderIndex,
+        now,
+      ],
+    );
+
+    return we;
+  },
+
+  updateWorkoutExercise: async (
+    workoutId: string,
+    exerciseId: string,
+    patch: Partial<NewWorkoutExerciseInput>,
+  ): Promise<WorkoutExercise> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM workout_exercises WHERE workout_id = ? AND exercise_id = ? AND deleted_at IS NULL",
+      [workoutId, exerciseId],
+    );
+    if (rows.length === 0) throw new Error("Workout exercise not found");
+    const existing = rows[0];
+
+    const sets = patch.sets ?? Number(existing.sets);
+    const reps = patch.reps ?? Number(existing.reps);
+    const repsArray =
+      patch.repsArray !== undefined
+        ? patch.repsArray
+        : existing.reps_per_set
+          ? JSON.parse(String(existing.reps_per_set))
+          : undefined;
+    const weight =
+      patch.weight !== undefined
+        ? patch.weight
+        : typeof existing.weight === "number"
+          ? existing.weight
+          : undefined;
+    const weights =
+      patch.weights !== undefined
+        ? patch.weights
+        : existing.weight_per_set
+          ? JSON.parse(String(existing.weight_per_set))
+          : undefined;
+    const restSeconds = patch.restSeconds ?? Number(existing.rest_seconds);
+    const orderIndex = patch.orderIndex ?? Number(existing.order_index);
+
+    await db.execute(
+      `UPDATE workout_exercises SET sets = ?, reps = ?, reps_per_set = ?, weight = ?, weight_per_set = ?, rest_seconds = ?, order_index = ?, _sync_status = 'pending' WHERE id = ?`,
+      [
+        sets,
+        reps,
+        repsArray ? JSON.stringify(repsArray) : null,
+        weight ?? null,
+        weights ? JSON.stringify(weights) : null,
+        restSeconds,
+        orderIndex,
+        existing.id,
+      ],
+    );
+
+    return {
+      id: String(existing.id),
+      workoutId,
+      exerciseId,
+      sets,
+      reps,
+      repsArray,
+      weight,
+      weights,
+      restSeconds,
+      orderIndex,
+      createdAt: String(existing.created_at),
+    };
+  },
+
+  removeExerciseFromWorkout: async (workoutId: string, exerciseId: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE workout_exercises SET deleted_at = ?, _sync_status = 'pending' WHERE workout_id = ? AND exercise_id = ?",
+      [now, workoutId, exerciseId],
+    );
+  },
+
+  reorderWorkoutExercises: async (workoutId: string, exerciseIds: string[]): Promise<void> => {
+    const db = await getLocalDb();
+    for (let i = 0; i < exerciseIds.length; i++) {
+      await db.execute(
+        "UPDATE workout_exercises SET order_index = ?, _sync_status = 'pending' WHERE id = ? AND workout_id = ?",
+        [i, exerciseIds[i], workoutId],
+      );
+    }
+  },
+
+  getExercises: async (): Promise<Exercise[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM exercises WHERE deleted_at IS NULL ORDER BY name ASC",
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      name: String(r.name),
+      muscleGroup: (r.category || r.muscle_group || "general") as MuscleGroup,
+      equipment: (r.equipment as EquipmentType) || "other",
+      videoUrl: r.video_url ? String(r.video_url) : undefined,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at || r.created_at),
+    }));
+  },
+
+  getExercise: async (id: string): Promise<Exercise> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM exercises WHERE id = ? AND deleted_at IS NULL",
+      [id],
+    );
+    if (rows.length === 0) throw new Error("Exercise not found");
+    const r = rows[0];
+    return {
+      id: String(r.id),
+      name: String(r.name),
+      muscleGroup: (r.category || r.muscle_group || "general") as MuscleGroup,
+      equipment: (r.equipment as EquipmentType) || "other",
+      videoUrl: r.video_url ? String(r.video_url) : undefined,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at || r.created_at),
+    };
+  },
+
+  createExercise: async (input: NewExerciseInput): Promise<Exercise> => {
+    const db = await getLocalDb();
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    const ex: Exercise = {
+      id,
+      name: input.name,
+      muscleGroup: input.muscleGroup || "general",
+      equipment: input.equipment || "other",
+      videoUrl: input.videoUrl,
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await db.execute(
+      `INSERT INTO exercises (id, name, category, equipment, video_url, created_at, updated_at, _sync_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [ex.id, ex.name, ex.muscleGroup, ex.equipment, ex.videoUrl ?? null, now, now],
+    );
+
+    return ex;
+  },
+
+  updateExercise: async (id: string, patch: Partial<NewExerciseInput>): Promise<Exercise> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    const existing = await localDal.getExercise(id);
+    if (!existing) throw new Error("Exercise not found");
+
+    const name = patch.name ?? existing.name;
+    const muscleGroup = patch.muscleGroup ?? existing.muscleGroup;
+    const equipment = patch.equipment ?? existing.equipment;
+    const videoUrl = patch.videoUrl !== undefined ? patch.videoUrl : existing.videoUrl;
+
+    await db.execute(
+      `UPDATE exercises SET name = ?, category = ?, equipment = ?, video_url = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?`,
+      [name, muscleGroup, equipment, videoUrl ?? null, now, id],
+    );
+
+    return {
+      id,
+      name,
+      muscleGroup,
+      equipment,
+      videoUrl,
+      createdAt: existing.createdAt,
+      updatedAt: now,
+    };
+  },
+
+  deleteExercise: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE exercises SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, now, id],
+    );
+  },
+
+  getWorkoutSessions: async (): Promise<WorkoutSession[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM workout_sessions WHERE deleted_at IS NULL ORDER BY started_at DESC",
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      workoutId: String(r.workout_id),
+      startedAt: String(r.started_at),
+      completedAt: r.completed_at ? String(r.completed_at) : undefined,
+      durationSeconds: typeof r.duration_seconds === "number" ? r.duration_seconds : undefined,
+      notes: r.notes ? String(r.notes) : undefined,
+    }));
+  },
+
+  getWorkoutSession: async (id: string): Promise<WorkoutSessionWithLogs> => {
+    const db = await getLocalDb();
+    const sRows = await db.select<SqliteRow[]>(
+      "SELECT * FROM workout_sessions WHERE id = ? AND deleted_at IS NULL",
+      [id],
+    );
+    if (sRows.length === 0) throw new Error("Workout session not found");
+    const s = sRows[0];
+
+    const logRows = await db.select<SqliteRow[]>(
+      "SELECT * FROM exercise_logs WHERE session_id = ? AND deleted_at IS NULL ORDER BY exercise_id, set_number ASC",
+      [id],
+    );
+    const logs: ExerciseLog[] = logRows.map((r) => ({
+      id: String(r.id),
+      sessionId: String(r.session_id),
+      exerciseId: String(r.exercise_id),
+      setNumber: Number(r.set_number),
+      actualReps: Number(r.actual_reps),
+      actualWeight: typeof r.actual_weight === "number" ? r.actual_weight : undefined,
+      completedAt: String(r.completed_at),
+    }));
+
+    return {
+      id: String(s.id),
+      workoutId: String(s.workout_id),
+      startedAt: String(s.started_at),
+      completedAt: s.completed_at ? String(s.completed_at) : undefined,
+      durationSeconds: typeof s.duration_seconds === "number" ? s.duration_seconds : undefined,
+      notes: s.notes ? String(s.notes) : undefined,
+      logs,
+    };
+  },
+
+  startWorkoutSession: async (workoutId: string): Promise<WorkoutSession> => {
+    const db = await getLocalDb();
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    const session: WorkoutSession = {
+      id,
+      workoutId,
+      startedAt: now,
+    };
+
+    await db.execute(
+      `INSERT INTO workout_sessions (id, user_id, workout_id, started_at, _sync_status)
+       VALUES (?, '', ?, ?, 'pending')`,
+      [session.id, session.workoutId, now],
+    );
+
+    return session;
+  },
+
+  completeWorkoutSession: async (
+    id: string,
+    durationSeconds: number,
+    notes?: string,
+  ): Promise<WorkoutSession> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE workout_sessions SET completed_at = ?, duration_seconds = ?, notes = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, durationSeconds, notes ?? null, id],
+    );
+    const updated = await localDal.getWorkoutSession(id);
+    return {
+      id: updated.id,
+      workoutId: updated.workoutId,
+      startedAt: updated.startedAt,
+      completedAt: updated.completedAt,
+      durationSeconds: updated.durationSeconds,
+      notes: updated.notes,
+    };
+  },
+
+  deleteWorkoutSession: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE workout_sessions SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, now, id],
+    );
+  },
+
+  cancelWorkoutSession: async (sessionId: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE workout_sessions SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, now, sessionId],
+    );
+  },
+
+  addExerciseLog: async (sessionId: string, input: NewExerciseLogInput): Promise<ExerciseLog> => {
+    const db = await getLocalDb();
+    const id = crypto.randomUUID();
+    const now = new Date().toISOString();
+
+    const log: ExerciseLog = {
+      id,
+      sessionId,
+      exerciseId: input.exerciseId,
+      setNumber: input.setNumber,
+      actualReps: input.actualReps,
+      actualWeight: input.actualWeight,
+      completedAt: now,
+    };
+
+    await db.execute(
+      `INSERT INTO exercise_logs (id, session_id, exercise_id, set_number, actual_reps, actual_weight, completed_at, _sync_status)
+       VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')`,
+      [
+        log.id,
+        log.sessionId,
+        log.exerciseId,
+        log.setNumber,
+        log.actualReps,
+        log.actualWeight ?? null,
+        now,
+      ],
+    );
+
+    return log;
+  },
+
+  getExerciseLogs: async (sessionId: string): Promise<ExerciseLog[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM exercise_logs WHERE session_id = ? AND deleted_at IS NULL ORDER BY exercise_id, set_number ASC",
+      [sessionId],
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      sessionId: String(r.session_id),
+      exerciseId: String(r.exercise_id),
+      setNumber: Number(r.set_number),
+      actualReps: Number(r.actual_reps),
+      actualWeight: typeof r.actual_weight === "number" ? r.actual_weight : undefined,
+      completedAt: String(r.completed_at),
+    }));
+  },
+
+  getWorkoutHistory: async (): Promise<WorkoutSession[]> => {
+    return localDal.getWorkoutSessions();
+  },
+
+  getWorkoutStats: async (): Promise<WorkoutStats> => {
+    const db = await getLocalDb();
+    const workouts = await localDal.getWorkouts();
+    const sessions = await db.select<SqliteRow[]>(
+      "SELECT * FROM workout_sessions WHERE completed_at IS NOT NULL AND deleted_at IS NULL ORDER BY started_at DESC",
+    );
+    const totalSessions = sessions.length;
+    const totalDuration = sessions.reduce((acc, s) => acc + (Number(s.duration_seconds) || 0), 0);
+    const averageDuration = totalSessions > 0 ? Math.round(totalDuration / totalSessions) : 0;
+    const lastWorkoutDate = sessions.length > 0 ? String(sessions[0].started_at) : undefined;
+
+    return {
+      totalWorkouts: workouts.length,
+      totalSessions,
+      totalDuration,
+      averageDuration,
+      lastWorkoutDate,
+    };
+  },
+
+  getRecentWorkoutSessions: async (limit = 10): Promise<WorkoutSession[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM workout_sessions WHERE deleted_at IS NULL ORDER BY started_at DESC LIMIT ?",
+      [limit],
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      workoutId: String(r.workout_id),
+      startedAt: String(r.started_at),
+      completedAt: r.completed_at ? String(r.completed_at) : undefined,
+      durationSeconds: typeof r.duration_seconds === "number" ? r.duration_seconds : undefined,
+      notes: r.notes ? String(r.notes) : undefined,
+    }));
+  },
+
+  getExerciseProgress: async (exerciseId: string): Promise<ExerciseProgressPoint[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      `
+      SELECT
+        el.session_id,
+        ws.started_at as date,
+        MAX(el.actual_weight) as max_weight,
+        AVG(el.actual_reps) as avg_reps,
+        COUNT(*) as total_sets
+      FROM exercise_logs el
+      JOIN workout_sessions ws ON ws.id = el.session_id
+      WHERE el.exercise_id = ? AND ws.completed_at IS NOT NULL AND el.deleted_at IS NULL AND ws.deleted_at IS NULL
+      GROUP BY el.session_id
+      ORDER BY ws.started_at ASC
+    `,
+      [exerciseId],
+    );
+
+    return rows.map((row) => ({
+      sessionId: String(row.session_id),
+      date: String(row.date),
+      maxWeight: Number(row.max_weight) || 0,
+      avgReps: Math.round((Number(row.avg_reps) || 0) * 10) / 10,
+      totalSets: Number(row.total_sets) || 0,
+    }));
+  },
+
+  // --- News ---
+  getNewsFeeds: async (): Promise<RssFeed[]> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM rss_feeds WHERE deleted_at IS NULL ORDER BY created_at DESC",
+    );
+    return rows.map((r) => ({
+      id: String(r.id),
+      userId: r.user_id ? String(r.user_id) : undefined,
+      title: String(r.title),
+      url: String(r.url),
+      status: (r.status as FeedStatus) || "active",
+      lastFetchedAt: r.last_fetched_at ? String(r.last_fetched_at) : undefined,
+      lastFetchError: r.last_fetch_error ? String(r.last_fetch_error) : undefined,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    }));
+  },
+
+  getNewsFeed: async (id: string): Promise<RssFeed> => {
+    const db = await getLocalDb();
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM rss_feeds WHERE id = ? AND deleted_at IS NULL",
+      [id],
+    );
+    if (rows.length === 0) throw new Error("Feed not found");
+    const r = rows[0];
+    return {
+      id: String(r.id),
+      userId: r.user_id ? String(r.user_id) : undefined,
+      title: String(r.title),
+      url: String(r.url),
+      status: (r.status as FeedStatus) || "active",
+      lastFetchedAt: r.last_fetched_at ? String(r.last_fetched_at) : undefined,
+      lastFetchError: r.last_fetch_error ? String(r.last_fetch_error) : undefined,
+      createdAt: String(r.created_at),
+      updatedAt: String(r.updated_at),
+    };
+  },
+
+  createNewsFeed: async (input: { title: string; url: string }): Promise<RssFeed> => {
+    const db = await getLocalDb();
+    const id = `feed_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+    const now = new Date().toISOString();
+
+    const feed: RssFeed = {
+      id,
+      title: input.title,
+      url: input.url,
+      status: "active",
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    await db.execute(
+      `INSERT INTO rss_feeds (id, user_id, title, url, status, created_at, updated_at, _sync_status)
+       VALUES (?, '', ?, ?, 'active', ?, ?, 'pending')`,
+      [feed.id, feed.title, feed.url, now, now],
+    );
+
+    return feed;
+  },
+
+  updateNewsFeed: async (id: string, patch: { title?: string; url?: string }): Promise<RssFeed> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    const existing = await localDal.getNewsFeed(id);
+    if (!existing) throw new Error("Feed not found");
+
+    const title = patch.title ?? existing.title;
+    const url = patch.url ?? existing.url;
+
+    await db.execute(
+      `UPDATE rss_feeds SET title = ?, url = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?`,
+      [title, url, now, id],
+    );
+
+    return {
+      ...existing,
+      title,
+      url,
+      updatedAt: now,
+    };
+  },
+
+  deleteNewsFeed: async (id: string): Promise<void> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE news_articles SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE feed_id = ?",
+      [now, now, id],
+    );
+    await db.execute(
+      "UPDATE rss_feeds SET deleted_at = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, now, id],
+    );
+  },
+
+  toggleNewsFeedStatus: async (id: string): Promise<RssFeed> => {
+    const existing = await localDal.getNewsFeed(id);
+    const newStatus: FeedStatus = existing.status === "active" ? "inactive" : "active";
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE rss_feeds SET status = ?, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [newStatus, now, id],
+    );
+    return {
+      ...existing,
+      status: newStatus,
+      updatedAt: now,
+    };
+  },
+
+  refreshNewsFeed: async (id: string): Promise<{ newArticles: number }> => {
+    try {
+      const { refreshFeed } = await import("../../modules/news/api.js");
+      return await refreshFeed(id);
+    } catch {
+      return { newArticles: 0 };
+    }
+  },
+
+  refreshAllNewsFeeds: async (): Promise<{
+    success: boolean;
+    totalFeeds: number;
+    newArticles: number;
+  }> => {
+    try {
+      const { refreshAllFeeds } = await import("../../modules/news/api.js");
+      return await refreshAllFeeds();
+    } catch {
+      const feeds = await localDal.getNewsFeeds();
+      return { success: true, totalFeeds: feeds.length, newArticles: 0 };
+    }
+  },
+
+  getNewsArticles: async (params?: {
+    feedId?: string;
+    search?: string;
+    limit?: number;
+    offset?: number;
+  }): Promise<NewsArticle[]> => {
+    const db = await getLocalDb();
+    let sql = "SELECT * FROM news_articles WHERE deleted_at IS NULL";
+    const args: (string | number)[] = [];
+
+    if (params?.feedId) {
+      sql += " AND feed_id = ?";
+      args.push(params.feedId);
+    }
+    if (params?.search) {
+      sql += " AND (title LIKE ? OR summary LIKE ?)";
+      args.push(`%${params.search}%`, `%${params.search}%`);
+    }
+
+    sql += " ORDER BY published_at DESC, fetched_at DESC";
+
+    if (params?.limit !== undefined) {
+      sql += " LIMIT ?";
+      args.push(params.limit);
+      if (params?.offset !== undefined) {
+        sql += " OFFSET ?";
+        args.push(params.offset);
+      }
+    }
+
+    const rows = await db.select<SqliteRow[]>(sql, args);
+    return rows.map((r) => ({
+      id: String(r.id),
+      userId: r.user_id ? String(r.user_id) : undefined,
+      feedId: String(r.feed_id),
+      title: String(r.title),
+      url: String(r.url),
+      summary: r.summary ? String(r.summary) : undefined,
+      publishedAt: r.published_at ? String(r.published_at) : undefined,
+      fetchedAt: String(r.fetched_at),
+      isRead: Number(r.is_read) === 1,
+    }));
+  },
+
+  getTickerArticles: async (): Promise<NewsArticle[]> => {
+    return localDal.getNewsArticles({ limit: 10 });
+  },
+
+  markNewsArticleAsRead: async (id: string): Promise<NewsArticle> => {
+    const db = await getLocalDb();
+    const now = new Date().toISOString();
+    await db.execute(
+      "UPDATE news_articles SET is_read = 1, updated_at = ?, _sync_status = 'pending' WHERE id = ?",
+      [now, id],
+    );
+    const rows = await db.select<SqliteRow[]>(
+      "SELECT * FROM news_articles WHERE id = ? AND deleted_at IS NULL",
+      [id],
+    );
+    if (rows.length === 0) throw new Error("Article not found");
+    const r = rows[0];
+    return {
+      id: String(r.id),
+      userId: r.user_id ? String(r.user_id) : undefined,
+      feedId: String(r.feed_id),
+      title: String(r.title),
+      url: String(r.url),
+      summary: r.summary ? String(r.summary) : undefined,
+      publishedAt: r.published_at ? String(r.published_at) : undefined,
+      fetchedAt: String(r.fetched_at),
+      isRead: true,
+    };
+  },
+
   // --- Profile & System ---
   updateProfile: async (input: { name?: string; email?: string }) => {
     const raw = localStorage.getItem("lifeos_session_user");
@@ -2540,6 +3497,43 @@ export const localDal = {
     }
 
     return localDal.getSettings();
+  },
+
+  exportBackupJson: async (): Promise<Blob> => {
+    const db = await getLocalDb();
+    const tables = [
+      "settings",
+      "routine_categories",
+      "tasks",
+      "habits",
+      "habit_logs",
+      "accounts",
+      "categories",
+      "transactions",
+      "skill_areas",
+      "learning_resources",
+      "learning_logs",
+      "reminders",
+      "notifications",
+      "workouts",
+      "exercises",
+      "workout_exercises",
+      "workout_sessions",
+      "exercise_logs",
+      "rss_feeds",
+      "news_articles",
+    ];
+    const backup: Record<string, unknown[]> = {};
+    for (const table of tables) {
+      try {
+        const rows = await db.select<SqliteRow[]>(
+          `SELECT * FROM ${table} WHERE deleted_at IS NULL`,
+        );
+        backup[table] = rows;
+      } catch {}
+    }
+    const json = JSON.stringify(backup, null, 2);
+    return new Blob([json], { type: "application/json" });
   },
 
   getHealth: async (): Promise<{ status: string; timestamp: string; version?: string }> => {

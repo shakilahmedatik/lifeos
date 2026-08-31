@@ -31,7 +31,7 @@ export class SqliteReminderRepository implements ReminderRepository {
 
   async getAll(userId: string): Promise<Reminder[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM reminders WHERE (user_id = ? OR user_id = '') ORDER BY time ASC, created_at DESC",
+      sql: "SELECT * FROM reminders WHERE (user_id = ? OR user_id = '') AND deleted_at IS NULL ORDER BY time ASC, created_at DESC",
       args: [userId],
     });
     const rows = res.rows as unknown as ReminderRow[];
@@ -40,7 +40,7 @@ export class SqliteReminderRepository implements ReminderRepository {
 
   async getByDate(date: string, userId: string): Promise<Reminder[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM reminders WHERE (user_id = ? OR user_id = '') AND (date = ? OR date IS NULL) ORDER BY time ASC",
+      sql: "SELECT * FROM reminders WHERE (user_id = ? OR user_id = '') AND (date = ? OR date IS NULL) AND deleted_at IS NULL ORDER BY time ASC",
       args: [userId, date],
     });
     const rows = res.rows as unknown as ReminderRow[];
@@ -49,7 +49,7 @@ export class SqliteReminderRepository implements ReminderRepository {
 
   async getTodayReminders(today: string, userId: string): Promise<Reminder[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM reminders WHERE (user_id = ? OR user_id = '') AND (date = ? OR date IS NULL) AND completed = 0 ORDER BY time ASC",
+      sql: "SELECT * FROM reminders WHERE (user_id = ? OR user_id = '') AND (date = ? OR date IS NULL) AND completed = 0 AND deleted_at IS NULL ORDER BY time ASC",
       args: [userId, today],
     });
     const rows = res.rows as unknown as ReminderRow[];
@@ -58,7 +58,7 @@ export class SqliteReminderRepository implements ReminderRepository {
 
   async getById(id: string, userId: string): Promise<Reminder | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM reminders WHERE id = ? AND (user_id = ? OR user_id = '')",
+      sql: "SELECT * FROM reminders WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
       args: [id, userId],
     });
     const row = res.rows[0] as unknown as ReminderRow | undefined;
@@ -102,7 +102,7 @@ export class SqliteReminderRepository implements ReminderRepository {
     await this.client.execute({
       sql: `UPDATE reminders
             SET title = ?, time = ?, date = ?, kind = ?, completed = ?, updated_at = ?
-            WHERE id = ? AND (user_id = ? OR user_id = '')`,
+            WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL`,
       args: [title, time, date, kind, completed, now, id, userId],
     });
 
@@ -110,9 +110,10 @@ export class SqliteReminderRepository implements ReminderRepository {
   }
 
   async delete(id: string, userId: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM reminders WHERE id = ? AND (user_id = ? OR user_id = '')",
-      args: [id, userId],
+      sql: "UPDATE reminders SET deleted_at = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
+      args: [now, now, id, userId],
     });
     return res.rowsAffected > 0;
   }

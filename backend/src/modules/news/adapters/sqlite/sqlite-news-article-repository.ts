@@ -20,7 +20,7 @@ function getUserFilter(userId?: string): { clause: string; args: string[] } {
 export function createSqliteNewsArticleRepository(client: Client): NewsArticleRepository {
   return {
     async getById(id: string, userId?: string): Promise<NewsArticle | undefined> {
-      let sql = "SELECT * FROM news_articles WHERE id = ?";
+      let sql = "SELECT * FROM news_articles WHERE id = ? AND deleted_at IS NULL";
       const args: (string | number)[] = [id];
 
       if (userId !== undefined) {
@@ -36,12 +36,12 @@ export function createSqliteNewsArticleRepository(client: Client): NewsArticleRe
     },
 
     async getAll(userId?: string, limit = 20, offset = 0): Promise<NewsArticle[]> {
-      let sql = "SELECT * FROM news_articles";
+      let sql = "SELECT * FROM news_articles WHERE deleted_at IS NULL";
       const args: (string | number)[] = [];
 
       if (userId !== undefined) {
         const filter = getUserFilter(userId);
-        sql += ` WHERE ${filter.clause}`;
+        sql += ` AND ${filter.clause}`;
         args.push(...filter.args);
       }
 
@@ -59,7 +59,7 @@ export function createSqliteNewsArticleRepository(client: Client): NewsArticleRe
       limit = 20,
       offset = 0,
     ): Promise<NewsArticle[]> {
-      let sql = "SELECT * FROM news_articles WHERE feed_id = ?";
+      let sql = "SELECT * FROM news_articles WHERE feed_id = ? AND deleted_at IS NULL";
       const args: (string | number)[] = [feedId];
 
       if (userId !== undefined) {
@@ -77,12 +77,12 @@ export function createSqliteNewsArticleRepository(client: Client): NewsArticleRe
     },
 
     async getRecent(limit: number, userId?: string): Promise<NewsArticle[]> {
-      let sql = "SELECT * FROM news_articles";
+      let sql = "SELECT * FROM news_articles WHERE deleted_at IS NULL";
       const args: (string | number)[] = [];
 
       if (userId !== undefined) {
         const filter = getUserFilter(userId);
-        sql += ` WHERE ${filter.clause}`;
+        sql += ` AND ${filter.clause}`;
         args.push(...filter.args);
       }
 
@@ -108,7 +108,7 @@ export function createSqliteNewsArticleRepository(client: Client): NewsArticleRe
       }
 
       let sql =
-        "SELECT * FROM news_articles WHERE (title LIKE ? ESCAPE '\\' OR summary LIKE ? ESCAPE '\\')";
+        "SELECT * FROM news_articles WHERE deleted_at IS NULL AND (title LIKE ? ESCAPE '\\' OR summary LIKE ? ESCAPE '\\')";
       const args: (string | number)[] = [`%${sanitizedQuery}%`, `%${sanitizedQuery}%`];
 
       if (userId !== undefined) {
@@ -132,7 +132,7 @@ export function createSqliteNewsArticleRepository(client: Client): NewsArticleRe
 
     async getByUrlAndFeedId(url: string, feedId: string): Promise<NewsArticle | undefined> {
       const res = await client.execute({
-        sql: "SELECT * FROM news_articles WHERE url = ? AND feed_id = ?",
+        sql: "SELECT * FROM news_articles WHERE url = ? AND feed_id = ? AND deleted_at IS NULL",
         args: [url, feedId],
       });
       const row = res.rows[0] as unknown as Record<string, unknown> | undefined;
@@ -179,8 +179,9 @@ export function createSqliteNewsArticleRepository(client: Client): NewsArticleRe
     },
 
     async markAsRead(id: string, userId?: string): Promise<NewsArticle | undefined> {
-      let sql = "UPDATE news_articles SET is_read = 1 WHERE id = ?";
-      const args: (string | number)[] = [id];
+      let sql = "UPDATE news_articles SET is_read = 1, updated_at = ? WHERE id = ? AND deleted_at IS NULL";
+      const now = new Date().toISOString();
+      const args: (string | number)[] = [now, id];
 
       if (userId !== undefined) {
         const filter = getUserFilter(userId);
@@ -193,9 +194,10 @@ export function createSqliteNewsArticleRepository(client: Client): NewsArticleRe
     },
 
     async deleteOlderThan(date: string): Promise<number> {
+      const now = new Date().toISOString();
       const res = await client.execute({
-        sql: "DELETE FROM news_articles WHERE published_at < ?",
-        args: [date],
+        sql: "UPDATE news_articles SET deleted_at = ?, updated_at = ? WHERE published_at < ? AND deleted_at IS NULL",
+        args: [now, now, date],
       });
       return res.rowsAffected;
     },

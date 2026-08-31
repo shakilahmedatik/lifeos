@@ -58,7 +58,7 @@ export class SqliteCategoryRepository implements CategoryRepository {
   async getById(id: string): Promise<Category | undefined> {
     await this.ensureDefaults();
     const res = await this.client.execute({
-      sql: "SELECT * FROM categories WHERE id = ?",
+      sql: "SELECT * FROM categories WHERE id = ? AND deleted_at IS NULL",
       args: [id],
     });
     const row = res.rows[0] as unknown as CategoryRow | undefined;
@@ -68,7 +68,7 @@ export class SqliteCategoryRepository implements CategoryRepository {
   async getAll(): Promise<Category[]> {
     await this.ensureDefaults();
     const res = await this.client.execute(
-      "SELECT * FROM categories ORDER BY is_system DESC, kind, name",
+      "SELECT * FROM categories WHERE deleted_at IS NULL ORDER BY is_system DESC, kind, name",
     );
     const rows = res.rows as unknown as CategoryRow[];
     return rows.map(rowToCategory);
@@ -77,7 +77,7 @@ export class SqliteCategoryRepository implements CategoryRepository {
   async getActive(): Promise<Category[]> {
     await this.ensureDefaults();
     const res = await this.client.execute(
-      "SELECT * FROM categories WHERE archived = 0 ORDER BY is_system DESC, kind, name",
+      "SELECT * FROM categories WHERE archived = 0 AND deleted_at IS NULL ORDER BY is_system DESC, kind, name",
     );
     const rows = res.rows as unknown as CategoryRow[];
     return rows.map(rowToCategory);
@@ -86,7 +86,7 @@ export class SqliteCategoryRepository implements CategoryRepository {
   async getByKind(kind: Category["kind"]): Promise<Category[]> {
     await this.ensureDefaults();
     const res = await this.client.execute({
-      sql: "SELECT * FROM categories WHERE kind = ? AND archived = 0 ORDER BY is_system DESC, name",
+      sql: "SELECT * FROM categories WHERE kind = ? AND archived = 0 AND deleted_at IS NULL ORDER BY is_system DESC, name",
       args: [kind],
     });
     const rows = res.rows as unknown as CategoryRow[];
@@ -130,7 +130,7 @@ export class SqliteCategoryRepository implements CategoryRepository {
     values.push(id);
 
     await this.client.execute({
-      sql: `UPDATE categories SET ${fields.join(", ")} WHERE id = ?`,
+      sql: `UPDATE categories SET ${fields.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
       args: values,
     });
 
@@ -140,7 +140,7 @@ export class SqliteCategoryRepository implements CategoryRepository {
   async archive(id: string): Promise<boolean> {
     await this.ensureDefaults();
     const res = await this.client.execute({
-      sql: "UPDATE categories SET archived = 1, updated_at = ? WHERE id = ? AND is_system = 0",
+      sql: "UPDATE categories SET archived = 1, updated_at = ? WHERE id = ? AND is_system = 0 AND deleted_at IS NULL",
       args: [new Date().toISOString(), id],
     });
     return res.rowsAffected > 0;
@@ -149,7 +149,7 @@ export class SqliteCategoryRepository implements CategoryRepository {
   async unarchive(id: string): Promise<boolean> {
     await this.ensureDefaults();
     const res = await this.client.execute({
-      sql: "UPDATE categories SET archived = 0, updated_at = ? WHERE id = ?",
+      sql: "UPDATE categories SET archived = 0, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
       args: [new Date().toISOString(), id],
     });
     return res.rowsAffected > 0;
@@ -157,9 +157,10 @@ export class SqliteCategoryRepository implements CategoryRepository {
 
   async delete(id: string): Promise<boolean> {
     await this.ensureDefaults();
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM categories WHERE id = ? AND is_system = 0",
-      args: [id],
+      sql: "UPDATE categories SET deleted_at = ?, updated_at = ? WHERE id = ? AND is_system = 0 AND deleted_at IS NULL",
+      args: [now, now, id],
     });
     return res.rowsAffected > 0;
   }

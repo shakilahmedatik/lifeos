@@ -28,7 +28,7 @@ export class SqliteHabitLogRepository implements HabitLogRepository {
 
   async getById(id: string, _userId: string): Promise<HabitLogEntry | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM habit_logs WHERE id = ?",
+      sql: "SELECT * FROM habit_logs WHERE id = ? AND deleted_at IS NULL",
       args: [id],
     });
     const row = res.rows[0] as unknown as HabitLogRow | undefined;
@@ -41,7 +41,7 @@ export class SqliteHabitLogRepository implements HabitLogRepository {
     _userId: string,
   ): Promise<HabitLogEntry[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM habit_logs WHERE habit_id = ? AND date = ? ORDER BY logged_at ASC",
+      sql: "SELECT * FROM habit_logs WHERE habit_id = ? AND date = ? AND deleted_at IS NULL ORDER BY logged_at ASC",
       args: [habitId, date],
     });
     const rows = res.rows as unknown as HabitLogRow[];
@@ -54,7 +54,7 @@ export class SqliteHabitLogRepository implements HabitLogRepository {
     _userId: string,
   ): Promise<HabitLogEntry[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM habit_logs WHERE date >= ? AND date <= ? ORDER BY date, logged_at ASC",
+      sql: "SELECT * FROM habit_logs WHERE date >= ? AND date <= ? AND deleted_at IS NULL ORDER BY date, logged_at ASC",
       args: [startDate, endDate],
     });
     const rows = res.rows as unknown as HabitLogRow[];
@@ -63,7 +63,7 @@ export class SqliteHabitLogRepository implements HabitLogRepository {
 
   async getByHabitId(habitId: string, _userId: string): Promise<HabitLogEntry[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM habit_logs WHERE habit_id = ? ORDER BY date DESC, logged_at DESC",
+      sql: "SELECT * FROM habit_logs WHERE habit_id = ? AND deleted_at IS NULL ORDER BY date DESC, logged_at DESC",
       args: [habitId],
     });
     const rows = res.rows as unknown as HabitLogRow[];
@@ -72,7 +72,7 @@ export class SqliteHabitLogRepository implements HabitLogRepository {
 
   async getAllLogs(_userId: string): Promise<HabitLogEntry[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM habit_logs ORDER BY date DESC, logged_at DESC",
+      sql: "SELECT * FROM habit_logs WHERE deleted_at IS NULL ORDER BY date DESC, logged_at DESC",
     });
     const rows = res.rows as unknown as HabitLogRow[];
     return rows.map(rowToHabitLog);
@@ -90,17 +90,19 @@ export class SqliteHabitLogRepository implements HabitLogRepository {
   }
 
   async delete(id: string, _userId: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM habit_logs WHERE id = ?",
-      args: [id],
+      sql: "UPDATE habit_logs SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, id],
     });
     return res.rowsAffected > 0;
   }
 
   async deleteByHabitId(habitId: string, _userId: string): Promise<void> {
+    const now = new Date().toISOString();
     await this.client.execute({
-      sql: "DELETE FROM habit_logs WHERE habit_id = ?",
-      args: [habitId],
+      sql: "UPDATE habit_logs SET deleted_at = ? WHERE habit_id = ? AND deleted_at IS NULL",
+      args: [now, habitId],
     });
   }
 }

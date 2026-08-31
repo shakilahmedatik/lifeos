@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { ErrorBanner } from "../../components/ui/ErrorBanner.js";
-import { request } from "../../lib/api.js";
+import { getDataSource } from "../../lib/dataSource.js";
 
 import { SOUND_PRESET_OPTIONS, type SoundPreset } from "./sound-presets.js";
 
@@ -29,15 +29,12 @@ export function ReminderForm({ taskId, taskTitle, onSubmit, onCancel }: Reminder
       setError(null);
 
       const isoTime = new Date(reminderTime).toISOString();
+      const ds = await getDataSource();
 
-      await request<void>("/api/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          taskId,
-          reminderTime: isoTime,
-          soundType,
-        }),
+      await ds.createNotification({
+        taskId,
+        reminderTime: isoTime,
+        soundType: soundType as import("@lifeos/contracts").NotificationSoundType,
       });
 
       onSubmit(isoTime, soundType);

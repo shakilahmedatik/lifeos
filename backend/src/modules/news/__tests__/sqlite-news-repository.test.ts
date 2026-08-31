@@ -38,6 +38,8 @@ async function createTestClient(): Promise<Client> {
       published_at TEXT,
       fetched_at TEXT NOT NULL DEFAULT (datetime('now')),
       is_read INTEGER NOT NULL DEFAULT 0,
+      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+      deleted_at TEXT,
       FOREIGN KEY (feed_id) REFERENCES rss_feeds(id) ON DELETE CASCADE,
       UNIQUE(user_id, url, feed_id)
     );

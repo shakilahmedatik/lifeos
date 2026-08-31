@@ -51,7 +51,7 @@ export class SqliteNotificationRepository implements NotificationRepository {
 
   async findById(id: string): Promise<Notification | null> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM notifications WHERE id = ?",
+      sql: "SELECT * FROM notifications WHERE id = ? AND deleted_at IS NULL",
       args: [id],
     });
     const row = res.rows[0] as unknown as NotificationRow | undefined;
@@ -68,7 +68,7 @@ export class SqliteNotificationRepository implements NotificationRepository {
           t.start_time as taskStartTime
         FROM notifications n
         LEFT JOIN tasks t ON n.task_id = t.id
-        WHERE (n.user_id = ? OR n.user_id = 'default' OR ? = 'default')
+        WHERE (n.user_id = ? OR n.user_id = 'default' OR ? = 'default') AND n.deleted_at IS NULL
         ORDER BY n.reminder_time ASC
       `,
       args: [userId, userId],
@@ -79,7 +79,7 @@ export class SqliteNotificationRepository implements NotificationRepository {
 
   async findByTaskId(taskId: string): Promise<Notification[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM notifications WHERE task_id = ?",
+      sql: "SELECT * FROM notifications WHERE task_id = ? AND deleted_at IS NULL",
       args: [taskId],
     });
     const rows = res.rows as unknown as NotificationRow[];
@@ -99,6 +99,7 @@ export class SqliteNotificationRepository implements NotificationRepository {
         LEFT JOIN tasks t ON n.task_id = t.id
         WHERE n.status = 'scheduled'
           AND n.reminder_time <= ?
+          AND n.deleted_at IS NULL
         ORDER BY n.reminder_time ASC
       `,
       args: [now],
@@ -109,7 +110,7 @@ export class SqliteNotificationRepository implements NotificationRepository {
 
   async getUnreadCount(userId: string): Promise<number> {
     const res = await this.client.execute({
-      sql: "SELECT COUNT(*) as count FROM notifications WHERE (user_id = ? OR user_id = 'default' OR ? = 'default') AND status = 'scheduled'",
+      sql: "SELECT COUNT(*) as count FROM notifications WHERE (user_id = ? OR user_id = 'default' OR ? = 'default') AND status = 'scheduled' AND deleted_at IS NULL",
       args: [userId, userId],
     });
     return Number(res.rows[0]?.count ?? 0);
@@ -178,7 +179,7 @@ export class SqliteNotificationRepository implements NotificationRepository {
     values.push(id);
 
     await this.client.execute({
-      sql: `UPDATE notifications SET ${updates.join(", ")} WHERE id = ?`,
+      sql: `UPDATE notifications SET ${updates.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
       args: values,
     });
 
@@ -186,17 +187,19 @@ export class SqliteNotificationRepository implements NotificationRepository {
   }
 
   async delete(id: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM notifications WHERE id = ?",
-      args: [id],
+      sql: "UPDATE notifications SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, now, id],
     });
     return res.rowsAffected > 0;
   }
 
   async deleteByTaskId(taskId: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM notifications WHERE task_id = ?",
-      args: [taskId],
+      sql: "UPDATE notifications SET deleted_at = ?, updated_at = ? WHERE task_id = ? AND deleted_at IS NULL",
+      args: [now, now, taskId],
     });
     return res.rowsAffected > 0;
   }

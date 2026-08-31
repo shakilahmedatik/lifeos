@@ -26,7 +26,7 @@ export class SqliteSkillAreaRepository implements SkillAreaRepository {
 
   async getById(id: string): Promise<SkillArea | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM skill_areas WHERE id = ?",
+      sql: "SELECT * FROM skill_areas WHERE id = ? AND deleted_at IS NULL",
       args: [id],
     });
     const row = res.rows[0] as unknown as SkillAreaRow | undefined;
@@ -34,14 +34,16 @@ export class SqliteSkillAreaRepository implements SkillAreaRepository {
   }
 
   async getAll(): Promise<SkillArea[]> {
-    const res = await this.client.execute("SELECT * FROM skill_areas ORDER BY name");
+    const res = await this.client.execute(
+      "SELECT * FROM skill_areas WHERE deleted_at IS NULL ORDER BY name",
+    );
     const rows = res.rows as unknown as SkillAreaRow[];
     return rows.map(rowToSkillArea);
   }
 
   async getByName(name: string): Promise<SkillArea | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM skill_areas WHERE name = ?",
+      sql: "SELECT * FROM skill_areas WHERE name = ? AND deleted_at IS NULL",
       args: [name],
     });
     const row = res.rows[0] as unknown as SkillAreaRow | undefined;
@@ -64,16 +66,17 @@ export class SqliteSkillAreaRepository implements SkillAreaRepository {
     const name = patch.name ?? existing.name;
     const weeklyGoalHours = patch.weeklyGoalHours ?? existing.weeklyGoalHours;
     await this.client.execute({
-      sql: "UPDATE skill_areas SET name = ?, weekly_goal_hours = ?, updated_at = ? WHERE id = ?",
+      sql: "UPDATE skill_areas SET name = ?, weekly_goal_hours = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
       args: [name, weeklyGoalHours, new Date().toISOString(), id],
     });
     return await this.getById(id);
   }
 
   async delete(id: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM skill_areas WHERE id = ?",
-      args: [id],
+      sql: "UPDATE skill_areas SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, now, id],
     });
     return res.rowsAffected > 0;
   }

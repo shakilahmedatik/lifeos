@@ -32,7 +32,7 @@ export class SqliteLearningLogRepository implements LearningLogRepository {
 
   async getById(id: string): Promise<LearningLog | undefined> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM learning_logs WHERE id = ?",
+      sql: "SELECT * FROM learning_logs WHERE id = ? AND deleted_at IS NULL",
       args: [id],
     });
     const row = res.rows[0] as unknown as LearningLogRow | undefined;
@@ -41,7 +41,7 @@ export class SqliteLearningLogRepository implements LearningLogRepository {
 
   async getByResourceId(resourceId: string): Promise<LearningLog[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM learning_logs WHERE resource_id = ? ORDER BY date DESC",
+      sql: "SELECT * FROM learning_logs WHERE resource_id = ? AND deleted_at IS NULL ORDER BY date DESC",
       args: [resourceId],
     });
     const rows = res.rows as unknown as LearningLogRow[];
@@ -56,7 +56,7 @@ export class SqliteLearningLogRepository implements LearningLogRepository {
     if (resourceIds.length === 0) return [];
     const placeholders = resourceIds.map(() => "?").join(",");
     const args: (string | number)[] = [...resourceIds];
-    let sql = `SELECT * FROM learning_logs WHERE resource_id IN (${placeholders})`;
+    let sql = `SELECT * FROM learning_logs WHERE resource_id IN (${placeholders}) AND deleted_at IS NULL`;
 
     if (startDate) {
       sql += " AND date >= ?";
@@ -75,7 +75,7 @@ export class SqliteLearningLogRepository implements LearningLogRepository {
 
   async getByDateRange(startDate: string, endDate: string): Promise<LearningLog[]> {
     const res = await this.client.execute({
-      sql: "SELECT * FROM learning_logs WHERE date >= ? AND date <= ? ORDER BY date",
+      sql: "SELECT * FROM learning_logs WHERE date >= ? AND date <= ? AND deleted_at IS NULL ORDER BY date",
       args: [startDate, endDate],
     });
     const rows = res.rows as unknown as LearningLogRow[];
@@ -131,16 +131,17 @@ export class SqliteLearningLogRepository implements LearningLogRepository {
     values.push(id);
 
     await this.client.execute({
-      sql: `UPDATE learning_logs SET ${fields.join(", ")} WHERE id = ?`,
+      sql: `UPDATE learning_logs SET ${fields.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
       args: values,
     });
     return await this.getById(id);
   }
 
   async delete(id: string): Promise<boolean> {
+    const now = new Date().toISOString();
     const res = await this.client.execute({
-      sql: "DELETE FROM learning_logs WHERE id = ?",
-      args: [id],
+      sql: "UPDATE learning_logs SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
+      args: [now, now, id],
     });
     return res.rowsAffected > 0;
   }
