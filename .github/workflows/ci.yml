@@ -39,6 +39,11 @@ jobs:
       - name: Typecheck TypeScript packages
         run: pnpm -r exec tsc --noEmit
 
+      - name: Install Tauri OS dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libgtk-3-dev libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev
+
       - name: Check Rust Tauri compilation
         run: cargo check --manifest-path frontend/src-tauri/Cargo.toml
 
