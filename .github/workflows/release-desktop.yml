@@ -47,7 +47,7 @@ jobs:
           pnpm test
 
       - name: Build Tauri macOS app
-        uses: tauri-apps/tauri-action@v1
+        uses: tauri-apps/tauri-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://api-lifeos.shatik.me' }}
@@ -58,5 +58,5 @@ jobs:
           tagName: v__VERSION__
           releaseName: 'LifeOS Desktop v__VERSION__'
           releaseBody: 'See release notes for changes.'
-          releaseDraft: true
+          releaseDraft: false
           prerelease: false
