@@ -30,7 +30,7 @@
   },
   "plugins": {
     "updater": {
-      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDY2MEEzQTY0RDAwMjNFQzYKRldSdWtzcGl3eWhndjhxYWJzY2Z0Z3ZodWlqazFsMnAzaTRwNTY3ODkwYWJjZGVmZ2hpamtsbW5vCg==",
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk5MDQ2QjkzNzI4NjM5RUYKUldUdk9ZWnlrMnNFbWIzVm1QeU1ZdVRmR3pEenplMmhkb3REdHFoQ2t2WWFFSzVEOGNEbkp1bm4K",
       "endpoints": [
         "https://github.com/shakilahmedatik/lifeos/releases/latest/download/latest.json"
       ]
