@@ -3,7 +3,6 @@ export { CategoryList } from "./CategoryList.js";
 export { FinanceWidget } from "./FinanceWidget.js";
 export { useAccountBalances, useAccounts, useActiveAccounts } from "./hooks/useAccounts.js";
 export { useActiveCategories, useCategories } from "./hooks/useCategories.js";
-export { useFinanceBackup } from "./hooks/useFinanceBackup.js";
 export { useFinanceSummary } from "./hooks/useFinanceSummary.js";
 export { useTransactions } from "./hooks/useTransactions.js";
 export { MonthlyView } from "./MonthlyView.js";

@@ -1,0 +1,50 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "LifeOS",
+  "version": "0.1.0",
+  "identifier": "com.lifeos.desktop",
+  "build": {
+    "beforeDevCommand": "cd .. && pnpm dev",
+    "beforeBuildCommand": "cd .. && pnpm build",
+    "devUrl": "http://localhost:5173",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "LifeOS",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 900,
+        "minHeight": 600,
+        "decorations": true,
+        "titleBarStyle": "Overlay",
+        "hiddenTitle": true,
+        "transparent": false
+      }
+    ],
+    "security": {
+      "csp": "default-src 'self'; img-src 'self' data: https: asset: blob:; style-src 'self' 'unsafe-inline'; connect-src 'self' http://127.0.0.1:3000 http://localhost:3000 https://api-lifeos.shatik.me; font-src 'self' data:; script-src 'self'"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDk5MDQ2QjkzNzI4NjM5RUYKUldUdk9ZWnlrMnNFbWIzVm1QeU1ZdVRmR3pEenplMmhkb3REdHFoQ2t2WWFFSzVEOGNEbkp1bm4K",
+      "endpoints": [
+        "https://github.com/shakilahmedatik/lifeos/releases/latest/download/latest.json"
+      ]
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["dmg"],
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  }
+}

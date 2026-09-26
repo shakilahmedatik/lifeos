@@ -1,10 +1,14 @@
 import { describe, expect, it } from "vitest";
 import {
+  CategorySchema,
+  NewAccountInputSchema,
+  NewCategoryInputSchema,
   NewExerciseInputSchema,
-  NewNotificationInputSchema,
+  NewRoutineCategoryInputSchema,
   NewTransactionInputSchema,
   TransferInputSchema,
-  UpdateNotificationInputSchema,
+  UpdateCategorySchema,
+  UpdateRoutineCategoryInputSchema,
 } from "../schemas.js";
 
 describe("TransferInputSchema", () => {
@@ -99,40 +103,6 @@ describe("TransferInputSchema", () => {
   });
 });
 
-describe("UpdateNotificationInputSchema", () => {
-  it("accepts valid status update", () => {
-    const result = UpdateNotificationInputSchema.safeParse({ status: "sent" });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts valid reminderTime update", () => {
-    const result = UpdateNotificationInputSchema.safeParse({
-      reminderTime: "2026-07-22T09:00:00Z",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts valid soundType update", () => {
-    const result = UpdateNotificationInputSchema.safeParse({ soundType: "urgent" });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts empty object (no fields to update)", () => {
-    const result = UpdateNotificationInputSchema.safeParse({});
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects invalid status", () => {
-    const result = UpdateNotificationInputSchema.safeParse({ status: "invalid" });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects invalid soundType", () => {
-    const result = UpdateNotificationInputSchema.safeParse({ soundType: "invalid" });
-    expect(result.success).toBe(false);
-  });
-});
-
 describe("NewTransactionInputSchema", () => {
   it("accepts valid transaction input", () => {
     const result = NewTransactionInputSchema.safeParse({
@@ -164,39 +134,6 @@ describe("NewTransactionInputSchema", () => {
   });
 });
 
-describe("NewNotificationInputSchema", () => {
-  it("accepts valid notification input", () => {
-    const result = NewNotificationInputSchema.safeParse({
-      taskId: "task-1",
-      reminderTime: "2026-07-22T09:00:00Z",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts notification with soundType", () => {
-    const result = NewNotificationInputSchema.safeParse({
-      taskId: "task-1",
-      reminderTime: "2026-07-22T09:00:00Z",
-      soundType: "gentle",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects missing taskId", () => {
-    const result = NewNotificationInputSchema.safeParse({
-      reminderTime: "2026-07-22T09:00:00Z",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects missing reminderTime", () => {
-    const result = NewNotificationInputSchema.safeParse({
-      taskId: "task-1",
-    });
-    expect(result.success).toBe(false);
-  });
-});
-
 describe("NewExerciseInputSchema", () => {
   it("accepts exercise with empty string videoUrl", () => {
     const result = NewExerciseInputSchema.safeParse({
@@ -212,6 +149,131 @@ describe("NewExerciseInputSchema", () => {
     const result = NewExerciseInputSchema.safeParse({
       name: "Bicep Curls",
       videoUrl: "https://example.com/demo.mp4",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("RoutineCategory Schemas", () => {
+  it("accepts valid NewRoutineCategoryInput", () => {
+    const result = NewRoutineCategoryInputSchema.safeParse({
+      name: "Deep Work",
+      color: "#3b82f6",
+      icon: "⚡",
+      sortOrder: 1,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects NewRoutineCategoryInput with empty name", () => {
+    const result = NewRoutineCategoryInputSchema.safeParse({
+      name: "",
+      color: "#3b82f6",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects invalid hex color format in NewRoutineCategoryInput", () => {
+    const result = NewRoutineCategoryInputSchema.safeParse({
+      name: "Deep Work",
+      color: "not-a-color",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts valid UpdateRoutineCategoryInput", () => {
+    const result = UpdateRoutineCategoryInputSchema.safeParse({
+      name: "Focus Time",
+      color: "#8b5cf6",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("Finance Category Schemas", () => {
+  it("accepts valid CategorySchema", () => {
+    const result = CategorySchema.safeParse({
+      id: "cat-1",
+      name: "Food",
+      kind: "expense",
+      isSystem: false,
+      archived: false,
+      createdAt: "2026-08-28T00:00:00.000Z",
+      updatedAt: "2026-08-28T00:00:00.000Z",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts valid NewCategoryInput", () => {
+    const result = NewCategoryInputSchema.safeParse({
+      name: "Freelance",
+      kind: "income",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects NewCategoryInput with reserved name 'Transfer In'", () => {
+    const result = NewCategoryInputSchema.safeParse({
+      name: "Transfer In",
+      kind: "income",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects NewCategoryInput with reserved name 'transfer out' (case insensitive)", () => {
+    const result = NewCategoryInputSchema.safeParse({
+      name: "  transfer out  ",
+      kind: "expense",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects NewCategoryInput with reserved name 'Opening Balance'", () => {
+    const result = NewCategoryInputSchema.safeParse({
+      name: "Opening Balance",
+      kind: "income",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects NewCategoryInput with reserved name 'opening balance (liability)'", () => {
+    const result = NewCategoryInputSchema.safeParse({
+      name: "  opening balance (liability)  ",
+      kind: "expense",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects UpdateCategorySchema with reserved name 'Transfer In'", () => {
+    const result = UpdateCategorySchema.safeParse({
+      name: "Transfer In",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts UpdateCategorySchema with valid name", () => {
+    const result = UpdateCategorySchema.safeParse({
+      name: "Groceries",
+      kind: "expense",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("Account Schemas", () => {
+  it("accepts NewAccountInput with initialBalanceMinor", () => {
+    const result = NewAccountInputSchema.safeParse({
+      name: "City Bank",
+      type: "bank",
+      initialBalanceMinor: 500000,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts NewAccountInput without initialBalanceMinor", () => {
+    const result = NewAccountInputSchema.safeParse({
+      name: "Cash Wallet",
+      type: "cash",
     });
     expect(result.success).toBe(true);
   });

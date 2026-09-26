@@ -1,18 +1,26 @@
-import { type Client, createClient } from "@libsql/client";
+import { createClient } from "@libsql/client";
+import { drizzle } from "drizzle-orm/libsql";
 import { logger } from "./logger.js";
+import * as schema from "./schema.js";
+
+const dbLog = logger.child({ module: "db" });
+
+export type DrizzleClient = ReturnType<typeof drizzle<typeof schema>>;
 
 export function createDatabase(
   dbPath: string,
   databaseUrl?: string,
   databaseToken?: string,
-): Client {
+): { db: DrizzleClient } {
   const url = databaseUrl || (dbPath === ":memory:" ? ":memory:" : `file:${dbPath}`);
-  logger.info("Initializing LibSQL database connection", { url });
+  dbLog.info("Initializing LibSQL database connection", { url });
 
-  const client = createClient({
+  const rawClient = createClient({
     url,
     authToken: databaseToken,
   });
 
-  return client;
+  const db = drizzle(rawClient, { schema });
+
+  return { db };
 }

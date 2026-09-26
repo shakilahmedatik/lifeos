@@ -45,8 +45,6 @@ class InMemoryTaskRepo implements TaskRepository {
       endTime: input.endTime,
       status: "planned",
       notes: input.notes,
-      reminderMinutesBefore: input.reminderMinutesBefore,
-      reminderSilent: input.reminderSilent ?? false,
       recurrence: input.recurrence ?? "none",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -70,12 +68,6 @@ class InMemoryTaskRepo implements TaskRepository {
       startTime: patch.startTime ?? existing.startTime,
       endTime: patch.endTime ?? existing.endTime,
       notes: patch.notes !== undefined ? patch.notes : existing.notes,
-      reminderMinutesBefore:
-        patch.reminderMinutesBefore !== undefined
-          ? patch.reminderMinutesBefore
-          : existing.reminderMinutesBefore,
-      reminderSilent:
-        patch.reminderSilent !== undefined ? patch.reminderSilent : existing.reminderSilent,
       recurrence: patch.recurrence ?? existing.recurrence,
       updatedAt: new Date().toISOString(),
     };

@@ -10,37 +10,38 @@ export class LearningResourceService {
     private readonly skillAreaRepo: SkillAreaRepository,
   ) {}
 
-  async create(input: NewLearningResourceInput): Promise<LearningResource> {
-    const area = await this.skillAreaRepo.getById(input.skillAreaId);
+  async create(input: NewLearningResourceInput, userId = "default"): Promise<LearningResource> {
+    const area = await this.skillAreaRepo.getById(input.skillAreaId, userId);
     if (!area) throw new Error("Skill area not found");
     const id = randomUUID();
-    return await this.repo.create(id, input);
+    return await this.repo.create(id, input, userId);
   }
 
-  async list(): Promise<LearningResource[]> {
-    return await this.repo.getAll();
+  async list(userId = "default"): Promise<LearningResource[]> {
+    return await this.repo.getAll(userId);
   }
 
-  async getBySkillArea(skillAreaId: string): Promise<LearningResource[]> {
-    return await this.repo.getBySkillArea(skillAreaId);
+  async getBySkillArea(skillAreaId: string, userId = "default"): Promise<LearningResource[]> {
+    return await this.repo.getBySkillArea(skillAreaId, userId);
   }
 
-  async getById(id: string): Promise<LearningResource | undefined> {
-    return await this.repo.getById(id);
+  async getById(id: string, userId = "default"): Promise<LearningResource | undefined> {
+    return await this.repo.getById(id, userId);
   }
 
   async update(
     id: string,
     patch: Partial<NewLearningResourceInput>,
+    userId = "default",
   ): Promise<LearningResource | undefined> {
     if (patch.skillAreaId) {
-      const area = await this.skillAreaRepo.getById(patch.skillAreaId);
+      const area = await this.skillAreaRepo.getById(patch.skillAreaId, userId);
       if (!area) throw new Error("Skill area not found");
     }
-    return await this.repo.update(id, patch);
+    return await this.repo.update(id, patch, userId);
   }
 
-  async delete(id: string): Promise<boolean> {
-    return await this.repo.delete(id);
+  async delete(id: string, userId = "default"): Promise<boolean> {
+    return await this.repo.delete(id, userId);
   }
 }

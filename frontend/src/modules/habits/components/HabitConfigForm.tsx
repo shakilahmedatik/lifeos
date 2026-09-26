@@ -23,9 +23,15 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
   const [name, setName] = useState(initialData?.name || "");
   const [category, setCategory] = useState<HabitCategory>(initialData?.category || "general");
   const [icon, setIcon] = useState(initialData?.icon || "");
-  const [color, setColor] = useState(initialData?.color || "#10B981");
+  const [color, setColor] = useState(
+    initialData?.color && /^#[0-9a-fA-F]{6}$/.test(initialData.color)
+      ? initialData.color
+      : "#10B981",
+  );
   const [config, setConfig] = useState<Record<string, unknown>>(() => {
-    if (initialData?.config) return initialData.config as unknown as Record<string, unknown>;
+    if (initialData?.config && typeof initialData.config === "object") {
+      return { ...(initialData.config as unknown as Record<string, unknown>), type };
+    }
     switch (type) {
       case "water":
         return {
@@ -52,13 +58,58 @@ export function HabitConfigForm({ type, initialData, onSave, onCancel }: HabitCo
       case "boolean":
         return { type: "boolean" };
       default:
-        return {};
+        return { type };
     }
   });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSave({ name, type, category, icon, color, config: config as unknown as HabitConfig });
+    const finalColor = color && /^#[0-9a-fA-F]{6}$/.test(color) ? color : "#10B981";
+    const finalIcon = icon.trim() || undefined;
+
+    let finalConfig: Record<string, unknown> = { ...config, type };
+    if (type === "water") {
+      const dailyGoalMl = Number(config.dailyGoalMl) || 2500;
+      const sessionPresetsMl =
+        Array.isArray(config.sessionPresetsMl) && config.sessionPresetsMl.length > 0
+          ? config.sessionPresetsMl.map(Number).filter((n) => !Number.isNaN(n) && n > 0)
+          : [250, 500];
+      const reminderIntervalMin = Number(config.reminderIntervalMin) || 120;
+      finalConfig = { type: "water", dailyGoalMl, sessionPresetsMl, reminderIntervalMin };
+    } else if (type === "walking") {
+      const dailyGoal = Number(config.dailyGoal) || 10000;
+      const unit = config.unit === "km" ? "km" : "steps";
+      finalConfig = { type: "walking", dailyGoal, unit };
+    } else if (type === "timed") {
+      const dailyGoalMinutes = Number(config.dailyGoalMinutes) || 30;
+      finalConfig = { type: "timed", dailyGoalMinutes };
+    } else if (type === "prayer") {
+      const prayers =
+        Array.isArray(config.prayers) && config.prayers.length > 0
+          ? config.prayers.map((p) => ({
+              name: String(p.name || "Prayer").trim(),
+              time: String(p.time || "12:00").trim(),
+            }))
+          : [
+              { name: "Fajr", time: "05:00" },
+              { name: "Dhuhr", time: "13:00" },
+              { name: "Asr", time: "16:30" },
+              { name: "Maghrib", time: "19:00" },
+              { name: "Isha", time: "20:30" },
+            ];
+      finalConfig = { type: "prayer", prayers };
+    } else if (type === "boolean") {
+      finalConfig = { type: "boolean" };
+    }
+
+    onSave({
+      name: name.trim(),
+      type,
+      category,
+      icon: finalIcon,
+      color: finalColor,
+      config: finalConfig as unknown as HabitConfig,
+    });
   };
 
   return (

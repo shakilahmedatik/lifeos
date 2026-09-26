@@ -1,17 +1,41 @@
 import { z } from "zod";
 import { isValidDateString } from "./date-utils.js";
 
-export const TaskCategorySchema = z.enum([
-  "routine",
-  "must_do",
-  "work",
-  "workout",
-  "learning",
-  "habit",
-  "personal",
-  "general",
-  "flex",
-]);
+export const TaskCategorySchema = z.string().min(1, "Category is required");
+
+export const RoutineCategorySchema = z.object({
+  id: z.string(),
+  name: z.string().min(1, "Name is required").max(50, "Name is too long"),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
+    .or(z.string().min(1)),
+  icon: z.string().max(50).optional(),
+  isDefault: z.boolean().optional(),
+  sortOrder: z.number().int().optional(),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const NewRoutineCategoryInputSchema = z.object({
+  name: z.string().min(1, "Name is required").max(50, "Name is too long"),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
+    .optional(),
+  icon: z.string().max(50).optional(),
+  sortOrder: z.number().int().optional(),
+});
+
+export const UpdateRoutineCategoryInputSchema = z.object({
+  name: z.string().min(1, "Name is required").max(50, "Name is too long").optional(),
+  color: z
+    .string()
+    .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
+    .optional(),
+  icon: z.string().max(50).optional(),
+  sortOrder: z.number().int().optional(),
+});
 
 export const TaskStatusSchema = z.enum([
   "todo",
@@ -38,8 +62,6 @@ export const TaskSubtaskSchema = z.object({
   completed: z.boolean(),
 });
 
-export const NotificationSoundTypeSchema = z.enum(["default", "gentle", "urgent", "chime", "bell"]);
-
 export const NewTaskInputSchema = z
   .object({
     title: z.string().min(1, "Title is required").max(200, "Title is too long"),
@@ -48,9 +70,6 @@ export const NewTaskInputSchema = z
     startTime: StrictTimeSchema,
     endTime: StrictTimeSchema,
     notes: z.string().optional(),
-    reminderMinutesBefore: z.number().min(1).max(1440).nullable().optional(),
-    reminderSilent: z.boolean().optional(),
-    reminderSound: NotificationSoundTypeSchema.optional(),
     recurrence: TaskRecurrenceSchema.optional(),
     subtasks: z.array(TaskSubtaskSchema).optional(),
     referenceId: z.string().optional(),
@@ -67,9 +86,6 @@ export const UpdateTaskSchema = z.object({
   startTime: StrictTimeSchema.optional(),
   endTime: StrictTimeSchema.optional(),
   notes: z.string().optional(),
-  reminderMinutesBefore: z.number().min(1).max(1440).nullable().optional(),
-  reminderSilent: z.boolean().optional(),
-  reminderSound: NotificationSoundTypeSchema.optional(),
   recurrence: TaskRecurrenceSchema.optional(),
   subtasks: z.array(TaskSubtaskSchema).optional(),
   isOvernight: z.boolean().optional(),
@@ -146,24 +162,47 @@ export const HabitConfigSchema = z.discriminatedUnion("type", [
 export const NewHabitDefinitionSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
   type: HabitTypeSchema,
-  category: HabitCategorySchema.optional(),
-  icon: z.string().max(10).optional(),
+  category: HabitCategorySchema.optional()
+    .nullable()
+    .transform((v) => v || undefined),
+  icon: z
+    .string()
+    .max(10)
+    .optional()
+    .nullable()
+    .transform((v) => v || undefined),
   color: z
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
-    .optional(),
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => v || undefined),
   config: HabitConfigSchema,
 });
 
 export const UpdateHabitDefinitionSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long").optional(),
-  category: HabitCategorySchema.optional(),
-  icon: z.string().max(10).optional(),
+  type: HabitTypeSchema.optional(),
+  category: HabitCategorySchema.optional()
+    .nullable()
+    .transform((v) => v || undefined),
+  icon: z
+    .string()
+    .max(10)
+    .optional()
+    .nullable()
+    .transform((v) => v || undefined),
   color: z
     .string()
     .regex(/^#[0-9a-fA-F]{6}$/, "Must be hex color")
-    .optional(),
+    .optional()
+    .nullable()
+    .or(z.literal(""))
+    .transform((v) => v || undefined),
   config: HabitConfigSchema.optional(),
+  archived: z.boolean().optional(),
+  sortOrder: z.number().optional(),
 });
 
 export const NewHabitLogEntrySchema = z.object({
@@ -197,13 +236,38 @@ export const AccountTypeSchema = z.enum(["cash", "bank", "card", "savings", "mfs
 export const NewAccountInputSchema = z.object({
   name: z.string().min(1, "Account name is required"),
   type: AccountTypeSchema,
+  initialBalanceMinor: z.number().int().optional(),
 });
 
 export const CategoryKindSchema = z.enum(["income", "expense"]);
 
-export const NewCategoryInputSchema = z.object({
-  name: z.string().min(1, "Category name is required"),
+export const RESERVED_CATEGORY_NAMES = [
+  "Transfer In",
+  "Transfer Out",
+  "Opening Balance",
+  "Opening Balance (Liability)",
+] as const;
+
+export const CategorySchema = z.object({
+  id: z.string(),
+  name: z.string(),
   kind: CategoryKindSchema,
+  isSystem: z.boolean().default(false),
+  archived: z.boolean().default(false),
+  createdAt: z.string(),
+  updatedAt: z.string(),
+});
+
+export const NewCategoryInputSchema = z.object({
+  name: z
+    .string()
+    .min(1, "Category name is required")
+    .refine(
+      (val) => !RESERVED_CATEGORY_NAMES.some((n) => n.toLowerCase() === val.trim().toLowerCase()),
+      { message: "Transfer In and Transfer Out are reserved system categories" },
+    ),
+  kind: CategoryKindSchema,
+  isSystem: z.boolean().optional(),
 });
 
 export const NewTransactionInputSchema = z.object({
@@ -237,7 +301,14 @@ export const UpdateAccountSchema = z.object({
 });
 
 export const UpdateCategorySchema = z.object({
-  name: z.string().min(1, "Category name is required").optional(),
+  name: z
+    .string()
+    .min(1, "Category name is required")
+    .refine(
+      (val) => !RESERVED_CATEGORY_NAMES.some((n) => n.toLowerCase() === val.trim().toLowerCase()),
+      { message: "Transfer In and Transfer Out are reserved system categories" },
+    )
+    .optional(),
   kind: CategoryKindSchema.optional(),
   archived: z.boolean().optional(),
 });
@@ -256,24 +327,6 @@ export const UpdateTransactionSchema = z.object({
     .optional(),
   currency: z.string().optional(),
   note: z.string().optional(),
-});
-
-export const NewRssFeedInputSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  url: z.string().url("Must be a valid RSS URL"),
-});
-
-export const NewNotificationInputSchema = z.object({
-  taskId: z.string().min(1),
-  userId: z.string().optional(),
-  reminderTime: z.string(),
-  soundType: z.enum(["default", "gentle", "urgent", "chime", "bell"]).optional(),
-});
-
-export const UpdateNotificationInputSchema = z.object({
-  reminderTime: z.string().optional(),
-  soundType: z.enum(["default", "gentle", "urgent", "chime", "bell"]).optional(),
-  status: z.enum(["scheduled", "sent", "cancelled", "expired"]).optional(),
 });
 
 // Workout schemas
@@ -378,38 +431,6 @@ export const NewSkillAreaInputSchema = z.object({
 export const UpdateSkillAreaInputSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
   weeklyGoalHours: z.number().positive().optional(),
-});
-
-export const NewReminderSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)"),
-  date: z.preprocess(
-    (val) => (val === "" ? null : val),
-    z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
-      .nullable()
-      .optional(),
-  ),
-  kind: z.enum(["reminder", "event"]).optional(),
-});
-
-export const UpdateReminderSchema = z.object({
-  title: z.string().min(1, "Title is required").optional(),
-  time: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)")
-    .optional(),
-  date: z.preprocess(
-    (val) => (val === "" ? null : val),
-    z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
-      .nullable()
-      .optional(),
-  ),
-  kind: z.enum(["reminder", "event"]).optional(),
-  completed: z.boolean().optional(),
 });
 
 export const LearningResourceTypeSchema = z.enum(["course", "book", "project", "article"]);

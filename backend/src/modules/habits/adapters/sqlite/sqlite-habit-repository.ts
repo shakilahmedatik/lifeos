@@ -1,5 +1,7 @@
-import type { Client } from "@libsql/client";
+import { and, asc, desc, eq, isNull, or, sql } from "drizzle-orm";
 
+import type { DrizzleClient } from "../../../../shared/db.js";
+import { habits } from "../../../../shared/schema.js";
 import type {
   HabitCategory,
   HabitConfig,
@@ -10,22 +12,7 @@ import type {
 } from "../../domain/types.js";
 import type { HabitRepository } from "../../ports/habit-repository.js";
 
-interface HabitRow {
-  id: string;
-  user_id: string;
-  name: string;
-  type: HabitType;
-  category: HabitCategory;
-  icon: string | null;
-  color: string | null;
-  config: string;
-  archived: number;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-}
-
-function rowToHabit(row: HabitRow): HabitDefinition {
+function rowToHabit(row: typeof habits.$inferSelect): HabitDefinition {
   let config: HabitConfig;
   try {
     config = JSON.parse(row.config);
@@ -35,51 +22,52 @@ function rowToHabit(row: HabitRow): HabitDefinition {
   return {
     id: row.id,
     name: row.name,
-    type: row.type || "boolean",
-    category: row.category || "general",
+    type: (row.type || "boolean") as HabitType,
+    category: (row.category || "general") as HabitCategory,
     icon: row.icon || undefined,
     color: row.color || undefined,
     config: config && typeof config === "object" ? config : { type: "boolean" },
     archived: Boolean(row.archived),
-    sortOrder: row.sort_order ?? 0,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at || row.created_at,
+    sortOrder: row.sortOrder ?? 0,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt || row.createdAt,
   };
 }
 
-export class SqliteHabitRepository implements HabitRepository {
-  constructor(private readonly client: Client) {}
+function userScope(userId: string) {
+  return and(or(eq(habits.userId, userId), eq(habits.userId, "")), isNull(habits.deletedAt));
+}
+
+export class DrizzleHabitRepository implements HabitRepository {
+  constructor(private readonly db: DrizzleClient) {}
 
   async getById(id: string, userId: string): Promise<HabitDefinition | undefined> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM habits WHERE id = ? AND (user_id = ? OR user_id = '')",
-      args: [id, userId],
-    });
-    const row = res.rows[0] as unknown as HabitRow | undefined;
+    const [row] = await this.db
+      .select()
+      .from(habits)
+      .where(and(eq(habits.id, id), userScope(userId)));
     return row ? rowToHabit(row) : undefined;
   }
 
   async getByName(name: string, userId: string): Promise<HabitDefinition | undefined> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM habits WHERE LOWER(name) = LOWER(?) AND (user_id = ? OR user_id = '')",
-      args: [name, userId],
-    });
-    const row = res.rows[0] as unknown as HabitRow | undefined;
+    const [row] = await this.db
+      .select()
+      .from(habits)
+      .where(and(sql`LOWER(${habits.name}) = LOWER(${name})`, userScope(userId)));
     return row ? rowToHabit(row) : undefined;
   }
 
   async getAll(includeArchived = false, userId: string): Promise<HabitDefinition[]> {
-    let sql = "SELECT * FROM habits WHERE (user_id = ? OR user_id = '')";
+    const conditions = [userScope(userId)];
     if (!includeArchived) {
-      sql += " AND archived = 0";
+      conditions.push(eq(habits.archived, 0));
     }
-    sql += " ORDER BY sort_order ASC, created_at DESC";
 
-    const res = await this.client.execute({
-      sql,
-      args: [userId],
-    });
-    const rows = res.rows as unknown as HabitRow[];
+    const rows = await this.db
+      .select()
+      .from(habits)
+      .where(and(...conditions))
+      .orderBy(asc(habits.sortOrder), desc(sql`${habits.createdAt}`));
     return rows.map(rowToHabit);
   }
 
@@ -90,45 +78,21 @@ export class SqliteHabitRepository implements HabitRepository {
     userId: string,
   ): Promise<HabitDefinition> {
     const now = new Date().toISOString();
-    const frequency = (input as { frequency?: string }).frequency ?? "daily";
-    const category = input.category ?? "general";
 
-    try {
-      await this.client.execute({
-        sql: `INSERT INTO habits (id, user_id, name, type, category, icon, color, config, archived, sort_order, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?, ?)`,
-        args: [
-          id,
-          userId,
-          input.name,
-          input.type,
-          category,
-          input.icon ?? null,
-          input.color ?? null,
-          JSON.stringify(input.config),
-          sortOrder,
-          now,
-          now,
-        ],
-      });
-    } catch {
-      await this.client.execute({
-        sql: `INSERT INTO habits (id, user_id, name, frequency, type, icon, color, config, archived, sort_order, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, ?, ?)`,
-        args: [
-          id,
-          userId,
-          input.name,
-          frequency,
-          input.type,
-          input.icon ?? null,
-          input.color ?? null,
-          JSON.stringify(input.config),
-          sortOrder,
-          now,
-        ],
-      });
-    }
+    await this.db.insert(habits).values({
+      id,
+      userId,
+      name: input.name,
+      type: input.type,
+      category: input.category ?? "general",
+      icon: input.icon ?? null,
+      color: input.color ?? null,
+      config: JSON.stringify(input.config),
+      archived: 0,
+      sortOrder,
+      createdAt: now,
+      updatedAt: now,
+    });
 
     return (await this.getById(id, userId)) as HabitDefinition;
   }
@@ -141,58 +105,42 @@ export class SqliteHabitRepository implements HabitRepository {
     const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
-    const fields: string[] = [];
-    const values: (string | number | null)[] = [];
+    const updates: Record<string, unknown> = {};
+    if (patch.name !== undefined) updates.name = patch.name;
+    if (patch.category !== undefined) updates.category = patch.category;
+    if (patch.icon !== undefined) updates.icon = patch.icon ?? null;
+    if (patch.color !== undefined) updates.color = patch.color ?? null;
+    if (patch.config !== undefined) updates.config = JSON.stringify(patch.config);
+    const p = patch as Record<string, unknown>;
+    if (p.archived !== undefined) updates.archived = p.archived ? 1 : 0;
+    if (p.sortOrder !== undefined) updates.sortOrder = p.sortOrder as number;
 
-    if (patch.name !== undefined) {
-      fields.push("name = ?");
-      values.push(patch.name);
-    }
-    if (patch.category !== undefined) {
-      fields.push("category = ?");
-      values.push(patch.category);
-    }
-    if (patch.icon !== undefined) {
-      fields.push("icon = ?");
-      values.push(patch.icon ?? null);
-    }
-    if (patch.color !== undefined) {
-      fields.push("color = ?");
-      values.push(patch.color ?? null);
-    }
-    if (patch.config !== undefined) {
-      fields.push("config = ?");
-      values.push(JSON.stringify(patch.config));
-    }
+    if (Object.keys(updates).length === 0) return existing;
 
-    if (fields.length === 0) return existing;
+    updates.updatedAt = new Date().toISOString();
 
-    fields.push("updated_at = ?");
-    values.push(new Date().toISOString());
-    values.push(id);
-    values.push(userId);
-
-    await this.client.execute({
-      sql: `UPDATE habits SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '')`,
-      args: values,
-    });
+    await this.db
+      .update(habits)
+      .set(updates)
+      .where(and(eq(habits.id, id), userScope(userId)));
 
     return await this.getById(id, userId);
   }
 
   async delete(id: string, userId: string): Promise<boolean> {
-    const res = await this.client.execute({
-      sql: "DELETE FROM habits WHERE id = ? AND (user_id = ? OR user_id = '')",
-      args: [id, userId],
-    });
-    return res.rowsAffected > 0;
+    const now = new Date().toISOString();
+    const result = await this.db
+      .update(habits)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(and(eq(habits.id, id), userScope(userId)));
+    return result.rowsAffected > 0;
   }
 
   async archive(id: string, archived: boolean, userId: string): Promise<void> {
-    await this.client.execute({
-      sql: "UPDATE habits SET archived = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
-      args: [archived ? 1 : 0, new Date().toISOString(), id, userId],
-    });
+    await this.db
+      .update(habits)
+      .set({ archived: archived ? 1 : 0, updatedAt: new Date().toISOString() })
+      .where(and(eq(habits.id, id), userScope(userId)));
   }
 
   async updateSortOrders(
@@ -200,11 +148,11 @@ export class SqliteHabitRepository implements HabitRepository {
     userId: string,
   ): Promise<void> {
     const now = new Date().toISOString();
-    const statements = updates.map((update) => ({
-      sql: "UPDATE habits SET sort_order = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '')",
-      args: [update.sortOrder, now, update.id, userId],
-    }));
-
-    await this.client.batch(statements, "write");
+    for (const update of updates) {
+      await this.db
+        .update(habits)
+        .set({ sortOrder: update.sortOrder, updatedAt: now })
+        .where(and(eq(habits.id, update.id), userScope(userId)));
+    }
   }
 }

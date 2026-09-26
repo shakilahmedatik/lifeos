@@ -1,37 +1,29 @@
-import type { Client } from "@libsql/client";
+import { and, asc, desc, eq, isNull } from "drizzle-orm";
 
+import type { DrizzleClient } from "../../../../shared/db.js";
+import { habitLogs } from "../../../../shared/schema.js";
 import type { HabitLogEntry, NewHabitLogEntryInput } from "../../domain/types.js";
 import type { HabitLogRepository } from "../../ports/habit-log-repository.js";
 
-interface HabitLogRow {
-  id: string;
-  habit_id: string;
-  date: string;
-  value: number;
-  logged_at: string;
-  meta: string | null;
-}
-
-function rowToHabitLog(row: HabitLogRow): HabitLogEntry {
+function rowToHabitLog(row: typeof habitLogs.$inferSelect): HabitLogEntry {
   return {
     id: row.id,
-    habitId: row.habit_id,
+    habitId: row.habitId,
     date: row.date,
     value: row.value,
-    loggedAt: row.logged_at,
+    loggedAt: row.loggedAt,
     meta: row.meta || undefined,
   };
 }
 
-export class SqliteHabitLogRepository implements HabitLogRepository {
-  constructor(private readonly client: Client) {}
+export class DrizzleHabitLogRepository implements HabitLogRepository {
+  constructor(private readonly db: DrizzleClient) {}
 
   async getById(id: string, _userId: string): Promise<HabitLogEntry | undefined> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM habit_logs WHERE id = ?",
-      args: [id],
-    });
-    const row = res.rows[0] as unknown as HabitLogRow | undefined;
+    const [row] = await this.db
+      .select()
+      .from(habitLogs)
+      .where(and(eq(habitLogs.id, id), isNull(habitLogs.deletedAt)));
     return row ? rowToHabitLog(row) : undefined;
   }
 
@@ -40,11 +32,13 @@ export class SqliteHabitLogRepository implements HabitLogRepository {
     date: string,
     _userId: string,
   ): Promise<HabitLogEntry[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM habit_logs WHERE habit_id = ? AND date = ? ORDER BY logged_at ASC",
-      args: [habitId, date],
-    });
-    const rows = res.rows as unknown as HabitLogRow[];
+    const rows = await this.db
+      .select()
+      .from(habitLogs)
+      .where(
+        and(eq(habitLogs.habitId, habitId), eq(habitLogs.date, date), isNull(habitLogs.deletedAt)),
+      )
+      .orderBy(asc(habitLogs.loggedAt));
     return rows.map(rowToHabitLog);
   }
 
@@ -53,54 +47,68 @@ export class SqliteHabitLogRepository implements HabitLogRepository {
     endDate: string,
     _userId: string,
   ): Promise<HabitLogEntry[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM habit_logs WHERE date >= ? AND date <= ? ORDER BY date, logged_at ASC",
-      args: [startDate, endDate],
-    });
-    const rows = res.rows as unknown as HabitLogRow[];
+    const { gte, lte } = await import("drizzle-orm");
+    const rows = await this.db
+      .select()
+      .from(habitLogs)
+      .where(
+        and(
+          gte(habitLogs.date, startDate),
+          lte(habitLogs.date, endDate),
+          isNull(habitLogs.deletedAt),
+        ),
+      )
+      .orderBy(asc(habitLogs.date), asc(habitLogs.loggedAt));
     return rows.map(rowToHabitLog);
   }
 
   async getByHabitId(habitId: string, _userId: string): Promise<HabitLogEntry[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM habit_logs WHERE habit_id = ? ORDER BY date DESC, logged_at DESC",
-      args: [habitId],
-    });
-    const rows = res.rows as unknown as HabitLogRow[];
+    const rows = await this.db
+      .select()
+      .from(habitLogs)
+      .where(and(eq(habitLogs.habitId, habitId), isNull(habitLogs.deletedAt)))
+      .orderBy(desc(habitLogs.date), desc(habitLogs.loggedAt));
     return rows.map(rowToHabitLog);
   }
 
   async getAllLogs(_userId: string): Promise<HabitLogEntry[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM habit_logs ORDER BY date DESC, logged_at DESC",
-    });
-    const rows = res.rows as unknown as HabitLogRow[];
+    const rows = await this.db
+      .select()
+      .from(habitLogs)
+      .where(isNull(habitLogs.deletedAt))
+      .orderBy(desc(habitLogs.date), desc(habitLogs.loggedAt));
     return rows.map(rowToHabitLog);
   }
 
   async create(id: string, input: NewHabitLogEntryInput, userId: string): Promise<HabitLogEntry> {
     const now = new Date().toISOString();
-    await this.client.execute({
-      sql: `INSERT INTO habit_logs (id, habit_id, date, value, logged_at, meta)
-            VALUES (?, ?, ?, ?, ?, ?)`,
-      args: [id, input.habitId, input.date, input.value, now, input.meta ?? null],
+    await this.db.insert(habitLogs).values({
+      id,
+      userId,
+      habitId: input.habitId,
+      date: input.date,
+      value: input.value,
+      loggedAt: now,
+      meta: input.meta ?? null,
     });
 
     return (await this.getById(id, userId)) as HabitLogEntry;
   }
 
   async delete(id: string, _userId: string): Promise<boolean> {
-    const res = await this.client.execute({
-      sql: "DELETE FROM habit_logs WHERE id = ?",
-      args: [id],
-    });
-    return res.rowsAffected > 0;
+    const now = new Date().toISOString();
+    const result = await this.db
+      .update(habitLogs)
+      .set({ deletedAt: now })
+      .where(and(eq(habitLogs.id, id), isNull(habitLogs.deletedAt)));
+    return result.rowsAffected > 0;
   }
 
   async deleteByHabitId(habitId: string, _userId: string): Promise<void> {
-    await this.client.execute({
-      sql: "DELETE FROM habit_logs WHERE habit_id = ?",
-      args: [habitId],
-    });
+    const now = new Date().toISOString();
+    await this.db
+      .update(habitLogs)
+      .set({ deletedAt: now })
+      .where(and(eq(habitLogs.habitId, habitId), isNull(habitLogs.deletedAt)));
   }
 }

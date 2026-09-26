@@ -2,6 +2,8 @@ import type { NextFunction, Request, Response } from "express";
 import { Redis } from "ioredis";
 import { logger } from "./logger.js";
 
+const rlLog = logger.child({ module: "rate-limiter" });
+
 interface RateLimitOptions {
   windowMs: number;
   max: number;
@@ -22,14 +24,14 @@ if (process.env.REDIS_URL) {
       lazyConnect: true,
     });
     redisClient.connect().catch((err: Error) => {
-      logger.error("Failed to connect to Redis for rate limiting, falling back to in-memory", {
+      rlLog.error("Failed to connect to Redis for rate limiting, falling back to in-memory", {
         error: err.message,
       });
       redisClient = null;
     });
-    logger.info("Initialized Redis client for rate limiting");
+    rlLog.info("Initialized Redis client for rate limiting");
   } catch (err) {
-    logger.error("Error creating Redis client", { error: (err as Error).message });
+    rlLog.error("Error creating Redis client", { error: (err as Error).message });
     redisClient = null;
   }
 }
@@ -72,7 +74,7 @@ export function createRateLimiter(options: RateLimitOptions) {
 
         return next();
       } catch (err) {
-        logger.error("Redis rate limiter error, falling back to in-memory", {
+        rlLog.error("Redis rate limiter error, falling back to in-memory", {
           error: (err as Error).message,
         });
       }
@@ -116,4 +118,10 @@ export const apiRateLimiter = createRateLimiter({
   windowMs: 15 * 60 * 1000, // 15 minutes
   max: 2500, // Limit each IP to 2500 requests per 15 min
   skip: (req) => req.path.startsWith("/health"),
+});
+
+export const authRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // Limit sensitive auth operations to 30 requests per 15 min
+  message: "Too many authentication attempts, please try again later.",
 });

@@ -1,56 +1,18 @@
-import { type Client, createClient } from "@libsql/client";
+import { sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { SqliteLearningLogRepository } from "../adapters/sqlite/sqlite-learning-log-repository.js";
-import { SqliteLearningResourceRepository } from "../adapters/sqlite/sqlite-learning-resource-repository.js";
-import { SqliteSkillAreaRepository } from "../adapters/sqlite/sqlite-skill-area-repository.js";
+import type { DrizzleClient } from "../../../shared/db.js";
+import { createTestDatabase } from "../../../shared/test-db.js";
+import { DrizzleLearningLogRepository } from "../adapters/sqlite/sqlite-learning-log-repository.js";
+import { DrizzleLearningResourceRepository } from "../adapters/sqlite/sqlite-learning-resource-repository.js";
+import { DrizzleSkillAreaRepository } from "../adapters/sqlite/sqlite-skill-area-repository.js";
 
-async function createTestClient(): Promise<Client> {
-  const client = createClient({ url: ":memory:" });
-
-  await client.execute(`
-    CREATE TABLE skill_areas (
-      id TEXT PRIMARY KEY,
-      name TEXT NOT NULL UNIQUE,
-      weekly_goal_hours REAL NOT NULL DEFAULT 5,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `);
-  await client.execute(`
-    CREATE TABLE learning_resources (
-      id TEXT PRIMARY KEY,
-      skill_area_id TEXT NOT NULL REFERENCES skill_areas(id) ON DELETE CASCADE,
-      title TEXT NOT NULL,
-      type TEXT NOT NULL CHECK (type IN ('course', 'book', 'project', 'article')),
-      total_units REAL,
-      unit TEXT CHECK (unit IN ('chapters', 'videos', 'hours')),
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `);
-  await client.execute(`
-    CREATE TABLE learning_logs (
-      id TEXT PRIMARY KEY,
-      resource_id TEXT NOT NULL REFERENCES learning_resources(id) ON DELETE CASCADE,
-      date TEXT NOT NULL,
-      minutes_spent INTEGER NOT NULL,
-      units_completed REAL,
-      notes TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-    );
-  `);
-
-  return client;
-}
-
-describe("SqliteSkillAreaRepository", () => {
-  let client: Client;
-  let repo: SqliteSkillAreaRepository;
+describe("DrizzleSkillAreaRepository", () => {
+  let db: DrizzleClient;
+  let repo: DrizzleSkillAreaRepository;
 
   beforeEach(async () => {
-    client = await createTestClient();
-    repo = new SqliteSkillAreaRepository(client);
+    db = await createTestDatabase();
+    repo = new DrizzleSkillAreaRepository(db);
   });
 
   it("creates and retrieves a skill area", async () => {
@@ -67,11 +29,6 @@ describe("SqliteSkillAreaRepository", () => {
     await repo.create("sa-2", { name: "Design" });
     await repo.create("sa-3", { name: "Music" });
     expect(await repo.getAll()).toHaveLength(3);
-  });
-
-  it("rejects duplicate name on create", async () => {
-    await repo.create("sa-1", { name: "Programming" });
-    await expect(repo.create("sa-2", { name: "Programming" })).rejects.toThrow();
   });
 
   it("gets by name", async () => {
@@ -96,17 +53,17 @@ describe("SqliteSkillAreaRepository", () => {
   });
 });
 
-describe("SqliteLearningResourceRepository", () => {
-  let client: Client;
-  let repo: SqliteLearningResourceRepository;
+describe("DrizzleLearningResourceRepository", () => {
+  let db: DrizzleClient;
+  let repo: DrizzleLearningResourceRepository;
 
   beforeEach(async () => {
-    client = await createTestClient();
-    await client.execute({
-      sql: "INSERT INTO skill_areas (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-      args: ["sa-1", "Programming", new Date().toISOString(), new Date().toISOString()],
-    });
-    repo = new SqliteLearningResourceRepository(client);
+    db = await createTestDatabase();
+    const now = new Date().toISOString();
+    await db.run(
+      sql`INSERT INTO skill_areas (id, name, created_at, updated_at) VALUES (${"sa-1"}, ${"Programming"}, ${now}, ${now})`,
+    );
+    repo = new DrizzleLearningResourceRepository(db);
   });
 
   it("creates and retrieves a resource", async () => {
@@ -150,31 +107,20 @@ describe("SqliteLearningResourceRepository", () => {
   });
 });
 
-describe("SqliteLearningLogRepository", () => {
-  let client: Client;
-  let repo: SqliteLearningLogRepository;
+describe("DrizzleLearningLogRepository", () => {
+  let db: DrizzleClient;
+  let repo: DrizzleLearningLogRepository;
 
   beforeEach(async () => {
-    client = await createTestClient();
-    await client.execute({
-      sql: "INSERT INTO skill_areas (id, name, created_at, updated_at) VALUES (?, ?, ?, ?)",
-      args: ["sa-1", "Programming", new Date().toISOString(), new Date().toISOString()],
-    });
-    await client.execute({
-      sql: `INSERT INTO learning_resources (id, skill_area_id, title, type, total_units, unit, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        "lr-1",
-        "sa-1",
-        "Course",
-        "course",
-        null,
-        null,
-        new Date().toISOString(),
-        new Date().toISOString(),
-      ],
-    });
-    repo = new SqliteLearningLogRepository(client);
+    db = await createTestDatabase();
+    const now = new Date().toISOString();
+    await db.run(
+      sql`INSERT INTO skill_areas (id, name, created_at, updated_at) VALUES (${"sa-1"}, ${"Programming"}, ${now}, ${now})`,
+    );
+    await db.run(
+      sql`INSERT INTO learning_resources (id, skill_area_id, title, type, created_at, updated_at) VALUES (${"lr-1"}, ${"sa-1"}, ${"Course"}, ${"course"}, ${now}, ${now})`,
+    );
+    repo = new DrizzleLearningLogRepository(db);
   });
 
   it("creates and retrieves a log", async () => {

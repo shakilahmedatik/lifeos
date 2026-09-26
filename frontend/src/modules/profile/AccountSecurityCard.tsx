@@ -1,4 +1,4 @@
-import { KeyRound, LogOut, ShieldAlert } from "lucide-react";
+import { KeyRound, LogOut, ShieldAlert, Smartphone } from "lucide-react";
 import { type FC, useState } from "react";
 import Button from "../../components/ui/Button.js";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
@@ -15,38 +15,45 @@ export const AccountSecurityCard: FC = () => {
 
   return (
     <>
-      <Card className="bg-surface border-border p-6 shadow-lg">
+      <Card className="bg-card border-border p-6 shadow-sm rounded-2xl">
         <CardHeader className="mb-4">
           <CardTitle className="text-lg font-semibold text-primary flex items-center gap-2">
-            <KeyRound className="w-5 h-5 text-amber-400" />
+            <KeyRound className="w-5 h-5 text-accent" />
             Security & Session
           </CardTitle>
         </CardHeader>
 
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between p-4 bg-surface-elevated rounded-xl border border-border-subtle">
-            <div>
-              <p className="text-sm font-semibold text-primary">Active Session</p>
-              <p className="text-xs text-muted">Authenticated on this browser device</p>
+          <div className="flex items-center justify-between p-4 bg-surface-elevated rounded-xl border border-border shadow-xs">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                <Smartphone className="w-4 h-4" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-primary">Active Browser Session</p>
+                <p className="text-xs text-muted">Secured via local bearer token storage</p>
+              </div>
             </div>
-            <span className="text-xs font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
-              Active
+            <span className="text-xs font-mono font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+              Active Now
             </span>
           </div>
 
-          <div className="pt-2 border-t border-border flex items-center justify-between gap-4">
+          <div className="pt-3 border-t border-border flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <p className="text-sm font-semibold text-red-400 flex items-center gap-1.5">
-                <ShieldAlert className="w-4 h-4" /> Log Out of LifeOS
+              <p className="text-sm font-semibold text-red-600 dark:text-red-400 flex items-center gap-1.5">
+                <ShieldAlert className="w-4 h-4" /> End Session
               </p>
-              <p className="text-xs text-muted">Safely end your current session on this device</p>
+              <p className="text-xs text-muted">
+                Safely sign out of your LifeOS account on this device
+              </p>
             </div>
 
             <Button
               type="button"
               onClick={() => setShowLogoutConfirm(true)}
               icon={<LogOut className="w-4 h-4 mr-1" />}
-              className="bg-red-500/10 hover:bg-red-500 text-red-400 hover:text-white border border-red-500/30 font-bold px-4 py-2 rounded-xl text-xs shrink-0 transition-all duration-200"
+              className="bg-red-500/10 hover:bg-red-600 text-red-600 dark:text-red-400 hover:text-white border border-red-500/30 font-semibold px-4 py-2 rounded-xl text-xs shrink-0 transition-all duration-200"
             >
               Sign Out
             </Button>

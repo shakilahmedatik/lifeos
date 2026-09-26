@@ -1,4 +1,8 @@
 import { randomUUID } from "node:crypto";
+import {
+  SYSTEM_CATEGORY_OPENING_BALANCE_EXPENSE_ID,
+  SYSTEM_CATEGORY_OPENING_BALANCE_ID,
+} from "@lifeos/contracts";
 
 import type { Account, NewAccountInput } from "../domain/types.js";
 import type { AccountRepository } from "../ports/account-repository.js";
@@ -10,46 +14,79 @@ export class AccountService {
     private readonly transactionRepo: TransactionRepository,
   ) {}
 
-  async createAccount(input: NewAccountInput): Promise<Account> {
+  async createAccount(input: NewAccountInput, userId: string): Promise<Account> {
     const id = randomUUID();
-    return await this.accountRepo.create(id, input);
+    const account = await this.accountRepo.create(id, input, userId);
+
+    if (input.initialBalanceMinor && input.initialBalanceMinor !== 0) {
+      const isPositive = input.initialBalanceMinor > 0;
+      const categoryId = isPositive
+        ? SYSTEM_CATEGORY_OPENING_BALANCE_ID
+        : SYSTEM_CATEGORY_OPENING_BALANCE_EXPENSE_ID;
+
+      await this.transactionRepo.create(
+        randomUUID(),
+        {
+          accountId: account.id,
+          categoryId,
+          date: new Date().toISOString().split("T")[0],
+          amountMinor: Math.abs(input.initialBalanceMinor),
+          note: "Opening balance",
+        },
+        userId,
+      );
+    }
+
+    return account;
   }
 
-  async listAccounts(): Promise<Account[]> {
-    return await this.accountRepo.getAll();
+  async listAccounts(userId: string): Promise<Account[]> {
+    return await this.accountRepo.getAll(userId);
   }
 
-  async listActiveAccounts(): Promise<Account[]> {
-    return await this.accountRepo.getActive();
+  async listActiveAccounts(userId: string): Promise<Account[]> {
+    return await this.accountRepo.getActive(userId);
   }
 
-  async getAccount(id: string): Promise<Account | undefined> {
-    return await this.accountRepo.getById(id);
+  async getAccount(id: string, userId: string): Promise<Account | undefined> {
+    return await this.accountRepo.getById(id, userId);
   }
 
-  async updateAccount(id: string, patch: Partial<NewAccountInput>): Promise<Account | undefined> {
-    return await this.accountRepo.update(id, patch);
+  async updateAccount(
+    id: string,
+    patch: Partial<NewAccountInput>,
+    userId: string,
+  ): Promise<Account | undefined> {
+    return await this.accountRepo.update(id, patch, userId);
   }
 
-  async archiveAccount(id: string): Promise<boolean> {
-    return await this.accountRepo.archive(id);
+  async archiveAccount(id: string, userId: string): Promise<boolean> {
+    return await this.accountRepo.archive(id, userId);
   }
 
-  async unarchiveAccount(id: string): Promise<boolean> {
-    return await this.accountRepo.unarchive(id);
+  async unarchiveAccount(id: string, userId: string): Promise<boolean> {
+    return await this.accountRepo.unarchive(id, userId);
   }
 
-  async deleteAccount(id: string): Promise<boolean> {
-    const txs = await this.transactionRepo.getByAccountId(id);
-    if (txs.length > 0) {
+  async deleteAccount(id: string, userId: string): Promise<boolean> {
+    const txs = await this.transactionRepo.getByAccountId(id, userId);
+    const nonOpeningTxs = txs.filter(
+      (t) =>
+        t.categoryId !== SYSTEM_CATEGORY_OPENING_BALANCE_ID &&
+        t.categoryId !== SYSTEM_CATEGORY_OPENING_BALANCE_EXPENSE_ID,
+    );
+    if (nonOpeningTxs.length > 0) {
       throw new Error(
         "Cannot delete account with existing transactions. Archive the account instead.",
       );
     }
-    return await this.accountRepo.delete(id);
+    for (const t of txs) {
+      await this.transactionRepo.delete(t.id, userId);
+    }
+    return await this.accountRepo.delete(id, userId);
   }
 
-  async getAccountBalance(id: string): Promise<number> {
-    return await this.transactionRepo.getAccountBalance(id);
+  async getAccountBalance(id: string, userId: string): Promise<number> {
+    return await this.transactionRepo.getAccountBalance(id, userId);
   }
 }

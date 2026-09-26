@@ -1,5 +1,6 @@
-import { type Client, createClient } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
+import type { DrizzleClient } from "../../../shared/db.js";
+import { createTestDatabase } from "../../../shared/test-db.js";
 import type { HabitLogService } from "../application/habit-log-service.js";
 import type { HabitService } from "../application/habit-service.js";
 import { getDailyProgress, isCompleted } from "../domain/rules.js";
@@ -107,42 +108,14 @@ describe("Typed Habit Domain Rules", () => {
 });
 
 describe("Habit Module Services Integration", () => {
-  let client: Client;
+  let db: DrizzleClient;
   let habitService: HabitService;
   let habitLogService: HabitLogService;
 
   beforeEach(async () => {
-    client = createClient({ url: ":memory:" });
-    await client.execute(`
-      CREATE TABLE habits (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL DEFAULT 'default',
-        name TEXT NOT NULL UNIQUE,
-        type TEXT NOT NULL DEFAULT 'boolean',
-        category TEXT NOT NULL DEFAULT 'general',
-        icon TEXT,
-        color TEXT,
-        config TEXT NOT NULL DEFAULT '{"type":"boolean"}',
-        archived INTEGER NOT NULL DEFAULT 0,
-        sort_order INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL DEFAULT (datetime('now')),
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      );
-    `);
-    await client.execute(`
-      CREATE TABLE habit_logs (
-        id TEXT PRIMARY KEY,
-        user_id TEXT NOT NULL DEFAULT 'default',
-        habit_id TEXT NOT NULL,
-        date TEXT NOT NULL,
-        value REAL NOT NULL DEFAULT 1,
-        meta TEXT,
-        logged_at TEXT NOT NULL DEFAULT (datetime('now')),
-        FOREIGN KEY (habit_id) REFERENCES habits(id) ON DELETE CASCADE
-      );
-    `);
+    db = await createTestDatabase();
 
-    const module = initHabitsModule(client);
+    const module = initHabitsModule(db);
     habitService = module.habitService;
     habitLogService = module.habitLogService;
   });
@@ -208,5 +181,32 @@ describe("Habit Module Services Integration", () => {
     expect(found).toBeDefined();
     expect(found?.todayTarget).toBe(4);
     expect(found?.todayProgress).toBe(0.25);
+  });
+
+  it("calculates analytics correctly for a habit with getAnalytics", async () => {
+    const habit = await habitService.createHabit({
+      name: "Study",
+      type: "timed",
+      config: { type: "timed", dailyGoalMinutes: 60 },
+    });
+
+    await habitLogService.logHabit({
+      habitId: habit.id,
+      date: "2026-08-14",
+      value: 60,
+    });
+
+    const module = initHabitsModule(db);
+    const stats = await module.habitStatsService.getAnalytics(
+      habit.id,
+      "week",
+      "default",
+      "2026-08-14",
+    );
+    expect(stats).toBeDefined();
+    expect(stats?.totalValue).toBe(60);
+    expect(stats?.completionRate).toBe(14);
+    expect(stats?.dailyValues).toHaveLength(7);
+    expect(stats?.dailyValues[6].value).toBe(60);
   });
 });

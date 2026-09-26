@@ -1,3 +1,4 @@
+import { SYSTEM_CATEGORY_TRANSFER_IN_ID, SYSTEM_CATEGORY_TRANSFER_OUT_ID } from "@lifeos/contracts";
 import { beforeEach, describe, expect, it } from "vitest";
 
 import { TransactionService } from "../application/transaction-service.js";
@@ -67,12 +68,13 @@ function createMockCategoryRepo(): CategoryRepository & { categories: Map<string
     async getByKind(kind: Category["kind"]) {
       return Array.from(categories.values()).filter((c) => c.kind === kind && !c.archived);
     },
-    async create(id: string, input: { name: string; kind: Category["kind"] }) {
+    async create(id: string, input: { name: string; kind: Category["kind"]; isSystem?: boolean }) {
       const now = new Date().toISOString();
       const category: Category = {
         id,
         name: input.name,
         kind: input.kind,
+        isSystem: Boolean(input.isSystem),
         archived: false,
         createdAt: now,
         updatedAt: now,
@@ -172,18 +174,21 @@ describe("TransactionService", () => {
     service = new TransactionService(transactionRepo, accountRepo, categoryRepo);
 
     // Seed test data
-    await accountRepo.create("acc-1", { name: "Bank", type: "bank" });
-    await categoryRepo.create("cat-expense-food", { name: "Food", kind: "expense" });
-    await categoryRepo.create("cat-income-salary", { name: "Salary", kind: "income" });
+    await accountRepo.create("acc-1", { name: "Bank", type: "bank" }, "test-user");
+    await categoryRepo.create("cat-expense-food", { name: "Food", kind: "expense" }, "test-user");
+    await categoryRepo.create("cat-income-salary", { name: "Salary", kind: "income" }, "test-user");
   });
 
   it("creates a transaction", async () => {
-    const transaction = await service.createTransaction({
-      accountId: "acc-1",
-      categoryId: "cat-expense-food",
-      date: "2026-07-22",
-      amountMinor: 5000,
-    });
+    const transaction = await service.createTransaction(
+      {
+        accountId: "acc-1",
+        categoryId: "cat-expense-food",
+        date: "2026-07-22",
+        amountMinor: 5000,
+      },
+      "test-user",
+    );
     expect(transaction.accountId).toBe("acc-1");
     expect(transaction.amountMinor).toBe(5000);
     expect(transactionRepo.transactions.size).toBe(1);
@@ -191,88 +196,113 @@ describe("TransactionService", () => {
 
   it("rejects transaction for non-existent account", async () => {
     await expect(
-      service.createTransaction({
-        accountId: "non-existent",
-        categoryId: "cat-expense-food",
-        date: "2026-07-22",
-        amountMinor: 5000,
-      }),
+      service.createTransaction(
+        {
+          accountId: "non-existent",
+          categoryId: "cat-expense-food",
+          date: "2026-07-22",
+          amountMinor: 5000,
+        },
+        "test-user",
+      ),
     ).rejects.toThrow("Account not found");
   });
 
   it("rejects transaction for archived account", async () => {
-    await accountRepo.archive("acc-1");
+    await accountRepo.archive("acc-1", "test-user");
     await expect(
-      service.createTransaction({
-        accountId: "acc-1",
-        categoryId: "cat-expense-food",
-        date: "2026-07-22",
-        amountMinor: 5000,
-      }),
+      service.createTransaction(
+        {
+          accountId: "acc-1",
+          categoryId: "cat-expense-food",
+          date: "2026-07-22",
+          amountMinor: 5000,
+        },
+        "test-user",
+      ),
     ).rejects.toThrow("archived account");
   });
 
   it("rejects transaction for non-existent category", async () => {
     await expect(
-      service.createTransaction({
-        accountId: "acc-1",
-        categoryId: "non-existent",
-        date: "2026-07-22",
-        amountMinor: 5000,
-      }),
+      service.createTransaction(
+        {
+          accountId: "acc-1",
+          categoryId: "non-existent",
+          date: "2026-07-22",
+          amountMinor: 5000,
+        },
+        "test-user",
+      ),
     ).rejects.toThrow("Category not found");
   });
 
   it("rejects zero amount", async () => {
     await expect(
-      service.createTransaction({
-        accountId: "acc-1",
-        categoryId: "cat-expense-food",
-        date: "2026-07-22",
-        amountMinor: 0,
-      }),
+      service.createTransaction(
+        {
+          accountId: "acc-1",
+          categoryId: "cat-expense-food",
+          date: "2026-07-22",
+          amountMinor: 0,
+        },
+        "test-user",
+      ),
     ).rejects.toThrow("Amount must be positive");
   });
 
-  it("creates a transfer between accounts", async () => {
-    await accountRepo.create("acc-2", { name: "Cash", type: "cash" });
+  it("creates a transfer between accounts using dedicated transfer categories", async () => {
+    await accountRepo.create("acc-2", { name: "Cash", type: "cash" }, "test-user");
     const result = await service.createTransfer(
       "acc-1",
       "acc-2",
       100000,
       "2026-07-22",
       "ATM withdrawal",
+      "test-user",
     );
     expect(result.from.accountId).toBe("acc-1");
     expect(result.to.accountId).toBe("acc-2");
+    expect(result.from.categoryId).toBe(SYSTEM_CATEGORY_TRANSFER_OUT_ID);
+    expect(result.to.categoryId).toBe(SYSTEM_CATEGORY_TRANSFER_IN_ID);
     expect(result.from.amountMinor).toBe(100000);
     expect(result.to.amountMinor).toBe(100000);
     expect(result.from.transferPairId).toBe(result.to.transferPairId);
   });
 
   it("rejects transfer to same account", async () => {
-    await expect(service.createTransfer("acc-1", "acc-1", 10000, "2026-07-22")).rejects.toThrow(
-      "Cannot transfer to the same account",
-    );
+    await expect(
+      service.createTransfer("acc-1", "acc-1", 10000, "2026-07-22", undefined, "test-user"),
+    ).rejects.toThrow("Cannot transfer to the same account");
   });
 
   it("deletes a transaction", async () => {
-    const transaction = await service.createTransaction({
-      accountId: "acc-1",
-      categoryId: "cat-expense-food",
-      date: "2026-07-22",
-      amountMinor: 5000,
-    });
-    expect(await service.deleteTransaction(transaction.id)).toBe(true);
+    const transaction = await service.createTransaction(
+      {
+        accountId: "acc-1",
+        categoryId: "cat-expense-food",
+        date: "2026-07-22",
+        amountMinor: 5000,
+      },
+      "test-user",
+    );
+    expect(await service.deleteTransaction(transaction.id, "test-user")).toBe(true);
     expect(transactionRepo.transactions.size).toBe(0);
   });
 
   it("deleting a transfer transaction reverts both linked transactions", async () => {
-    await accountRepo.create("acc-2", { name: "Cash", type: "cash" });
-    const { from } = await service.createTransfer("acc-1", "acc-2", 100000, "2026-07-22", "ATM");
+    await accountRepo.create("acc-2", { name: "Cash", type: "cash" }, "test-user");
+    const { from } = await service.createTransfer(
+      "acc-1",
+      "acc-2",
+      100000,
+      "2026-07-22",
+      "ATM",
+      "test-user",
+    );
     expect(transactionRepo.transactions.size).toBe(2);
 
-    expect(await service.deleteTransaction(from.id)).toBe(true);
+    expect(await service.deleteTransaction(from.id, "test-user")).toBe(true);
     expect(transactionRepo.transactions.size).toBe(0);
   });
 });

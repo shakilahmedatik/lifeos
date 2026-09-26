@@ -1,42 +1,15 @@
-import { type Client, createClient } from "@libsql/client";
 import { beforeEach, describe, expect, it } from "vitest";
-import { SqliteWorkoutRepository } from "../adapters/sqlite/sqlite-workout-repository.js";
+import type { DrizzleClient } from "../../../shared/db.js";
+import { createTestDatabase } from "../../../shared/test-db.js";
+import { DrizzleWorkoutRepository } from "../adapters/sqlite/sqlite-workout-repository.js";
 
-describe("SqliteWorkoutRepository.reorderExercises", () => {
-  let client: Client;
-  let repo: SqliteWorkoutRepository;
+describe("DrizzleWorkoutRepository.reorderExercises", () => {
+  let db: DrizzleClient;
+  let repo: DrizzleWorkoutRepository;
 
   beforeEach(async () => {
-    client = createClient({ url: ":memory:" });
-    await client.execute(`
-      CREATE TABLE workouts (
-        id TEXT PRIMARY KEY,
-        user_id TEXT DEFAULT '',
-        name TEXT NOT NULL,
-        description TEXT,
-        scheduled_day TEXT,
-        scheduled_time TEXT,
-        created_at TEXT NOT NULL,
-        updated_at TEXT NOT NULL
-      );
-    `);
-    await client.execute(`
-      CREATE TABLE workout_exercises (
-        id TEXT PRIMARY KEY,
-        workout_id TEXT NOT NULL,
-        exercise_id TEXT NOT NULL,
-        sets INTEGER NOT NULL,
-        reps INTEGER NOT NULL,
-        reps_per_set TEXT,
-        weight REAL,
-        weight_per_set TEXT,
-        rest_seconds INTEGER NOT NULL DEFAULT 60,
-        order_index INTEGER NOT NULL DEFAULT 0,
-        created_at TEXT NOT NULL,
-        FOREIGN KEY (workout_id) REFERENCES workouts(id) ON DELETE CASCADE
-      );
-    `);
-    repo = new SqliteWorkoutRepository(client);
+    db = await createTestDatabase();
+    repo = new DrizzleWorkoutRepository(db);
   });
 
   it("reorders exercises successfully for valid duplicate-free permutation", async () => {

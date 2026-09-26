@@ -1,17 +1,17 @@
-import type { Client } from "@libsql/client";
-import { SqliteExerciseRepository } from "./adapters/sqlite/sqlite-exercise-repository.js";
-import { SqliteWorkoutRepository } from "./adapters/sqlite/sqlite-workout-repository.js";
-import { SqliteWorkoutSessionRepository } from "./adapters/sqlite/sqlite-workout-session-repository.js";
+import type { DrizzleClient } from "../../shared/db.js";
+import { DrizzleExerciseRepository } from "./adapters/sqlite/sqlite-exercise-repository.js";
+import { DrizzleWorkoutRepository } from "./adapters/sqlite/sqlite-workout-repository.js";
+import { DrizzleWorkoutSessionRepository } from "./adapters/sqlite/sqlite-workout-session-repository.js";
 import { createWorkoutsRouter } from "./api/router.js";
 import { ExerciseService } from "./application/exercise-service.js";
 import { WorkoutHistoryService } from "./application/workout-history-service.js";
 import { WorkoutService } from "./application/workout-service.js";
 import { WorkoutSessionService } from "./application/workout-session-service.js";
 
-export function initWorkoutsModule(client: Client) {
-  const workoutRepo = new SqliteWorkoutRepository(client);
-  const exerciseRepo = new SqliteExerciseRepository(client);
-  const workoutSessionRepo = new SqliteWorkoutSessionRepository(client);
+export function initWorkoutsModule(db: DrizzleClient) {
+  const workoutRepo = new DrizzleWorkoutRepository(db);
+  const exerciseRepo = new DrizzleExerciseRepository(db);
+  const workoutSessionRepo = new DrizzleWorkoutSessionRepository(db);
 
   const workoutService = new WorkoutService(workoutRepo);
   const exerciseService = new ExerciseService(exerciseRepo);

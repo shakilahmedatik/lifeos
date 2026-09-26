@@ -28,6 +28,7 @@ function createMockCategoryRepo(): CategoryRepository & { categories: Map<string
         id,
         name: input.name,
         kind: input.kind,
+        isSystem: Boolean(input.isSystem),
         archived: false,
         createdAt: now,
         updatedAt: now,
@@ -112,42 +113,89 @@ describe("CategoryService", () => {
   });
 
   it("creates a category", async () => {
-    const category = await service.createCategory({ name: "Consulting", kind: "income" });
+    const category = await service.createCategory(
+      { name: "Consulting", kind: "income" },
+      "test-user",
+    );
     expect(category.name).toBe("Consulting");
     expect(category.kind).toBe("income");
     expect(category.archived).toBe(false);
   });
 
+  it("rejects creating category with reserved system name", async () => {
+    await expect(
+      service.createCategory({ name: "Transfer In", kind: "income" }, "test-user"),
+    ).rejects.toThrow("reserved system categories");
+    await expect(
+      service.createCategory({ name: "transfer out", kind: "expense" }, "test-user"),
+    ).rejects.toThrow("reserved system categories");
+  });
+
   it("lists categories by kind", async () => {
-    await service.createCategory({ name: "Salary", kind: "income" });
-    await service.createCategory({ name: "Groceries", kind: "expense" });
-    expect(await service.listByKind("income")).toHaveLength(1);
-    expect(await service.listByKind("expense")).toHaveLength(1);
+    await service.createCategory({ name: "Salary", kind: "income" }, "test-user");
+    await service.createCategory({ name: "Groceries", kind: "expense" }, "test-user");
+    expect(await service.listByKind("income", "test-user")).toHaveLength(1);
+    expect(await service.listByKind("expense", "test-user")).toHaveLength(1);
   });
 
   it("lists active categories", async () => {
-    const cat = await service.createCategory({ name: "Travel", kind: "expense" });
-    await service.createCategory({ name: "Food", kind: "expense" });
-    await service.archiveCategory(cat.id);
-    const active = await service.listActiveCategories();
+    const cat = await service.createCategory({ name: "Travel", kind: "expense" }, "test-user");
+    await service.createCategory({ name: "Food", kind: "expense" }, "test-user");
+    await service.archiveCategory(cat.id, "test-user");
+    const active = await service.listActiveCategories("test-user");
     expect(active).toHaveLength(1);
     expect(active[0].name).toBe("Food");
   });
 
   it("updates a category", async () => {
-    const cat = await service.createCategory({ name: "Groceries", kind: "expense" });
-    const updated = await service.updateCategory(cat.id, { name: "Supermarket" });
+    const cat = await service.createCategory({ name: "Groceries", kind: "expense" }, "test-user");
+    const updated = await service.updateCategory(cat.id, { name: "Supermarket" }, "test-user");
     expect(updated?.name).toBe("Supermarket");
   });
 
+  it("rejects updating a category to a reserved system name", async () => {
+    const cat = await service.createCategory({ name: "Groceries", kind: "expense" }, "test-user");
+    await expect(
+      service.updateCategory(cat.id, { name: "Transfer Out" }, "test-user"),
+    ).rejects.toThrow("Cannot rename to reserved system category name");
+  });
+
+  it("rejects modifying or archiving or deleting system category", async () => {
+    const systemCat = await categoryRepo.create(
+      "cat-system-transfer-in",
+      {
+        name: "Transfer In",
+        kind: "income",
+        isSystem: true,
+      },
+      "test-user",
+    );
+
+    await expect(
+      service.updateCategory(systemCat.id, { name: "My Transfer" }, "test-user"),
+    ).rejects.toThrow("Cannot modify system category");
+    await expect(service.archiveCategory(systemCat.id, "test-user")).rejects.toThrow(
+      "Cannot archive system category",
+    );
+    await expect(service.unarchiveCategory(systemCat.id, "test-user")).rejects.toThrow(
+      "Cannot modify system category",
+    );
+    await expect(service.deleteCategory(systemCat.id, "test-user")).rejects.toThrow(
+      "Cannot delete system category",
+    );
+  });
+
   it("archives a category", async () => {
-    const cat = await service.createCategory({ name: "Old Category", kind: "expense" });
-    expect(await service.archiveCategory(cat.id)).toBe(true);
-    expect((await service.getCategory(cat.id))?.archived).toBe(true);
+    const cat = await service.createCategory(
+      { name: "Old Category", kind: "expense" },
+      "test-user",
+    );
+    expect(await service.archiveCategory(cat.id, "test-user")).toBe(true);
+    expect((await service.getCategory(cat.id, "test-user"))?.archived).toBe(true);
   });
 
   it("prevents deleting a category with existing transactions", async () => {
-    const cat = await service.createCategory({ name: "Shopping", kind: "expense" });
+    const cat = await service.createCategory({ name: "Shopping", kind: "expense" }, "test-user");
     const now = new Date().toISOString();
     transactionRepo.mockTransactions.set("tx-1", {
       id: "tx-1",
@@ -159,7 +207,7 @@ describe("CategoryService", () => {
       createdAt: now,
       updatedAt: now,
     });
-    await expect(service.deleteCategory(cat.id)).rejects.toThrow(
+    await expect(service.deleteCategory(cat.id, "test-user")).rejects.toThrow(
       "Cannot delete category with existing transactions. Archive the category instead.",
     );
   });

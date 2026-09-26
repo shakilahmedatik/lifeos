@@ -1,4 +1,4 @@
-export { useExerciseProgress, useExercises } from "./hooks/useExercises.js";
+export { useExercises } from "./hooks/useExercises.js";
 export {
   useWorkoutSession,
   useWorkoutSessions,

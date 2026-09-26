@@ -16,10 +16,22 @@ export function loadConfig(): AppConfig {
   dotenv.config({ path: resolve(process.cwd(), "../.env") });
   dotenv.config(); // fallback to current dir .env
 
+  const defaultOrigins = [
+    `http://localhost:${process.env.FRONTEND_PORT || 5173}`,
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "tauri://localhost",
+    "http://tauri.localhost",
+    "https://tauri.localhost",
+    "asset://localhost",
+    "tauri://*",
+    "asset://*",
+  ];
+
   const rawAllowedOrigins = process.env.ALLOWED_ORIGINS || process.env.CLIENT_ORIGIN;
-  const allowedOrigins = rawAllowedOrigins
-    ? rawAllowedOrigins.split(",").map((o) => o.trim())
-    : [`http://localhost:${process.env.FRONTEND_PORT || 5173}`];
+  const userOrigins = rawAllowedOrigins ? rawAllowedOrigins.split(",").map((o) => o.trim()) : [];
+
+  const allowedOrigins = Array.from(new Set([...defaultOrigins, ...userOrigins]));
 
   return {
     port: Number(process.env.BACKEND_PORT || 3000),

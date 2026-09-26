@@ -1,27 +1,12 @@
-import type { Client } from "@libsql/client";
 import { getDayOfWeekIndex, isWeekday } from "@lifeos/contracts";
-
+import { and, asc, desc, eq, isNull, lte, or, sql } from "drizzle-orm";
+import type { DrizzleClient } from "../../../../shared/db.js";
+import { tasks } from "../../../../shared/schema.js";
 import { isOvernightTask } from "../../domain/rules.js";
 import type { NewTaskInput, Task, TaskRecurrence, TaskSubtask } from "../../domain/types.js";
 import type { TaskRepository } from "../../ports/task-repository.js";
 
-interface TaskRow {
-  id: string;
-  title: string;
-  category: Task["category"];
-  date: string;
-  start_time: string;
-  end_time: string;
-  status: Task["status"];
-  notes: string | null;
-  reminder_minutes_before: number | null;
-  reminder_sound: number;
-  recurrence: TaskRecurrence;
-  subtasks?: string | null;
-  reference_id?: string | null;
-  created_at: string;
-  updated_at: string;
-}
+type TaskRow = typeof tasks.$inferSelect;
 
 function parseSubtasks(raw?: string | null): TaskSubtask[] {
   if (!raw) return [];
@@ -33,47 +18,48 @@ function parseSubtasks(raw?: string | null): TaskSubtask[] {
 }
 
 function rowToTask(row: TaskRow, dateOverride?: string): Task {
-  const startTime = row.start_time;
-  const endTime = row.end_time;
   return {
     id: row.id,
     title: row.title,
-    category: row.category,
+    category: row.category as Task["category"],
     date: dateOverride ?? row.date,
-    startTime,
-    endTime,
-    status: row.status,
+    startTime: row.startTime,
+    endTime: row.endTime,
+    status: row.status as Task["status"],
     notes: row.notes ?? undefined,
-    reminderMinutesBefore: row.reminder_minutes_before ?? undefined,
-    reminderSilent: row.reminder_sound !== 1,
-    recurrence: row.recurrence ?? "none",
-    isOvernight: isOvernightTask(startTime, endTime),
+    recurrence: (row.recurrence ?? "none") as TaskRecurrence,
+    isOvernight: isOvernightTask(row.startTime, row.endTime),
     subtasks: parseSubtasks(row.subtasks),
-    referenceId: row.reference_id ?? undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    referenceId: row.referenceId ?? undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 
-export class SqliteTaskRepository implements TaskRepository {
-  constructor(private readonly client: Client) {}
+function userScope(userId: string) {
+  return and(
+    or(eq(tasks.userId, userId), eq(tasks.userId, ""), sql`${tasks.userId} IS NULL`),
+    isNull(tasks.deletedAt),
+  );
+}
+
+export class DrizzleTaskRepository implements TaskRepository {
+  constructor(private readonly db: DrizzleClient) {}
 
   async getById(id: string, userId: string): Promise<Task | undefined> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
-      args: [id, userId],
-    });
-    const row = res.rows[0] as unknown as TaskRow | undefined;
+    const [row] = await this.db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.id, id), userScope(userId)));
     return row ? rowToTask(row) : undefined;
   }
 
   async getByDate(date: string, userId: string): Promise<Task[]> {
     // 1. Direct date tasks
-    const directRes = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE date = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
-      args: [date, userId],
-    });
-    const directRows = directRes.rows as unknown as TaskRow[];
+    const directRows = await this.db
+      .select()
+      .from(tasks)
+      .where(and(eq(tasks.date, date), userScope(userId)));
 
     const taskMap = new Map<string, Task>();
     for (const r of directRows) {
@@ -81,17 +67,16 @@ export class SqliteTaskRepository implements TaskRepository {
     }
 
     // 2. Recurring tasks starting on or before date
-    const recurringRes = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE recurrence != 'none' AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
-      args: [date, userId],
-    });
-    const recurringRows = recurringRes.rows as unknown as TaskRow[];
+    const recurringRows = await this.db
+      .select()
+      .from(tasks)
+      .where(and(sql`${tasks.recurrence} != 'none'`, lte(tasks.date, date), userScope(userId)));
 
     const targetDayIndex = getDayOfWeekIndex(date);
-    const targetIsWeekday = isWeekday(date, "bd"); // Bangladesh: Sun-Thu
+    const targetIsWeekday = isWeekday(date, "bd");
 
     for (const r of recurringRows) {
-      if (taskMap.has(r.id)) continue; // Already added as direct date
+      if (taskMap.has(r.id)) continue;
 
       let matches = false;
       if (r.recurrence === "daily") {
@@ -107,29 +92,27 @@ export class SqliteTaskRepository implements TaskRepository {
       }
     }
 
-    const tasks = Array.from(taskMap.values());
-    return tasks.sort((a, b) => a.startTime.localeCompare(b.startTime));
+    const result = Array.from(taskMap.values());
+    return result.sort((a, b) => a.startTime.localeCompare(b.startTime));
   }
 
   async getByDateRange(startDate: string, endDate: string, userId: string): Promise<Task[]> {
-    const directRes = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE date >= ? AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
-      args: [startDate, endDate, userId],
-    });
-    const directRows = directRes.rows as unknown as TaskRow[];
+    const { gte, lte: lteFn } = await import("drizzle-orm");
+    const directRows = await this.db
+      .select()
+      .from(tasks)
+      .where(and(gte(tasks.date, startDate), lteFn(tasks.date, endDate), userScope(userId)));
 
     const taskMap = new Map<string, Task>();
     for (const r of directRows) {
       taskMap.set(`${r.id}_${r.date}`, rowToTask(r));
     }
 
-    const recurringRes = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE recurrence != 'none' AND date <= ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
-      args: [endDate, userId],
-    });
-    const recurringRows = recurringRes.rows as unknown as TaskRow[];
+    const recurringRows = await this.db
+      .select()
+      .from(tasks)
+      .where(and(sql`${tasks.recurrence} != 'none'`, lte(tasks.date, endDate), userScope(userId)));
 
-    // Iterate through dates in date range to find matching recurring tasks
     const start = new Date(`${startDate}T00:00:00Z`);
     const end = new Date(`${endDate}T00:00:00Z`);
     const curr = new Date(start);
@@ -161,45 +144,41 @@ export class SqliteTaskRepository implements TaskRepository {
       curr.setDate(curr.getDate() + 1);
     }
 
-    const tasks = Array.from(taskMap.values());
-    return tasks.sort(
+    const result = Array.from(taskMap.values());
+    return result.sort(
       (a, b) => b.date.localeCompare(a.date) || a.startTime.localeCompare(b.startTime),
     );
   }
 
   async getAll(userId: string): Promise<Task[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM tasks WHERE user_id = ? OR user_id = '' OR user_id IS NULL ORDER BY date DESC, start_time ASC",
-      args: [userId],
-    });
-    const rows = res.rows as unknown as TaskRow[];
+    const rows = await this.db
+      .select()
+      .from(tasks)
+      .where(userScope(userId))
+      .orderBy(desc(tasks.date), asc(tasks.startTime));
     return rows.map((r) => rowToTask(r));
   }
 
   async create(id: string, input: NewTaskInput, userId: string): Promise<Task> {
     const now = new Date().toISOString();
-    const subtasksJson = JSON.stringify(input.subtasks ?? []);
 
-    await this.client.execute({
-      sql: `INSERT INTO tasks (id, title, category, date, start_time, end_time, status, notes, reminder_minutes_before, reminder_sound, recurrence, subtasks, reference_id, user_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, 'planned', ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        id,
-        input.title,
-        input.category ?? "general",
-        input.date,
-        input.startTime,
-        input.endTime,
-        input.notes ?? null,
-        input.reminderMinutesBefore ?? null,
-        input.reminderSilent ? 0 : 1,
-        input.recurrence ?? "none",
-        subtasksJson,
-        input.referenceId ?? null,
-        userId,
-        now,
-        now,
-      ],
+    await this.db.insert(tasks).values({
+      id,
+      userId,
+      title: input.title,
+      category: input.category ?? "general",
+      date: input.date,
+      startTime: input.startTime,
+      endTime: input.endTime,
+      status: "planned",
+      notes: input.notes ?? null,
+      reminderMinutesBefore: null,
+      reminderSound: 0,
+      recurrence: input.recurrence ?? "none",
+      subtasks: JSON.stringify(input.subtasks ?? []),
+      referenceId: input.referenceId ?? null,
+      createdAt: now,
+      updatedAt: now,
     });
 
     return (await this.getById(id, userId)) as Task;
@@ -213,65 +192,25 @@ export class SqliteTaskRepository implements TaskRepository {
     const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
-    const fields: string[] = [];
-    const values: (string | number | null)[] = [];
+    const updates: Record<string, unknown> = {};
+    if (patch.title !== undefined) updates.title = patch.title;
+    if (patch.category !== undefined) updates.category = patch.category;
+    if (patch.date !== undefined) updates.date = patch.date;
+    if (patch.startTime !== undefined) updates.startTime = patch.startTime;
+    if (patch.endTime !== undefined) updates.endTime = patch.endTime;
+    if (patch.notes !== undefined) updates.notes = patch.notes;
+    if (patch.recurrence !== undefined) updates.recurrence = patch.recurrence;
+    if (patch.subtasks !== undefined) updates.subtasks = JSON.stringify(patch.subtasks);
+    if (patch.referenceId !== undefined) updates.referenceId = patch.referenceId ?? null;
 
-    if (patch.title !== undefined) {
-      fields.push("title = ?");
-      values.push(patch.title);
-    }
-    if (patch.category !== undefined) {
-      fields.push("category = ?");
-      values.push(patch.category);
-    }
-    if (patch.date !== undefined) {
-      fields.push("date = ?");
-      values.push(patch.date);
-    }
-    if (patch.startTime !== undefined) {
-      fields.push("start_time = ?");
-      values.push(patch.startTime);
-    }
-    if (patch.endTime !== undefined) {
-      fields.push("end_time = ?");
-      values.push(patch.endTime);
-    }
-    if (patch.notes !== undefined) {
-      fields.push("notes = ?");
-      values.push(patch.notes);
-    }
-    if (patch.reminderMinutesBefore !== undefined) {
-      fields.push("reminder_minutes_before = ?");
-      values.push(patch.reminderMinutesBefore ?? null);
-    }
-    if (patch.reminderSilent !== undefined) {
-      fields.push("reminder_sound = ?");
-      values.push(patch.reminderSilent ? 0 : 1);
-    }
-    if (patch.recurrence !== undefined) {
-      fields.push("recurrence = ?");
-      values.push(patch.recurrence);
-    }
-    if (patch.subtasks !== undefined) {
-      fields.push("subtasks = ?");
-      values.push(JSON.stringify(patch.subtasks));
-    }
-    if (patch.referenceId !== undefined) {
-      fields.push("reference_id = ?");
-      values.push(patch.referenceId ?? null);
-    }
+    if (Object.keys(updates).length === 0) return existing;
 
-    if (fields.length === 0) return existing;
+    updates.updatedAt = new Date().toISOString();
 
-    fields.push("updated_at = ?");
-    values.push(new Date().toISOString());
-    values.push(id);
-    values.push(userId);
-
-    await this.client.execute({
-      sql: `UPDATE tasks SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)`,
-      args: values,
-    });
+    await this.db
+      .update(tasks)
+      .set(updates)
+      .where(and(eq(tasks.id, id), userScope(userId)));
 
     return await this.getById(id, userId);
   }
@@ -284,19 +223,20 @@ export class SqliteTaskRepository implements TaskRepository {
     const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
-    await this.client.execute({
-      sql: "UPDATE tasks SET status = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
-      args: [status, new Date().toISOString(), id, userId],
-    });
+    await this.db
+      .update(tasks)
+      .set({ status, updatedAt: new Date().toISOString() })
+      .where(and(eq(tasks.id, id), userScope(userId)));
 
     return await this.getById(id, userId);
   }
 
   async delete(id: string, userId: string): Promise<boolean> {
-    const res = await this.client.execute({
-      sql: "DELETE FROM tasks WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
-      args: [id, userId],
-    });
-    return res.rowsAffected > 0;
+    const now = new Date().toISOString();
+    const result = await this.db
+      .update(tasks)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(and(eq(tasks.id, id), userScope(userId)));
+    return result.rowsAffected > 0;
   }
 }

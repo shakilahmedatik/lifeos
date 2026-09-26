@@ -38,7 +38,12 @@ function createMockSessionRepo(): WorkoutSessionRepository & {
       sessions.set(id, session);
       return session;
     },
-    async complete(id: string, durationSeconds: number, notes?: string) {
+    async complete(
+      id: string,
+      durationSeconds: number,
+      _userId: string = "default",
+      notes?: string,
+    ) {
       const existing = sessions.get(id);
       if (!existing) return undefined;
       const updated: WorkoutSession = {

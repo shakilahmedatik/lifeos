@@ -14,7 +14,6 @@ import type { HabitLogService } from "../application/habit-log-service.js";
 import type { HabitService } from "../application/habit-service.js";
 import type { HabitStatsService } from "../application/habit-stats-service.js";
 import type { WeeklyReviewService } from "../application/weekly-review-service.js";
-import type { HabitLogRepository } from "../ports/habit-log-repository.js";
 
 const ArchiveHabitSchema = z.object({
   archived: z.boolean(),
@@ -25,26 +24,25 @@ export function createHabitsRouter(
   habitLogService: HabitLogService,
   habitStatsService: HabitStatsService,
   weeklyReviewService: WeeklyReviewService,
-  habitLogRepo?: HabitLogRepository,
 ): Router {
   const router = Router();
 
   router.get("/", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     const includeArchived = req.query.active !== "true"; // if ?active=true, includeArchived is false
     const habits = await habitService.listHabits(includeArchived, userId);
     res.json(habits);
   });
 
   router.get("/today", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     const today = todayInDhaka();
     const habits = await habitLogService.getTodayDueHabits(today, userId);
     res.json(habits);
   });
 
   router.get("/weekly-review", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     const { weekStart } = req.query;
     if (!weekStart) {
       const todayStr = todayInDhaka();
@@ -66,94 +64,14 @@ export function createHabitsRouter(
     "/reorder",
     validateBody(HabitReorderSchema),
     async (req: AuthenticatedRequest, res) => {
-      const userId = req.user?.id || (req.body.userId as string) || "default";
+      const userId = req.user?.id || "default";
       await habitService.reorderHabits(req.body.orders, userId);
       res.status(204).send();
     },
   );
 
-  router.get("/export", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
-    const habits = await habitService.listHabits(true, userId);
-    const logs = habitLogRepo ? await habitLogRepo.getAllLogs(userId) : [];
-    res.json({ habits, logs });
-  });
-
-  router.post("/import", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.body.userId as string) || "default";
-    try {
-      const { habits, logs } = req.body || {};
-      if (!Array.isArray(habits)) {
-        res.status(400).json({ error: "Invalid import format: habits array required" });
-        return;
-      }
-
-      for (const h of habits) {
-        if (!h.id || !h.name || !h.type) continue;
-        const existing = await habitService.getHabit(h.id, userId);
-        if (existing) {
-          await habitService.updateHabit(
-            h.id,
-            {
-              name: h.name,
-              category: h.category,
-              icon: h.icon,
-              color: h.color,
-              config: h.config,
-            },
-            userId,
-          );
-        } else {
-          try {
-            await habitService.createHabit(
-              {
-                name: h.name,
-                type: h.type,
-                category: h.category,
-                icon: h.icon,
-                color: h.color,
-                config: h.config,
-              },
-              userId,
-            );
-          } catch {
-            // ignore if duplicate
-          }
-        }
-      }
-
-      if (Array.isArray(logs) && habitLogRepo) {
-        for (const l of logs) {
-          if (!l.id || !l.habitId || !l.date) continue;
-          const existing = await habitLogRepo.getById(l.id, userId);
-          if (!existing) {
-            try {
-              await habitLogRepo.create(
-                l.id,
-                {
-                  habitId: l.habitId,
-                  date: l.date,
-                  value: l.value ?? 1,
-                  meta: l.meta,
-                },
-                userId,
-              );
-            } catch {
-              // ignore
-            }
-          }
-        }
-      }
-
-      res.status(200).json({ success: true });
-    } catch (err) {
-      const msg = (err as Error).message;
-      res.status(400).json({ error: msg || "Failed to import habit data" });
-    }
-  });
-
   router.get("/:id", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     const habit = await habitService.getHabit(req.params.id as string, userId);
     if (!habit) {
       res.status(404).json({ error: "Habit not found" });
@@ -166,7 +84,7 @@ export function createHabitsRouter(
     "/",
     validateBody(NewHabitDefinitionSchema),
     async (req: AuthenticatedRequest, res) => {
-      const userId = req.user?.id || (req.body.userId as string) || "default";
+      const userId = req.user?.id || "default";
       try {
         const habit = await habitService.createHabit(req.body, userId);
         res.status(201).json(habit);
@@ -185,7 +103,7 @@ export function createHabitsRouter(
     "/:id",
     validateBody(UpdateHabitDefinitionSchema),
     async (req: AuthenticatedRequest, res) => {
-      const userId = req.user?.id || (req.body.userId as string) || "default";
+      const userId = req.user?.id || "default";
       try {
         const id = req.params.id as string;
         const habit = await habitService.updateHabit(id, req.body, userId);
@@ -196,6 +114,7 @@ export function createHabitsRouter(
         res.json(habit);
       } catch (error) {
         const msg = (error as Error).message;
+        console.error("[Update Habit Error]:", error);
         if (msg.includes("already exists") || msg.includes("UNIQUE constraint failed")) {
           res.status(409).json({ error: "A habit with this name already exists" });
           return;
@@ -209,14 +128,14 @@ export function createHabitsRouter(
     "/:id/archive",
     validateBody(ArchiveHabitSchema),
     async (req: AuthenticatedRequest, res) => {
-      const userId = req.user?.id || (req.body.userId as string) || "default";
+      const userId = req.user?.id || "default";
       await habitService.archiveHabit(req.params.id as string, req.body.archived, userId);
       res.status(204).send();
     },
   );
 
   router.delete("/:id", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     await habitLogService.deleteLogsByHabitId(req.params.id as string, userId);
     const deleted = await habitService.deleteHabit(req.params.id as string, userId);
     if (!deleted) {
@@ -230,7 +149,7 @@ export function createHabitsRouter(
     "/:id/log",
     validateBody(NewHabitLogEntrySchema),
     async (req: AuthenticatedRequest, res) => {
-      const userId = req.user?.id || (req.body.userId as string) || "default";
+      const userId = req.user?.id || "default";
       const log = await habitLogService.logHabit(
         {
           ...req.body,
@@ -243,7 +162,7 @@ export function createHabitsRouter(
   );
 
   router.delete("/log/:logId", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     const deleted = await habitLogService.removeLog(req.params.logId as string, userId);
     if (!deleted) {
       res.status(404).json({ error: "Log not found" });
@@ -253,7 +172,7 @@ export function createHabitsRouter(
   });
 
   router.delete("/:id/log/:date", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     const logs = await habitLogService.getLogsForHabitAndDate(
       req.params.id as string,
       req.params.date as string,
@@ -266,7 +185,7 @@ export function createHabitsRouter(
   });
 
   router.get("/:id/logs", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     const { date } = req.query;
     if (!date) {
       res.status(400).json({ error: "Date query param is required" });
@@ -287,8 +206,8 @@ export function createHabitsRouter(
   });
 
   router.get("/:id/analytics", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
-    const { period } = req.query;
+    const userId = req.user?.id || "default";
+    const { period, endDate } = req.query;
     if (period !== "week" && period !== "month") {
       res.status(400).json({ error: "period must be week or month" });
       return;
@@ -298,6 +217,7 @@ export function createHabitsRouter(
       req.params.id as string,
       period as "week" | "month",
       userId,
+      endDate as string | undefined,
     );
     if (!stats) {
       res.status(404).json({ error: "Habit not found" });

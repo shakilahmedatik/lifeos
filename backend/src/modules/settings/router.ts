@@ -1,27 +1,33 @@
-import type { Client } from "@libsql/client";
+import { eq } from "drizzle-orm";
 import { Router } from "express";
+import type { DrizzleClient } from "../../shared/db.js";
+import { settings } from "../../shared/schema.js";
+import type { AuthenticatedRequest } from "../auth/middleware.js";
 
-export function createSettingsRouter(client: Client): Router {
+export function createSettingsRouter(db: DrizzleClient): Router {
   const router = Router();
 
   // GET /api/settings
-  router.get("/", async (_req, res, next) => {
+  router.get("/", async (req: AuthenticatedRequest, res, next) => {
     try {
-      const result = await client.execute("SELECT key, value FROM settings");
-      const settings: Record<string, string> = {};
-      for (const row of result.rows) {
-        if (row.key && typeof row.key === "string") {
-          settings[row.key] = String(row.value ?? "");
-        }
+      const userId = req.user?.id || "default";
+      const rows = await db
+        .select({ key: settings.key, value: settings.value })
+        .from(settings)
+        .where(eq(settings.userId, userId));
+
+      const result: Record<string, string> = {};
+      for (const row of rows) {
+        result[row.key] = row.value;
       }
-      res.json(settings);
+      res.json(result);
     } catch (err) {
       next(err);
     }
   });
 
   // PATCH /api/settings
-  router.patch("/", async (req, res, next) => {
+  router.patch("/", async (req: AuthenticatedRequest, res, next) => {
     try {
       const updates = req.body;
       if (!updates || typeof updates !== "object") {
@@ -30,28 +36,31 @@ export function createSettingsRouter(client: Client): Router {
       }
 
       const now = new Date().toISOString();
+      const userId = req.user?.id || "default";
+
       for (const [key, val] of Object.entries(updates)) {
         if (typeof key === "string" && key.trim().length > 0) {
           const stringVal = typeof val === "string" ? val : JSON.stringify(val);
-          await client.execute({
-            sql: `
-              INSERT INTO settings (key, value, updated_at)
-              VALUES (?, ?, ?)
-              ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
-            `,
-            args: [key, stringVal, now],
-          });
+          await db
+            .insert(settings)
+            .values({ key, userId, value: stringVal, updatedAt: now })
+            .onConflictDoUpdate({
+              target: [settings.key, settings.userId],
+              set: { value: stringVal, updatedAt: now },
+            });
         }
       }
 
-      const result = await client.execute("SELECT key, value FROM settings");
-      const settings: Record<string, string> = {};
-      for (const row of result.rows) {
-        if (row.key && typeof row.key === "string") {
-          settings[row.key] = String(row.value ?? "");
-        }
+      const rows = await db
+        .select({ key: settings.key, value: settings.value })
+        .from(settings)
+        .where(eq(settings.userId, userId));
+
+      const result: Record<string, string> = {};
+      for (const row of rows) {
+        result[row.key] = row.value;
       }
-      res.json(settings);
+      res.json(result);
     } catch (err) {
       next(err);
     }

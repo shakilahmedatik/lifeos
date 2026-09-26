@@ -1,83 +1,56 @@
-import { useCallback, useEffect, useState } from "react";
-import { api } from "../../../lib/api.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { getDataSource } from "../../../lib/dataSource.js";
+import { queryKeys } from "../../../lib/queryKeys.js";
 import type { LearningLog, NewLearningLogInput, UpdateLearningLogInput } from "../types.js";
 
 export function useLearningLogs(resourceId?: string) {
-  const [logs, setLogs] = useState<LearningLog[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
+  const ds = getDataSource();
 
-  const loadLogs = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      if (resourceId) {
-        const data = await api.getLearningLogsByResource(resourceId);
-        setLogs(data);
-      } else {
-        const today = new Date().toISOString().split("T")[0];
-        const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-          .toISOString()
-          .split("T")[0];
-        const data = await api.getLearningLogsByRange(monthAgo, today);
-        setLogs(data);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load logs");
-    } finally {
-      setLoading(false);
-    }
-  }, [resourceId]);
+  const today = new Date().toISOString().split("T")[0];
+  const monthAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split("T")[0];
 
-  useEffect(() => {
-    loadLogs();
-  }, [loadLogs]);
+  const logsQuery = useQuery<LearningLog[]>({
+    queryKey: resourceId
+      ? queryKeys.skills.logsByResource(resourceId)
+      : queryKeys.skills.logsByRange(monthAgo, today),
+    queryFn: () =>
+      resourceId
+        ? ds.getLearningLogsByResource(resourceId)
+        : ds.getLearningLogsByRange(monthAgo, today),
+  });
 
-  const addLog = useCallback(async (input: NewLearningLogInput) => {
-    try {
-      setError(null);
-      const newLog = await api.logLearningSession(input);
-      setLogs((prev) => [newLog, ...prev]);
-      return newLog;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to log session";
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const invalidateLogs = () => {
+    queryClient.invalidateQueries({
+      queryKey: ["skills", "logs"],
+    });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
+  };
 
-  const editLog = useCallback(async (id: string, patch: UpdateLearningLogInput) => {
-    try {
-      setError(null);
-      const updated = await api.updateLearningLog(id, patch);
-      setLogs((prev) => prev.map((l) => (l.id === id ? updated : l)));
-      return updated;
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to update log";
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const addLogMutation = useMutation({
+    mutationFn: (input: NewLearningLogInput) => ds.logLearningSession(input),
+    onSuccess: () => invalidateLogs(),
+  });
 
-  const removeLog = useCallback(async (id: string) => {
-    try {
-      setError(null);
-      await api.deleteLearningLog(id);
-      setLogs((prev) => prev.filter((l) => l.id !== id));
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to delete log";
-      setError(msg);
-      throw err;
-    }
-  }, []);
+  const editLogMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateLearningLogInput }) =>
+      ds.updateLearningLog(id, patch),
+    onSuccess: () => invalidateLogs(),
+  });
+
+  const removeLogMutation = useMutation({
+    mutationFn: (id: string) => ds.deleteLearningLog(id),
+    onSuccess: () => invalidateLogs(),
+  });
 
   return {
-    logs,
-    loading,
-    error,
-    addLog,
-    editLog,
-    removeLog,
-    refresh: loadLogs,
+    logs: logsQuery.data ?? [],
+    loading: logsQuery.isLoading,
+    error: logsQuery.error ? (logsQuery.error as Error).message : null,
+    addLog: (input: NewLearningLogInput) => addLogMutation.mutateAsync(input),
+    editLog: (id: string, patch: UpdateLearningLogInput) =>
+      editLogMutation.mutateAsync({ id, patch }),
+    removeLog: (id: string) => removeLogMutation.mutateAsync(id),
+    refresh: () => logsQuery.refetch(),
   };
 }

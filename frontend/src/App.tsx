@@ -1,11 +1,15 @@
+import { QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import { lazy, Suspense } from "react";
 import { Link, Route, Routes } from "react-router-dom";
 import { AuthModal } from "./components/auth/AuthModal.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.js";
 import Layout from "./components/layout/Layout.js";
 import PageSkeleton from "./components/PageSkeleton.js";
+import { ToastProvider } from "./components/Toast.js";
 import { AuthProvider, useAuth } from "./context/AuthContext.js";
 import { useTheme } from "./lib/hooks/useTheme.js";
+import { queryClient } from "./lib/queryClient.js";
 
 const DashboardPage = lazy(() => import("./pages/DashboardPage.js"));
 const RoutinePage = lazy(() => import("./pages/RoutinePage.js"));
@@ -13,8 +17,6 @@ const HabitsPage = lazy(() => import("./pages/HabitsPage.js"));
 const WorkoutsPage = lazy(() => import("./pages/WorkoutsPage.js"));
 const SkillsPage = lazy(() => import("./pages/SkillsPage.js"));
 const FinancePage = lazy(() => import("./pages/FinancePage.js"));
-const NewsPage = lazy(() => import("./pages/NewsPage.js"));
-const NotificationsPage = lazy(() => import("./pages/NotificationsPage.js"));
 const ProfilePage = lazy(() => import("./pages/ProfilePage.js"));
 
 function NotFoundPage() {
@@ -49,8 +51,6 @@ function MainContent() {
         <Route path="workouts" element={<WorkoutsPage />} />
         <Route path="skills" element={<SkillsPage />} />
         <Route path="finance" element={<FinancePage />} />
-        <Route path="news" element={<NewsPage />} />
-        <Route path="notifications" element={<NotificationsPage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
@@ -63,11 +63,16 @@ export default function App() {
 
   return (
     <ErrorBoundary>
-      <AuthProvider>
-        <Suspense fallback={<PageSkeleton />}>
-          <MainContent />
-        </Suspense>
-      </AuthProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <ToastProvider>
+            <Suspense fallback={<PageSkeleton />}>
+              <MainContent />
+            </Suspense>
+          </ToastProvider>
+        </AuthProvider>
+        <ReactQueryDevtools initialIsOpen={false} />
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 }

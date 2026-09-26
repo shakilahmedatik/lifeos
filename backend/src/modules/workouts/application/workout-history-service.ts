@@ -4,14 +4,14 @@ import type { WorkoutSessionRepository } from "../ports/workout-session-reposito
 export class WorkoutHistoryService {
   constructor(private readonly sessionRepo: WorkoutSessionRepository) {}
 
-  async getWorkoutHistory(): Promise<WorkoutSession[]> {
-    return await this.sessionRepo.getAll();
+  async getWorkoutHistory(userId = "default"): Promise<WorkoutSession[]> {
+    return await this.sessionRepo.getAll(userId);
   }
 
-  async getWorkoutStats(): Promise<WorkoutStats> {
-    const totalSessions = await this.sessionRepo.getTotalSessions();
-    const totalDuration = await this.sessionRepo.getTotalDuration();
-    const recentSessions = await this.sessionRepo.getRecentSessions(1);
+  async getWorkoutStats(userId = "default"): Promise<WorkoutStats> {
+    const totalSessions = await this.sessionRepo.getTotalSessions(userId);
+    const totalDuration = await this.sessionRepo.getTotalDuration(userId);
+    const recentSessions = await this.sessionRepo.getRecentSessions(1, userId);
 
     return {
       totalWorkouts: totalSessions,
@@ -22,15 +22,18 @@ export class WorkoutHistoryService {
     };
   }
 
-  async getSessionsByWorkoutId(workoutId: string): Promise<WorkoutSession[]> {
-    return await this.sessionRepo.getByWorkoutId(workoutId);
+  async getSessionsByWorkoutId(workoutId: string, userId = "default"): Promise<WorkoutSession[]> {
+    return await this.sessionRepo.getByWorkoutId(workoutId, userId);
   }
 
-  async getRecentSessions(limit: number): Promise<WorkoutSession[]> {
-    return await this.sessionRepo.getRecentSessions(limit);
+  async getRecentSessions(limit: number, userId = "default"): Promise<WorkoutSession[]> {
+    return await this.sessionRepo.getRecentSessions(limit, userId);
   }
 
-  async getExerciseProgress(exerciseId: string): Promise<ExerciseProgressPoint[]> {
-    return await this.sessionRepo.getExerciseProgress(exerciseId);
+  async getExerciseProgress(
+    exerciseId: string,
+    userId = "default",
+  ): Promise<ExerciseProgressPoint[]> {
+    return await this.sessionRepo.getExerciseProgress(exerciseId, userId);
   }
 }

@@ -4,12 +4,13 @@ import type React from "react";
 import { useCallback, useEffect, useState } from "react";
 import Card, { CardContent } from "../../../components/ui/Card.js";
 import { Select } from "../../../components/ui/Select.js";
-import { habitApi } from "../api.js";
+import { getDataSource } from "../../../lib/dataSource.js";
 
 export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
   const [selectedHabitId, setSelectedHabitId] = useState<string>(habits[0]?.id || "");
   const [logs, setLogs] = useState<HabitLogEntry[]>([]);
   const [dateStr, setDateStr] = useState<string>(() => getClientDateString());
+  const ds = getDataSource();
 
   useEffect(() => {
     if (habits.length > 0 && (!selectedHabitId || !habits.some((h) => h.id === selectedHabitId))) {
@@ -20,12 +21,12 @@ export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
   const loadLogs = useCallback(async () => {
     if (!selectedHabitId || !dateStr) return;
     try {
-      const data = await habitApi.getLogs(selectedHabitId, dateStr);
+      const data = await ds.getHabitLogs(selectedHabitId, dateStr);
       setLogs(data);
     } catch (err) {
       console.error(err);
     }
-  }, [selectedHabitId, dateStr]);
+  }, [selectedHabitId, dateStr, ds]);
 
   useEffect(() => {
     loadLogs();
@@ -33,7 +34,7 @@ export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
 
   const handleDeleteLog = async (logId: string) => {
     try {
-      await habitApi.removeLog(logId);
+      await ds.unlogHabitByLogId(logId);
       await loadLogs();
     } catch (err) {
       console.error(err);
@@ -44,6 +45,26 @@ export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
     value: h.id,
     label: `${h.icon || "📌"} ${h.name}`,
   }));
+
+  const selectedHabit = habits.find((h) => h.id === selectedHabitId);
+
+  const formatLogValue = (log: HabitLogEntry) => {
+    if (!selectedHabit) return String(log.value);
+    switch (selectedHabit.type) {
+      case "water":
+        return `${log.value.toLocaleString()} ml`;
+      case "walking":
+        return `${log.value.toLocaleString()} ${"unit" in selectedHabit.config ? selectedHabit.config.unit : "steps"}`;
+      case "timed":
+        return `${log.value} min`;
+      case "prayer":
+        return log.meta ? `Prayer: ${log.meta}` : `${log.value} prayer`;
+      case "boolean":
+        return "Completed ✓";
+      default:
+        return String(log.value);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -77,8 +98,10 @@ export function HabitHistory({ habits }: { habits: HabitDefinition[] }) {
             <Card key={log.id}>
               <CardContent className="p-4 flex justify-between items-center">
                 <div>
-                  <span className="font-medium text-primary">{log.value}</span>
-                  {log.meta && <span className="ml-2 text-sm text-secondary">({log.meta})</span>}
+                  <span className="font-semibold text-primary">{formatLogValue(log)}</span>
+                  {log.meta && selectedHabit?.type !== "prayer" && (
+                    <span className="ml-2 text-sm text-secondary">({log.meta})</span>
+                  )}
                 </div>
                 <div className="flex items-center gap-3 text-sm text-muted">
                   <span>
