@@ -1,15 +1,13 @@
 import { useState } from "react";
-import BackupPanel from "../components/ui/BackupPanel.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
-import { habitApi } from "../modules/habits/api.js";
 import { HabitBuilder } from "../modules/habits/components/HabitBuilder.js";
 import { HabitHistory } from "../modules/habits/components/HabitHistory.js";
 import { HabitOverview } from "../modules/habits/components/HabitOverview.js";
 import { useHabitBuilder } from "../modules/habits/hooks/useHabitBuilder.js";
 import { useHabitProgress } from "../modules/habits/hooks/useHabitProgress.js";
 
-type Tab = "overview" | "builder" | "history" | "backup";
+type Tab = "overview" | "builder" | "history";
 
 export default function HabitsPage() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -21,14 +19,8 @@ export default function HabitsPage() {
     deleteHabit,
     toggleArchive,
     reorderHabits,
-    refresh: refreshBuilder,
   } = useHabitBuilder();
-  const { refresh: refreshProgress } = useHabitProgress();
-
-  const handleImportComplete = () => {
-    refreshBuilder();
-    refreshProgress();
-  };
+  const { refresh: _refreshProgress } = useHabitProgress();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -42,7 +34,6 @@ export default function HabitsPage() {
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="builder">Builder</TabsTrigger>
           <TabsTrigger value="history">History</TabsTrigger>
-          <TabsTrigger value="backup">Backup</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -69,18 +60,6 @@ export default function HabitsPage() {
 
         <TabsContent value="history">
           <HabitHistory habits={habits} />
-        </TabsContent>
-
-        <TabsContent value="backup">
-          <BackupPanel
-            entityName="Habits"
-            onExportJson={() => habitApi.exportData()}
-            onImportJson={async (data) => {
-              await habitApi.importData(data);
-              handleImportComplete();
-              return { success: true, message: "Habits imported successfully" };
-            }}
-          />
         </TabsContent>
       </Tabs>
     </div>

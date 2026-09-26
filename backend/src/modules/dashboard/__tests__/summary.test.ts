@@ -11,7 +11,6 @@ function makeTask(id: string, startTime: string, endTime: string, isOvernight = 
     startTime,
     endTime,
     status: "planned",
-    reminderSilent: false,
     isOvernight,
     createdAt: "2026-08-07T00:00:00Z",
     updatedAt: "2026-08-07T00:00:00Z",

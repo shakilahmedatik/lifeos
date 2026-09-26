@@ -4,15 +4,20 @@ node_modules
 
 # Build outputs
 dist
+**/dist
 target
 **/src-tauri/target
 **/src-tauri/gen
+
+# E2E test artifacts
+e2e/screenshots/
+e2e/reports/
+e2e/storage-state.json
 
 # Local database files
 backend/data/*.sqlite
 backend/data/*.sqlite-shm
 backend/data/*.sqlite-wal
-backend/data/backups/
 *.db
 *.db-shm
 *.db-wal

@@ -1,5 +1,5 @@
 import { SYSTEM_CATEGORY_TRANSFER_IN_ID, SYSTEM_CATEGORY_TRANSFER_OUT_ID } from "@lifeos/contracts";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { assert, beforeEach, describe, expect, it, vi } from "vitest";
 
 // In-memory tables
 interface AccountRow {
@@ -137,6 +137,7 @@ const mockDb = {
     if (sql.includes("c.kind = 'income'") && sql.includes("t.transfer_pair_id IS NULL")) {
       const startDate = args[0] as string;
       const endDate = args[1] as string;
+      const excludedCats = (args.slice(2) as string[]) || [];
       const catMap = new Map(categoriesTable.map((c) => [c.id, c]));
       const txs = transactionsTable.filter(
         (t) =>
@@ -144,7 +145,8 @@ const mockDb = {
           !t.transfer_pair_id &&
           t.date >= startDate &&
           t.date <= endDate &&
-          catMap.get(t.category_id)?.kind === "income",
+          catMap.get(t.category_id)?.kind === "income" &&
+          !excludedCats.includes(t.category_id),
       );
       const total = txs.reduce((sum, t) => sum + t.amount_minor, 0);
       return [{ total }];
@@ -154,6 +156,7 @@ const mockDb = {
     if (sql.includes("c.kind = 'expense'") && sql.includes("t.transfer_pair_id IS NULL")) {
       const startDate = args[0] as string;
       const endDate = args[1] as string;
+      const excludedCats = (args.slice(2) as string[]) || [];
       const catMap = new Map(categoriesTable.map((c) => [c.id, c]));
       const txs = transactionsTable.filter(
         (t) =>
@@ -161,7 +164,8 @@ const mockDb = {
           !t.transfer_pair_id &&
           t.date >= startDate &&
           t.date <= endDate &&
-          catMap.get(t.category_id)?.kind === "expense",
+          catMap.get(t.category_id)?.kind === "expense" &&
+          !excludedCats.includes(t.category_id),
       );
       const total = txs.reduce((sum, t) => sum + t.amount_minor, 0);
       return [{ total }];
@@ -171,6 +175,7 @@ const mockDb = {
     if (sql.includes("GROUP BY c.id")) {
       const startDate = args[0] as string;
       const endDate = args[1] as string;
+      const excludedCats = (args.slice(2) as string[]) || [];
       const catMap = new Map(categoriesTable.map((c) => [c.id, c]));
       const groups = new Map<
         string,
@@ -178,7 +183,14 @@ const mockDb = {
       >();
 
       for (const t of transactionsTable) {
-        if (t.deleted_at || t.transfer_pair_id || t.date < startDate || t.date > endDate) continue;
+        if (
+          t.deleted_at ||
+          t.transfer_pair_id ||
+          t.date < startDate ||
+          t.date > endDate ||
+          excludedCats.includes(t.category_id)
+        )
+          continue;
         const cat = catMap.get(t.category_id);
         if (!cat) continue;
         const existing = groups.get(cat.id) || {
@@ -445,7 +457,16 @@ const mockDb = {
 
     // UPDATE transactions
     if (sql.includes("UPDATE transactions")) {
-      if (sql.includes("SET deleted_at = ?") && sql.includes("transfer_pair_id = ?")) {
+      if (sql.includes("SET deleted_at = ?") && sql.includes("account_id = ?")) {
+        const [deletedAt, updatedAt, accountId] = args as [string, string, string];
+        for (const t of transactionsTable) {
+          if (t.account_id === accountId) {
+            t.deleted_at = deletedAt;
+            t.updated_at = updatedAt;
+            t._sync_status = "pending";
+          }
+        }
+      } else if (sql.includes("SET deleted_at = ?") && sql.includes("transfer_pair_id = ?")) {
         const [deletedAt, updatedAt, id, transferPairId] = args as [string, string, string, string];
         for (const t of transactionsTable) {
           if (t.id === id || (transferPairId && t.transfer_pair_id === transferPairId)) {
@@ -551,6 +572,25 @@ describe("localDal Finance operations", () => {
       await localDal.deleteAccount(created.id);
       expect(await localDal.getAccounts()).toHaveLength(0);
     });
+
+    it("should create account with opening balance and allow deleting it", async () => {
+      const created = await localDal.createAccount({
+        name: "Savings Vault",
+        type: "savings",
+        initialBalanceMinor: 50000,
+      });
+
+      const balance = await localDal.getAccountBalance(created.id);
+      expect(balance).toBe(50000);
+
+      const accounts = await localDal.getAccounts();
+      expect(accounts[0].balance).toBe(50000);
+
+      // Deleting the account should also clean up the opening balance transaction
+      await localDal.deleteAccount(created.id);
+      expect(await localDal.getAccounts()).toHaveLength(0);
+      expect(await localDal.getAccountBalance(created.id)).toBe(0);
+    });
   });
 
   describe("Categories CRUD", () => {
@@ -563,18 +603,18 @@ describe("localDal Finance operations", () => {
       expect(food.id).toBeDefined();
       expect(food.isSystem).toBe(false);
 
-      // 2 system defaults (Transfer In, Transfer Out) + 2 user categories = 4
+      // 4 system defaults (Transfer In, Transfer Out, Opening Balance, Opening Balance (Liability)) + 2 user categories = 6
       const all = await localDal.getCategories();
-      expect(all).toHaveLength(4);
+      expect(all).toHaveLength(6);
 
-      // Transfer In + Salary = 2
+      // Transfer In + Opening Balance + Salary = 3
       const incomeCats = await localDal.getIncomeCategories();
-      expect(incomeCats).toHaveLength(2);
+      expect(incomeCats).toHaveLength(3);
       expect(incomeCats.some((c) => c.name === "Salary")).toBe(true);
 
-      // Transfer Out + Food & Dining = 2
+      // Transfer Out + Opening Balance (Liability) + Food & Dining = 3
       const expenseCats = await localDal.getExpenseCategories();
-      expect(expenseCats).toHaveLength(2);
+      expect(expenseCats).toHaveLength(3);
       expect(expenseCats.some((c) => c.name === "Food & Dining")).toBe(true);
 
       const updated = await localDal.updateCategory(food.id, {
@@ -584,10 +624,10 @@ describe("localDal Finance operations", () => {
       expect(updated.name).toBe("Groceries & Food");
 
       await localDal.archiveCategory(salary.id);
-      expect(await localDal.getActiveCategories()).toHaveLength(3);
+      expect(await localDal.getActiveCategories()).toHaveLength(5);
 
       await localDal.deleteCategory(food.id);
-      expect(await localDal.getCategories()).toHaveLength(3);
+      expect(await localDal.getCategories()).toHaveLength(5);
     });
 
     it("should prevent creating reserved categories and modifying/deleting system categories", async () => {
@@ -602,16 +642,17 @@ describe("localDal Finance operations", () => {
       const all = await localDal.getCategories();
       const systemCat = all.find((c) => c.isSystem);
       expect(systemCat).toBeDefined();
+      assert(systemCat);
 
       await expect(
-        localDal.updateCategory(systemCat!.id, { name: "Custom Transfer" }),
+        localDal.updateCategory(systemCat.id, { name: "Custom Transfer" }),
       ).rejects.toThrow("Cannot modify system category");
 
-      await expect(localDal.archiveCategory(systemCat!.id)).rejects.toThrow(
+      await expect(localDal.archiveCategory(systemCat.id)).rejects.toThrow(
         "Cannot archive system category",
       );
 
-      await expect(localDal.deleteCategory(systemCat!.id)).rejects.toThrow(
+      await expect(localDal.deleteCategory(systemCat.id)).rejects.toThrow(
         "Cannot delete system category",
       );
     });
@@ -721,6 +762,13 @@ describe("localDal Finance operations", () => {
 
       // Transfer 10,000 (should not affect income / expense total in summary)
       await localDal.createTransfer(bank.id, cash.id, 10000, "2026-08-04");
+
+      // Opening balance of 200,000 on new account should NOT inflate monthly income
+      await localDal.createAccount({
+        name: "New Deposit",
+        type: "bank",
+        initialBalanceMinor: 200000,
+      });
 
       const summary = await localDal.getMonthlySummary("2026-08");
       expect(summary.totalIncome).toBe(100000);

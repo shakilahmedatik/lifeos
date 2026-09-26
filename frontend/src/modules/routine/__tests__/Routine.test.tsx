@@ -19,7 +19,6 @@ const sampleTask: Task = {
   endTime: "07:00",
   status: "planned",
   recurrence: "daily",
-  reminderSilent: false,
   createdAt: "2026-07-27T00:00:00Z",
   updatedAt: "2026-07-27T00:00:00Z",
 };

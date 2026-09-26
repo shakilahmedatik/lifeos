@@ -1,7 +1,7 @@
 import type Database from "@tauri-apps/plugin-sql";
 import { request } from "../api.js";
 import { isTauri } from "../dataSource.js";
-import { getLocalDb } from "../local-db/index.js";
+import { getLocalDb, resetLocalDatabase } from "../local-db/index.js";
 
 const SYNCABLE_TABLES = [
   "tasks",
@@ -16,17 +16,11 @@ const SYNCABLE_TABLES = [
   "accounts",
   "categories",
   "transactions",
-  "rss_feeds",
-  "news_articles",
   "skill_areas",
   "learning_resources",
   "learning_logs",
-  "reminders",
-  "notifications",
   "settings",
 ] as const;
-
-type SyncableTableName = (typeof SYNCABLE_TABLES)[number];
 
 export interface SyncOptions {
   forceFull?: boolean;
@@ -86,25 +80,35 @@ export class SyncEngine {
       const userChanged = Boolean(
         currentUserId && lastSyncedUser && currentUserId !== lastSyncedUser,
       );
+
+      if (userChanged) {
+        await resetLocalDatabase(db);
+        await db.execute("UPDATE _sync_meta SET last_sync_at = NULL, user_id = ? WHERE id = 1", [
+          currentUserId,
+        ]);
+      }
+
       const isFullSync = Boolean(options?.forceFull || userChanged || !lastSyncAtMeta);
       const lastSyncAt = isFullSync ? null : lastSyncAtMeta;
 
-      // 2. Gather local pending changes
+      // 2. Gather local pending changes (skip if user changed to avoid polluting new user)
       const localChanges: Record<string, Record<string, unknown>[]> = {};
       const pushedIds: Record<string, string[]> = {};
       let pushedCount = 0;
 
-      for (const table of SYNCABLE_TABLES) {
-        const rows = await db.select<Record<string, unknown>[]>(
-          `SELECT * FROM ${table} WHERE _sync_status = 'pending'`,
-        );
-        if (rows.length > 0) {
-          localChanges[table] = rows;
-          const primaryKey = table === "settings" ? "key" : "id";
-          pushedIds[table] = rows
-            .map((r) => r[primaryKey])
-            .filter((id): id is string => typeof id === "string" && id.length > 0);
-          pushedCount += rows.length;
+      if (!userChanged) {
+        for (const table of SYNCABLE_TABLES) {
+          const rows = await db.select<Record<string, unknown>[]>(
+            `SELECT * FROM ${table} WHERE _sync_status = 'pending'`,
+          );
+          if (rows.length > 0) {
+            localChanges[table] = rows;
+            const primaryKey = table === "settings" ? "key" : "id";
+            pushedIds[table] = rows
+              .map((r) => r[primaryKey])
+              .filter((id): id is string => typeof id === "string" && id.length > 0);
+            pushedCount += rows.length;
+          }
         }
       }
 

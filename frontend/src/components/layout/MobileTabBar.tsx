@@ -1,11 +1,9 @@
 import {
-  Bell as BellIcon,
   Calendar as CalendarIcon,
   CheckCheck as CheckCheckIcon,
   Dumbbell as DumbbellIcon,
   GraduationCap as GraduationCapIcon,
   Home as HomeIcon,
-  Newspaper as NewspaperIcon,
   User as UserIcon,
   Wallet as WalletIcon,
 } from "lucide-react";
@@ -19,8 +17,6 @@ const navItems = [
   { to: "/workouts", icon: DumbbellIcon, label: "Workouts" },
   { to: "/skills", icon: GraduationCapIcon, label: "Skills" },
   { to: "/finance", icon: WalletIcon, label: "Finance" },
-  { to: "/news", icon: NewspaperIcon, label: "News" },
-  { to: "/notifications", icon: BellIcon, label: "Alerts" },
   { to: "/profile", icon: UserIcon, label: "Profile" },
 ];
 

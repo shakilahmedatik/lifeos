@@ -75,17 +75,6 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
   const [subtasks, setSubtasks] = useState<TaskSubtask[]>(task.subtasks ?? []);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
-  // Notification Reminder Config
-  const [enableReminder, setEnableReminder] = useState<boolean>(
-    Boolean(task.reminderMinutesBefore),
-  );
-  const [reminderMinutesBefore, setReminderMinutesBefore] = useState<number>(
-    task.reminderMinutesBefore ?? 15,
-  );
-  const [reminderSound, setReminderSound] = useState<string>(
-    task.reminderSilent ? "none" : "default",
-  );
-
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -102,7 +91,7 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
     setSubtasks((prev) => [
       ...prev,
       {
-        id: `st-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         title: newSubtaskTitle.trim(),
         completed: false,
       },
@@ -146,8 +135,6 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
         referenceId: referenceId || undefined,
         notes: notes.trim() || undefined,
         subtasks,
-        reminderMinutesBefore: enableReminder ? reminderMinutesBefore : null,
-        reminderSilent: enableReminder ? reminderSound === "none" : false,
       });
       onClose();
     } catch (err) {
@@ -399,65 +386,6 @@ export default function TaskEditModal({ task, onSave, onClose }: TaskEditModalPr
               rows={2}
               className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 resize-none"
             />
-          </div>
-
-          {/* Notification Settings Section */}
-          <div className="space-y-2 pt-1 border-t border-border">
-            <label className="flex items-center gap-2 text-sm text-primary cursor-pointer">
-              <input
-                type="checkbox"
-                checked={enableReminder}
-                onChange={(e) => setEnableReminder(e.target.checked)}
-                className="rounded bg-card-hover border-border-subtle accent-blue-500"
-              />
-              <span>Set Notification Reminder</span>
-            </label>
-
-            {enableReminder && (
-              <div className="grid grid-cols-2 gap-3 pl-6">
-                <div>
-                  <label
-                    htmlFor="edit-reminder-timing"
-                    className="block text-xs text-secondary mb-1"
-                  >
-                    Timing
-                  </label>
-                  <select
-                    id="edit-reminder-timing"
-                    value={reminderMinutesBefore}
-                    onChange={(e) => setReminderMinutesBefore(Number(e.target.value))}
-                    className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
-                  >
-                    <option value={5}>5 min before</option>
-                    <option value={10}>10 min before</option>
-                    <option value={15}>15 min before</option>
-                    <option value={30}>30 min before</option>
-                    <option value={60}>1 hour before</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="edit-reminder-sound"
-                    className="block text-xs text-secondary mb-1"
-                  >
-                    Sound
-                  </label>
-                  <select
-                    id="edit-reminder-sound"
-                    value={reminderSound}
-                    onChange={(e) => setReminderSound(e.target.value)}
-                    className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
-                  >
-                    <option value="default">Default</option>
-                    <option value="gentle">Gentle</option>
-                    <option value="urgent">Urgent</option>
-                    <option value="chime">Chime</option>
-                    <option value="none">Silent</option>
-                  </select>
-                </div>
-              </div>
-            )}
           </div>
 
           <ModalFooter>

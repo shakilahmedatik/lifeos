@@ -1,22 +1,11 @@
-import {
-  getClientDateString,
-  type HabitWithStreak,
-  type PrayerHabitConfig,
-  type WaterHabitConfig,
-} from "@lifeos/contracts";
+import { getClientDateString, type HabitWithStreak } from "@lifeos/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useRef } from "react";
 import { getDataSource } from "../../../lib/dataSource.js";
 import { queryKeys } from "../../../lib/queryKeys.js";
-import {
-  requestNotificationPermission,
-  showBrowserNotification,
-} from "../../notifications/browser-notifications.js";
 
 export function useHabitProgress() {
   const queryClient = useQueryClient();
   const ds = getDataSource();
-  const notifiedSetRef = useRef<Set<string>>(new Set());
 
   const progressQuery = useQuery<HabitWithStreak[]>({
     queryKey: queryKeys.habits.today(),
@@ -42,64 +31,6 @@ export function useHabitProgress() {
   });
 
   const progresses = progressQuery.data ?? [];
-
-  // Notification alerts logic for prayer / water habits
-  useEffect(() => {
-    requestNotificationPermission().catch(() => {});
-
-    const interval = setInterval(() => {
-      const now = new Date();
-      const currentHHMM = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const todayStr = getClientDateString();
-
-      for (const prog of progresses) {
-        if (!prog) continue;
-
-        if (prog.type === "prayer") {
-          const config = prog.config as PrayerHabitConfig;
-          if (config?.prayers) {
-            for (const prayer of config.prayers) {
-              if (prayer.time === currentHHMM) {
-                const key = `${todayStr}-${prog.id}-${prayer.name}`;
-                if (!notifiedSetRef.current.has(key)) {
-                  notifiedSetRef.current.add(key);
-                  showBrowserNotification(`🕌 Time for ${prayer.name} Salah`, {
-                    body: `It is now ${prayer.time}. Don't forget to perform your ${prayer.name} prayer.`,
-                    icon: "/favicon.ico",
-                  });
-                }
-              }
-            }
-          }
-        }
-
-        if (prog.type === "water") {
-          const config = prog.config as WaterHabitConfig;
-          const intervalMins = config?.reminderIntervalMin || 120;
-          const target = config?.dailyGoalMl || 2000;
-          const current = prog.todayValue ?? 0;
-
-          if (current < target) {
-            const key = `${todayStr}-${prog.id}-water-${currentHHMM}`;
-            if (
-              now.getMinutes() === 0 &&
-              now.getHours() % Math.max(1, Math.floor(intervalMins / 60)) === 0
-            ) {
-              if (!notifiedSetRef.current.has(key)) {
-                notifiedSetRef.current.add(key);
-                showBrowserNotification(`💧 Hydration Reminder`, {
-                  body: `You've drunk ${current} ml of ${target} ml today. Remember to drink a glass of water!`,
-                  icon: "/favicon.ico",
-                });
-              }
-            }
-          }
-        }
-      }
-    }, 30_000);
-
-    return () => clearInterval(interval);
-  }, [progresses]);
 
   return {
     progresses,

@@ -1,54 +1,16 @@
-import { type Client, createClient } from "@libsql/client";
+import { sql } from "drizzle-orm";
 import { beforeEach, describe, expect, it } from "vitest";
-import { SqliteRoutineCategoryRepository } from "../adapters/sqlite/sqlite-routine-category-repository.js";
+import type { DrizzleClient } from "../../../shared/db.js";
+import { createTestDatabase } from "../../../shared/test-db.js";
+import { DrizzleRoutineCategoryRepository } from "../adapters/sqlite/sqlite-routine-category-repository.js";
 
-async function createTestClient(): Promise<Client> {
-  const client = createClient({ url: ":memory:" });
-  await client.execute(`
-    CREATE TABLE routine_categories (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL DEFAULT '',
-      name TEXT NOT NULL,
-      color TEXT NOT NULL DEFAULT '#3b82f6',
-      icon TEXT,
-      is_default INTEGER NOT NULL DEFAULT 0,
-      sort_order INTEGER NOT NULL DEFAULT 0,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      deleted_at TEXT
-    );
-  `);
-  await client.execute(`
-    CREATE TABLE tasks (
-      id TEXT PRIMARY KEY,
-      user_id TEXT NOT NULL DEFAULT '',
-      title TEXT NOT NULL,
-      category TEXT NOT NULL DEFAULT 'general',
-      date TEXT NOT NULL,
-      start_time TEXT NOT NULL,
-      end_time TEXT NOT NULL,
-      status TEXT NOT NULL DEFAULT 'planned',
-      notes TEXT,
-      reminder_minutes_before INTEGER,
-      reminder_sound INTEGER NOT NULL DEFAULT 1,
-      recurrence TEXT NOT NULL DEFAULT 'none',
-      subtasks TEXT DEFAULT '[]',
-      reference_id TEXT,
-      created_at TEXT NOT NULL DEFAULT (datetime('now')),
-      updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-      deleted_at TEXT
-    );
-  `);
-  return client;
-}
-
-describe("SqliteRoutineCategoryRepository", () => {
-  let client: Client;
-  let repo: SqliteRoutineCategoryRepository;
+describe("DrizzleRoutineCategoryRepository", () => {
+  let db: DrizzleClient;
+  let repo: DrizzleRoutineCategoryRepository;
 
   beforeEach(async () => {
-    client = await createTestClient();
-    repo = new SqliteRoutineCategoryRepository(client);
+    db = await createTestDatabase();
+    repo = new DrizzleRoutineCategoryRepository(db);
   });
 
   it("auto-seeds default categories on first access", async () => {
@@ -89,11 +51,9 @@ describe("SqliteRoutineCategoryRepository", () => {
       "user-1",
     );
 
-    // Insert task referencing cat-study
-    await client.execute({
-      sql: `INSERT INTO tasks (id, user_id, title, category, date, start_time, end_time)
-            VALUES ('task-1', 'user-1', 'Study Math', 'cat-study', '2026-08-16', '10:00', '11:00')`,
-    });
+    // Insert task referencing cat-study using Drizzle raw SQL
+    await db.run(sql`INSERT INTO tasks (id, user_id, title, category, date, start_time, end_time)
+          VALUES ('task-1', 'user-1', 'Study Math', 'cat-study', '2026-08-16', '10:00', '11:00')`);
 
     const count = await repo.countTasksByCategoryId("cat-study", "user-1");
     expect(count).toBe(1);

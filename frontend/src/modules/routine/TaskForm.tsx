@@ -1,10 +1,4 @@
-import type {
-  NewTaskInput,
-  NotificationSoundType,
-  TaskCategory,
-  TaskRecurrence,
-  TaskSubtask,
-} from "@lifeos/contracts";
+import type { NewTaskInput, TaskCategory, TaskRecurrence, TaskSubtask } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
 import { Plus as PlusIcon, X as XIcon } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -92,11 +86,6 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
     ];
   }, [routineCategories]);
 
-  // Notifications
-  const [enableReminder, setEnableReminder] = useState(false);
-  const [reminderMinutesBefore, setReminderMinutesBefore] = useState(15);
-  const [reminderSound, setReminderSound] = useState<NotificationSoundType | "none">("default");
-
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
@@ -120,7 +109,7 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
     setSubtasks((prev) => [
       ...prev,
       {
-        id: `st-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`,
+        id: `st-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
         title: newSubtaskTitle.trim(),
         completed: false,
       },
@@ -145,7 +134,6 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
     setSubtasks([]);
     setNewSubtaskTitle("");
     setReferenceId("");
-    setEnableReminder(false);
     setFormError(null);
   };
 
@@ -185,11 +173,6 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
         referenceId: referenceId || undefined,
         notes: notes.trim() || undefined,
         subtasks: subtasks.length > 0 ? subtasks : undefined,
-        ...(enableReminder && {
-          reminderMinutesBefore,
-          reminderSilent: reminderSound === "none",
-          reminderSound: reminderSound !== "none" ? reminderSound : undefined,
-        }),
       });
 
       resetForm();
@@ -422,61 +405,6 @@ export default function TaskForm({ onSubmit, onCancel, defaultDate }: TaskFormPr
             rows={2}
             className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-blue-500/50 placeholder-gray-500 resize-none"
           />
-        </div>
-
-        {/* Reminder Settings */}
-        <div className="space-y-2 pt-1 border-t border-border">
-          <label className="flex items-center gap-2 text-sm text-primary cursor-pointer">
-            <input
-              type="checkbox"
-              checked={enableReminder}
-              onChange={(e) => setEnableReminder(e.target.checked)}
-              className="rounded bg-card-hover border-border-subtle accent-blue-500"
-            />
-            <span>Set Reminder Notification</span>
-          </label>
-
-          {enableReminder && (
-            <div className="grid grid-cols-2 gap-3 pl-6">
-              <div>
-                <label htmlFor="task-reminder-timing" className="block text-xs text-secondary mb-1">
-                  Timing
-                </label>
-                <select
-                  id="task-reminder-timing"
-                  value={reminderMinutesBefore}
-                  onChange={(e) => setReminderMinutesBefore(Number(e.target.value))}
-                  className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
-                >
-                  <option value={5}>5 min before</option>
-                  <option value={10}>10 min before</option>
-                  <option value={15}>15 min before</option>
-                  <option value={30}>30 min before</option>
-                  <option value={60}>1 hour before</option>
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="task-reminder-sound" className="block text-xs text-secondary mb-1">
-                  Sound
-                </label>
-                <select
-                  id="task-reminder-sound"
-                  value={reminderSound}
-                  onChange={(e) =>
-                    setReminderSound(e.target.value as NotificationSoundType | "none")
-                  }
-                  className="w-full bg-card-hover border border-border-subtle text-primary rounded-lg px-3 py-1.5 text-xs focus:outline-none focus:border-blue-500/50"
-                >
-                  <option value="default">Default</option>
-                  <option value="gentle">Gentle</option>
-                  <option value="urgent">Urgent</option>
-                  <option value="chime">Chime</option>
-                  <option value="none">Silent</option>
-                </select>
-              </div>
-            </div>
-          )}
         </div>
 
         <ModalFooter>

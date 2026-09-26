@@ -1,21 +1,22 @@
-import type { Client, InValue } from "@libsql/client";
+import { sql } from "drizzle-orm";
 import { Router } from "express";
+import type { DrizzleClient } from "../../shared/db.js";
 
 const TABLES_WITH_USER_ID = new Set([
+  "settings",
   "tasks",
   "routine_categories",
   "habits",
   "habit_logs",
+  "exercises",
   "workouts",
   "workout_sessions",
   "accounts",
+  "categories",
   "transactions",
-  "rss_feeds",
-  "news_articles",
   "skill_areas",
+  "learning_resources",
   "learning_logs",
-  "reminders",
-  "notifications",
 ]);
 
 const SYNCABLE_TABLES = [
@@ -31,13 +32,9 @@ const SYNCABLE_TABLES = [
   "accounts",
   "categories",
   "transactions",
-  "rss_feeds",
-  "news_articles",
   "skill_areas",
   "learning_resources",
   "learning_logs",
-  "reminders",
-  "notifications",
   "settings",
 ] as const;
 
@@ -54,17 +51,13 @@ const TABLE_TIMESTAMP_COLUMN: Record<string, string> = {
   accounts: "updated_at",
   categories: "updated_at",
   transactions: "updated_at",
-  rss_feeds: "updated_at",
-  news_articles: "fetched_at",
   skill_areas: "updated_at",
   learning_resources: "updated_at",
   learning_logs: "updated_at",
-  reminders: "updated_at",
-  notifications: "updated_at",
   settings: "updated_at",
 };
 
-export function createSyncRouter(client: Client): Router {
+export function createSyncRouter(db: DrizzleClient): Router {
   const router = Router();
   const tableColumnsCache = new Map<string, Set<string>>();
 
@@ -74,8 +67,8 @@ export function createSyncRouter(client: Client): Router {
       return cached;
     }
     try {
-      const res = await client.execute(`PRAGMA table_info(${table})`);
-      const cols = new Set((res.rows as unknown as { name: string }[]).map((r) => r.name));
+      const res = await db.all<{ name: string }>(sql.raw(`PRAGMA table_info(${table})`));
+      const cols = new Set(res.map((r) => r.name));
       tableColumnsCache.set(table, cols);
       return cols;
     } catch {
@@ -96,7 +89,7 @@ export function createSyncRouter(client: Client): Router {
           if (!rows || !Array.isArray(rows)) continue;
 
           const hasUserId = TABLES_WITH_USER_ID.has(table);
-          const primaryKey = table === "settings" ? "key" : "id";
+          const primaryKeys = table === "settings" ? ["key", "user_id"] : ["id"];
           const validColumns = await getTableColumns(table);
 
           for (const rawRow of rows) {
@@ -119,17 +112,24 @@ export function createSyncRouter(client: Client): Router {
             const columns = keys.join(", ");
             const values = keys.map((k) => row[k]);
 
-            const updateClause = keys
-              .filter((k) => k !== primaryKey)
-              .map((k) => `${k} = excluded.${k}`)
-              .join(", ");
+            const hasConflictTarget = primaryKeys.every((pk) => keys.includes(pk));
+            const updateKeys = keys.filter((k) => !primaryKeys.includes(k));
+            const updateClause = updateKeys.map((k) => `${k} = excluded.${k}`).join(", ");
 
-            const sql = keys.includes(primaryKey)
-              ? `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) ON CONFLICT(${primaryKey}) DO UPDATE SET ${updateClause}`
-              : `INSERT INTO ${table} (${columns}) VALUES (${placeholders})`;
+            let rawSql = "";
+            if (hasConflictTarget) {
+              if (updateClause.length > 0) {
+                rawSql = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) ON CONFLICT(${primaryKeys.join(", ")}) DO UPDATE SET ${updateClause}`;
+              } else {
+                rawSql = `INSERT INTO ${table} (${columns}) VALUES (${placeholders}) ON CONFLICT(${primaryKeys.join(", ")}) DO NOTHING`;
+              }
+            } else {
+              rawSql = `INSERT INTO ${table} (${columns}) VALUES (${placeholders})`;
+            }
 
             try {
-              await client.execute({ sql, args: values as InValue[] });
+              const paramQuery = buildParamQuery(rawSql, values);
+              await db.run(paramQuery);
             } catch (err) {
               console.warn(`Sync row insert failed for ${table}:`, err);
             }
@@ -148,40 +148,81 @@ export function createSyncRouter(client: Client): Router {
         const targetTimeCol = TABLE_TIMESTAMP_COLUMN[table] || "updated_at";
         const timeCol = cols.has(targetTimeCol) ? targetTimeCol : "created_at";
 
-        let sql = "";
+        let rawSql = "";
         const args: (string | number | null)[] = [];
 
-        if (hasUserId) {
+        if (table === "workout_exercises") {
           if (shouldFilterByTime) {
             if (hasDeletedAt) {
-              sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) >= datetime(?) OR deleted_at >= ?)))`;
+              rawSql = `SELECT we.* FROM workout_exercises we JOIN workouts w ON we.workout_id = w.id WHERE (w.user_id = ? OR w.user_id = '' OR w.user_id IS NULL) AND (datetime(we.${timeCol}) >= datetime(?) OR we.${timeCol} >= ? OR (we.deleted_at IS NOT NULL AND (datetime(we.deleted_at) >= datetime(?) OR we.deleted_at >= ?)))`;
               args.push(userId, lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
             } else {
-              sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ?)`;
+              rawSql = `SELECT we.* FROM workout_exercises we JOIN workouts w ON we.workout_id = w.id WHERE (w.user_id = ? OR w.user_id = '' OR w.user_id IS NULL) AND (datetime(we.${timeCol}) >= datetime(?) OR we.${timeCol} >= ?)`;
               args.push(userId, lastSyncAt, lastSyncAt);
             }
           } else {
-            sql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL)`;
+            rawSql = `SELECT we.* FROM workout_exercises we JOIN workouts w ON we.workout_id = w.id WHERE (w.user_id = ? OR w.user_id = '' OR w.user_id IS NULL)`;
+            args.push(userId);
+          }
+        } else if (table === "exercise_logs") {
+          if (shouldFilterByTime) {
+            if (hasDeletedAt) {
+              rawSql = `SELECT el.* FROM exercise_logs el JOIN workout_sessions ws ON el.session_id = ws.id WHERE (ws.user_id = ? OR ws.user_id = '' OR ws.user_id IS NULL) AND (datetime(el.${timeCol}) >= datetime(?) OR el.${timeCol} >= ? OR (el.deleted_at IS NOT NULL AND (datetime(el.deleted_at) >= datetime(?) OR el.deleted_at >= ?)))`;
+              args.push(userId, lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
+            } else {
+              rawSql = `SELECT el.* FROM exercise_logs el JOIN workout_sessions ws ON el.session_id = ws.id WHERE (ws.user_id = ? OR ws.user_id = '' OR ws.user_id IS NULL) AND (datetime(el.${timeCol}) >= datetime(?) OR el.${timeCol} >= ?)`;
+              args.push(userId, lastSyncAt, lastSyncAt);
+            }
+          } else {
+            rawSql = `SELECT el.* FROM exercise_logs el JOIN workout_sessions ws ON el.session_id = ws.id WHERE (ws.user_id = ? OR ws.user_id = '' OR ws.user_id IS NULL)`;
+            args.push(userId);
+          }
+        } else if (table === "categories") {
+          const catCondition = "(user_id = ? OR user_id = '' OR user_id IS NULL OR is_system = 1)";
+          if (shouldFilterByTime) {
+            if (hasDeletedAt) {
+              rawSql = `SELECT * FROM categories WHERE ${catCondition} AND (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) >= datetime(?) OR deleted_at >= ?)))`;
+              args.push(userId, lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
+            } else {
+              rawSql = `SELECT * FROM categories WHERE ${catCondition} AND (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ?)`;
+              args.push(userId, lastSyncAt, lastSyncAt);
+            }
+          } else {
+            rawSql = `SELECT * FROM categories WHERE ${catCondition}`;
+            args.push(userId);
+          }
+        } else if (hasUserId) {
+          if (shouldFilterByTime) {
+            if (hasDeletedAt) {
+              rawSql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) >= datetime(?) OR deleted_at >= ?)))`;
+              args.push(userId, lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
+            } else {
+              rawSql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ?)`;
+              args.push(userId, lastSyncAt, lastSyncAt);
+            }
+          } else {
+            rawSql = `SELECT * FROM ${table} WHERE (user_id = ? OR user_id = '' OR user_id IS NULL)`;
             args.push(userId);
           }
         } else {
           if (shouldFilterByTime) {
             if (hasDeletedAt) {
-              sql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) >= datetime(?) OR deleted_at >= ?)))`;
+              rawSql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ? OR (deleted_at IS NOT NULL AND (datetime(deleted_at) >= datetime(?) OR deleted_at >= ?)))`;
               args.push(lastSyncAt, lastSyncAt, lastSyncAt, lastSyncAt);
             } else {
-              sql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ?)`;
+              rawSql = `SELECT * FROM ${table} WHERE (datetime(${timeCol}) >= datetime(?) OR ${timeCol} >= ?)`;
               args.push(lastSyncAt, lastSyncAt);
             }
           } else {
-            sql = `SELECT * FROM ${table}`;
+            rawSql = `SELECT * FROM ${table}`;
           }
         }
 
         try {
-          const result = await client.execute({ sql, args });
-          if (result.rows.length > 0) {
-            serverChanges[table] = result.rows.map((row) => ({ ...row }));
+          const query = buildParamQuery(rawSql, args);
+          const result = await db.all<Record<string, unknown>>(query);
+          if (result.length > 0) {
+            serverChanges[table] = result.map((row) => ({ ...row }));
           }
         } catch (err) {
           console.warn(`Failed to pull server changes for ${table}:`, err);
@@ -198,4 +239,19 @@ export function createSyncRouter(client: Client): Router {
   });
 
   return router;
+}
+
+/**
+ * Build a parameterized Drizzle SQL query from a raw SQL string with ? placeholders
+ * and corresponding argument values.
+ */
+function buildParamQuery(rawSql: string, args: unknown[]) {
+  const parts = rawSql.split("?");
+  if (parts.length === 1) return sql.raw(rawSql);
+
+  let query = sql.raw(parts[0]);
+  for (let i = 0; i < args.length; i++) {
+    query = sql`${query}${args[i]}${sql.raw(parts[i + 1] || "")}`;
+  }
+  return query;
 }

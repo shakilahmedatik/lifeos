@@ -50,17 +50,38 @@ function formatDuration(ms: number): string {
 }
 
 // ── Skipped Paths ────────────────────────────────────────────────────────
-const SKIP_PATHS = new Set([
-  "/api/health",
-  "/api/notifications/due",
-  "/api/notifications/unread-count",
-]);
+const SKIP_PATHS = new Set(["/api/health"]);
+
+const SENSITIVE_KEY_REGEX =
+  /^(password|pin|newpassword|currentpassword|token|secret|authorization|credential|cookie)$/i;
+
+export function sanitizePayload(data: unknown): unknown {
+  if (data === null || data === undefined) return data;
+  if (typeof data !== "object") return data;
+
+  if (Array.isArray(data)) {
+    return data.map((item) => sanitizePayload(item));
+  }
+
+  const result: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(data as Record<string, unknown>)) {
+    if (SENSITIVE_KEY_REGEX.test(key)) {
+      result[key] = "[REDACTED]";
+    } else if (typeof value === "object" && value !== null) {
+      result[key] = sanitizePayload(value);
+    } else {
+      result[key] = value;
+    }
+  }
+  return result;
+}
 
 // ── Truncate Body for Logging ────────────────────────────────────────────
 function truncateBody(body: unknown, maxLen = 1024): string | undefined {
   if (!body || typeof body !== "object") return undefined;
   try {
-    const str = JSON.stringify(body);
+    const sanitized = sanitizePayload(body);
+    const str = JSON.stringify(sanitized);
     if (str.length <= maxLen) return str;
     return `${str.slice(0, maxLen)}… (${str.length} bytes)`;
   } catch {

@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import type { ZodSchema } from "zod";
+import { sanitizePayload } from "./request-logger.js";
 
 export function validateBody<T>(schema: ZodSchema<T>) {
   return (req: Request, res: Response, next: NextFunction) => {
@@ -9,7 +10,7 @@ export function validateBody<T>(schema: ZodSchema<T>) {
         `[Validation Error] ${req.method} ${req.originalUrl}:`,
         JSON.stringify(result.error.issues),
         "Payload:",
-        JSON.stringify(req.body),
+        JSON.stringify(sanitizePayload(req.body)),
       );
       res.status(400).json({
         error: "Validation error",

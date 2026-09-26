@@ -4,8 +4,6 @@ import { useDashboard } from "../modules/dashboard/hooks/useDashboard.js";
 import {
   HabitCarouselWidget,
   HabitConsistencyWidget,
-  NewsWidget,
-  RemindersWidget,
   ScheduleWidget,
   SkillsProgressWidget,
   StatusBar,
@@ -13,18 +11,8 @@ import {
 } from "../modules/dashboard/widgets/index.js";
 
 export default function DashboardPage() {
-  const {
-    summary,
-    loading,
-    error,
-    refresh,
-    startTask,
-    completeTask,
-    logHabit,
-    unlogHabit,
-    completeReminder,
-    createReminder,
-  } = useDashboard();
+  const { summary, loading, error, refresh, startTask, completeTask, logHabit, unlogHabit } =
+    useDashboard();
 
   const navigate = useNavigate();
 
@@ -43,11 +31,11 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Responsive Grid Layout: 1 col on mobile, 2 cols on tablet (scrollable), 4 cols x 2 rows on desktop (100dvh non-scrolling) */}
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 gap-3.5 min-h-0 overflow-visible lg:overflow-hidden pb-6 lg:pb-0">
+      {/* Responsive Grid Layout: 1 col on mobile, 2 cols on tablet, 6 cols x 2 rows on desktop */}
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 lg:grid-rows-2 gap-3.5 min-h-0 overflow-visible lg:overflow-hidden pb-6 lg:pb-0">
         {/* ROW 1 */}
-        {/* Schedule Stack (Spans 2 cols on tablet & desktop) */}
-        <div className="md:col-span-2 lg:col-span-2 min-h-0 flex flex-col justify-center">
+        {/* Schedule Stack (Spans 3 cols on desktop) */}
+        <div className="md:col-span-1 lg:col-span-3 min-h-0 flex flex-col justify-center">
           <ScheduleWidget
             previous={summary?.previous ?? null}
             now={summary?.now ?? null}
@@ -58,19 +46,8 @@ export default function DashboardPage() {
           />
         </div>
 
-        {/* Reminders & Events */}
-        <div className="min-h-0 flex flex-col justify-center">
-          <RemindersWidget
-            reminders={summary?.upcomingReminders ?? []}
-            onComplete={completeReminder}
-            onAdd={async (input) => {
-              await createReminder(input);
-            }}
-          />
-        </div>
-
-        {/* Habit Log Carousel */}
-        <div className="min-h-0 flex flex-col justify-center">
+        {/* Habit Log Carousel (Spans 3 cols on desktop) */}
+        <div className="md:col-span-1 lg:col-span-3 min-h-0 flex flex-col justify-center">
           <HabitCarouselWidget
             habits={summary?.dueHabits ?? []}
             onLog={logHabit}
@@ -79,27 +56,22 @@ export default function DashboardPage() {
         </div>
 
         {/* ROW 2 */}
-        {/* Habit Consistency Sparklines */}
-        <div className="min-h-0 flex flex-col justify-center">
+        {/* Habit Consistency Sparklines (Spans 2 cols on desktop) */}
+        <div className="md:col-span-1 lg:col-span-2 min-h-0 flex flex-col justify-center">
           <HabitConsistencyWidget habits={summary?.habitConsistency ?? []} />
         </div>
 
-        {/* Workout Stacked Column Chart */}
-        <div className="min-h-0 flex flex-col justify-center">
+        {/* Workout Stacked Column Chart (Spans 2 cols on desktop) */}
+        <div className="md:col-span-1 lg:col-span-2 min-h-0 flex flex-col justify-center">
           <WorkoutChartWidget
             data={summary?.workoutWeek ?? []}
             labels={summary?.workoutLabels ?? []}
           />
         </div>
 
-        {/* Skills Progress */}
-        <div className="min-h-0 flex flex-col justify-center">
+        {/* Skills Progress (Spans 2 cols on desktop) */}
+        <div className="md:col-span-2 lg:col-span-2 min-h-0 flex flex-col justify-center">
           <SkillsProgressWidget skills={summary?.skillsProgress ?? []} />
-        </div>
-
-        {/* Tech News Catch-up */}
-        <div className="min-h-0 flex flex-col justify-center">
-          <NewsWidget items={summary?.newsItems ?? []} />
         </div>
       </div>
     </div>
@@ -113,14 +85,12 @@ function DashboardSkeleton() {
         <div className="h-6 w-48 bg-card-solid rounded-md" />
         <div className="h-6 w-24 bg-card-solid rounded-md" />
       </div>
-      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2 gap-3.5 min-h-0">
+      <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 lg:grid-rows-2 gap-3.5 min-h-0">
+        <div className="md:col-span-1 lg:col-span-3 h-48 lg:h-auto bg-card-solid/60 rounded-xl" />
+        <div className="md:col-span-1 lg:col-span-3 h-48 lg:h-auto bg-card-solid/60 rounded-xl" />
+        <div className="md:col-span-1 lg:col-span-2 h-48 lg:h-auto bg-card-solid/60 rounded-xl" />
+        <div className="md:col-span-1 lg:col-span-2 h-48 lg:h-auto bg-card-solid/60 rounded-xl" />
         <div className="md:col-span-2 lg:col-span-2 h-48 lg:h-auto bg-card-solid/60 rounded-xl" />
-        <div className="h-48 lg:h-auto bg-card-solid/60 rounded-xl" />
-        <div className="h-48 lg:h-auto bg-card-solid/60 rounded-xl" />
-        <div className="h-48 lg:h-auto bg-card-solid/60 rounded-xl" />
-        <div className="h-48 lg:h-auto bg-card-solid/60 rounded-xl" />
-        <div className="h-48 lg:h-auto bg-card-solid/60 rounded-xl" />
-        <div className="h-48 lg:h-auto bg-card-solid/60 rounded-xl" />
       </div>
     </div>
   );

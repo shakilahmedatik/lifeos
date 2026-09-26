@@ -12,10 +12,7 @@ export function createDashboardRouter(deps: DashboardDependencies): Router {
     const nowIso =
       (req.query.nowIso as string) ||
       (clientDate ? `${clientDate}T${nowIsoInDhaka().slice(11)}` : nowIsoInDhaka());
-    const userId =
-      (req as unknown as { user?: { id: string } }).user?.id ||
-      (req.query.userId as string) ||
-      "default";
+    const userId = (req as unknown as { user?: { id: string } }).user?.id || "default";
     const summary = await getDashboardSummary(deps, nowIso, userId);
     res.json(summary);
   });

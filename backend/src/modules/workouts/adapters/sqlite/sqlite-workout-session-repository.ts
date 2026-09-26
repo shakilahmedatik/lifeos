@@ -1,6 +1,8 @@
 import { randomUUID } from "node:crypto";
-import type { Client } from "@libsql/client";
+import { and, asc, avg, count, desc, eq, isNotNull, isNull, max, or, sql } from "drizzle-orm";
 
+import type { DrizzleClient } from "../../../../shared/db.js";
+import { exerciseLogs, workoutSessions } from "../../../../shared/schema.js";
 import type {
   ExerciseLog,
   ExerciseProgressPoint,
@@ -10,84 +12,73 @@ import type {
 } from "../../domain/types.js";
 import type { WorkoutSessionRepository } from "../../ports/workout-session-repository.js";
 
-interface WorkoutSessionRow {
-  id: string;
-  workout_id: string;
-  started_at: string;
-  completed_at: string | null;
-  duration_seconds: number | null;
-  notes: string | null;
-}
-
-interface ExerciseLogRow {
-  id: string;
-  session_id: string;
-  exercise_id: string;
-  set_number: number;
-  actual_reps: number;
-  actual_weight: number | null;
-  completed_at: string;
-}
-
-function rowToWorkoutSession(row: WorkoutSessionRow): WorkoutSession {
+function rowToWorkoutSession(row: typeof workoutSessions.$inferSelect): WorkoutSession {
   return {
     id: row.id,
-    workoutId: row.workout_id,
-    startedAt: row.started_at,
-    completedAt: row.completed_at ?? undefined,
-    durationSeconds: row.duration_seconds ?? undefined,
+    workoutId: row.workoutId,
+    startedAt: row.startedAt,
+    completedAt: row.completedAt ?? undefined,
+    durationSeconds: row.durationSeconds ?? undefined,
     notes: row.notes ?? undefined,
   };
 }
 
-function rowToExerciseLog(row: ExerciseLogRow): ExerciseLog {
+function rowToExerciseLog(row: typeof exerciseLogs.$inferSelect): ExerciseLog {
   return {
     id: row.id,
-    sessionId: row.session_id,
-    exerciseId: row.exercise_id,
-    setNumber: row.set_number,
-    actualReps: row.actual_reps,
-    actualWeight: row.actual_weight ?? undefined,
-    completedAt: row.completed_at,
+    sessionId: row.sessionId,
+    exerciseId: row.exerciseId,
+    setNumber: row.setNumber,
+    actualReps: row.actualReps,
+    actualWeight: row.actualWeight ?? undefined,
+    completedAt: row.completedAt,
   };
 }
 
-export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository {
-  constructor(private readonly client: Client) {}
+function userScope(userId: string) {
+  return and(
+    or(eq(workoutSessions.userId, userId), eq(workoutSessions.userId, "")),
+    isNull(workoutSessions.deletedAt),
+  );
+}
+
+export class DrizzleWorkoutSessionRepository implements WorkoutSessionRepository {
+  constructor(private readonly db: DrizzleClient) {}
 
   async getById(id: string, userId = "default"): Promise<WorkoutSession | undefined> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM workout_sessions WHERE id = ? AND (user_id = ? OR user_id = '') AND deleted_at IS NULL",
-      args: [id, userId],
-    });
-    const row = res.rows[0] as unknown as WorkoutSessionRow | undefined;
+    const [row] = await this.db
+      .select()
+      .from(workoutSessions)
+      .where(and(eq(workoutSessions.id, id), userScope(userId)));
     return row ? rowToWorkoutSession(row) : undefined;
   }
 
   async getAll(userId = "default"): Promise<WorkoutSession[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM workout_sessions WHERE (user_id = ? OR user_id = '') AND deleted_at IS NULL ORDER BY started_at DESC",
-      args: [userId],
-    });
-    const rows = res.rows as unknown as WorkoutSessionRow[];
+    const rows = await this.db
+      .select()
+      .from(workoutSessions)
+      .where(userScope(userId))
+      .orderBy(desc(workoutSessions.startedAt));
     return rows.map(rowToWorkoutSession);
   }
 
-  async getByWorkoutId(workoutId: string): Promise<WorkoutSession[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM workout_sessions WHERE workout_id = ? AND deleted_at IS NULL ORDER BY started_at DESC",
-      args: [workoutId],
-    });
-    const rows = res.rows as unknown as WorkoutSessionRow[];
+  async getByWorkoutId(workoutId: string, userId = "default"): Promise<WorkoutSession[]> {
+    const rows = await this.db
+      .select()
+      .from(workoutSessions)
+      .where(and(eq(workoutSessions.workoutId, workoutId), userScope(userId)))
+      .orderBy(desc(workoutSessions.startedAt));
     return rows.map(rowToWorkoutSession);
   }
 
   async create(id: string, workoutId: string, userId = "default"): Promise<WorkoutSession> {
     const now = new Date().toISOString();
-    await this.client.execute({
-      sql: `INSERT INTO workout_sessions (id, user_id, workout_id, started_at)
-            VALUES (?, ?, ?, ?)`,
-      args: [id, userId, workoutId, now],
+    await this.db.insert(workoutSessions).values({
+      id,
+      userId,
+      workoutId,
+      startedAt: now,
+      createdAt: now,
     });
 
     return (await this.getById(id, userId)) as WorkoutSession;
@@ -96,38 +87,39 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
   async complete(
     id: string,
     durationSeconds: number,
+    userId = "default",
     notes?: string,
   ): Promise<WorkoutSession | undefined> {
-    const existing = await this.getById(id);
+    const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
     const now = new Date().toISOString();
-    await this.client.execute({
-      sql: "UPDATE workout_sessions SET completed_at = ?, duration_seconds = ?, notes = ? WHERE id = ? AND deleted_at IS NULL",
-      args: [now, durationSeconds, notes ?? null, id],
-    });
+    await this.db
+      .update(workoutSessions)
+      .set({ completedAt: now, durationSeconds, notes: notes ?? null })
+      .where(and(eq(workoutSessions.id, id), userScope(userId)));
 
-    return await this.getById(id);
+    return await this.getById(id, userId);
   }
 
-  async delete(id: string): Promise<boolean> {
+  async delete(id: string, userId = "default"): Promise<boolean> {
     const now = new Date().toISOString();
-    const res = await this.client.execute({
-      sql: "UPDATE workout_sessions SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
-      args: [now, now, id],
-    });
-    return res.rowsAffected > 0;
+    const result = await this.db
+      .update(workoutSessions)
+      .set({ deletedAt: now })
+      .where(and(eq(workoutSessions.id, id), userScope(userId)));
+    return result.rowsAffected > 0;
   }
 
-  async getWithLogs(id: string): Promise<WorkoutSessionWithLogs | undefined> {
-    const session = await this.getById(id);
+  async getWithLogs(id: string, userId = "default"): Promise<WorkoutSessionWithLogs | undefined> {
+    const session = await this.getById(id, userId);
     if (!session) return undefined;
 
-    const res = await this.client.execute({
-      sql: "SELECT * FROM exercise_logs WHERE session_id = ? AND deleted_at IS NULL ORDER BY exercise_id, set_number",
-      args: [id],
-    });
-    const logRows = res.rows as unknown as ExerciseLogRow[];
+    const logRows = await this.db
+      .select()
+      .from(exerciseLogs)
+      .where(and(eq(exerciseLogs.sessionId, id), isNull(exerciseLogs.deletedAt)))
+      .orderBy(asc(exerciseLogs.exerciseId), asc(exerciseLogs.setNumber));
 
     return {
       ...session,
@@ -135,97 +127,102 @@ export class SqliteWorkoutSessionRepository implements WorkoutSessionRepository 
     };
   }
 
-  async addLog(sessionId: string, input: NewExerciseLogInput): Promise<ExerciseLog> {
+  async addLog(
+    sessionId: string,
+    input: NewExerciseLogInput,
+    _userId = "default",
+  ): Promise<ExerciseLog> {
     const id = randomUUID();
     const now = new Date().toISOString();
 
-    await this.client.execute({
-      sql: `INSERT INTO exercise_logs (id, session_id, exercise_id, set_number, actual_reps, actual_weight, completed_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        id,
-        sessionId,
-        input.exerciseId,
-        input.setNumber,
-        input.actualReps,
-        input.actualWeight ?? null,
-        now,
-      ],
+    await this.db.insert(exerciseLogs).values({
+      id,
+      sessionId,
+      exerciseId: input.exerciseId,
+      setNumber: input.setNumber,
+      actualReps: input.actualReps,
+      actualWeight: input.actualWeight ?? null,
+      completedAt: now,
     });
 
-    const res = await this.client.execute({
-      sql: "SELECT * FROM exercise_logs WHERE id = ? AND deleted_at IS NULL",
-      args: [id],
-    });
-    const logRow = res.rows[0] as unknown as ExerciseLogRow | undefined;
+    const [logRow] = await this.db
+      .select()
+      .from(exerciseLogs)
+      .where(and(eq(exerciseLogs.id, id), isNull(exerciseLogs.deletedAt)));
+
     if (!logRow) {
       throw new Error("Failed to retrieve created exercise log");
     }
     return rowToExerciseLog(logRow);
   }
 
-  async getLogsBySessionId(sessionId: string): Promise<ExerciseLog[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM exercise_logs WHERE session_id = ? AND deleted_at IS NULL ORDER BY exercise_id, set_number",
-      args: [sessionId],
-    });
-    const rows = res.rows as unknown as ExerciseLogRow[];
+  async getLogsBySessionId(sessionId: string, _userId = "default"): Promise<ExerciseLog[]> {
+    const rows = await this.db
+      .select()
+      .from(exerciseLogs)
+      .where(and(eq(exerciseLogs.sessionId, sessionId), isNull(exerciseLogs.deletedAt)))
+      .orderBy(asc(exerciseLogs.exerciseId), asc(exerciseLogs.setNumber));
     return rows.map(rowToExerciseLog);
   }
 
-  async getRecentSessions(limit: number): Promise<WorkoutSession[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM workout_sessions WHERE deleted_at IS NULL ORDER BY started_at DESC LIMIT ?",
-      args: [limit],
-    });
-    const rows = res.rows as unknown as WorkoutSessionRow[];
+  async getRecentSessions(limit: number, userId = "default"): Promise<WorkoutSession[]> {
+    const rows = await this.db
+      .select()
+      .from(workoutSessions)
+      .where(userScope(userId))
+      .orderBy(desc(workoutSessions.startedAt))
+      .limit(limit);
     return rows.map(rowToWorkoutSession);
   }
 
-  async getTotalSessions(): Promise<number> {
-    const res = await this.client.execute("SELECT COUNT(*) as count FROM workout_sessions WHERE deleted_at IS NULL");
-    return Number(res.rows[0]?.count ?? 0);
+  async getTotalSessions(userId = "default"): Promise<number> {
+    const [result] = await this.db
+      .select({ count: count() })
+      .from(workoutSessions)
+      .where(userScope(userId));
+    return result?.count ?? 0;
   }
 
-  async getTotalDuration(): Promise<number> {
-    const res = await this.client.execute(
-      "SELECT COALESCE(SUM(duration_seconds), 0) as total FROM workout_sessions WHERE deleted_at IS NULL",
-    );
-    return Number(res.rows[0]?.total ?? 0);
+  async getTotalDuration(userId = "default"): Promise<number> {
+    const [result] = await this.db
+      .select({ total: sql<number>`COALESCE(SUM(${workoutSessions.durationSeconds}), 0)` })
+      .from(workoutSessions)
+      .where(userScope(userId));
+    return Number(result?.total ?? 0);
   }
 
-  async getExerciseProgress(exerciseId: string): Promise<ExerciseProgressPoint[]> {
-    const res = await this.client.execute({
-      sql: `
-        SELECT
-          el.session_id,
-          ws.started_at as date,
-          MAX(el.actual_weight) as max_weight,
-          AVG(el.actual_reps) as avg_reps,
-          COUNT(*) as total_sets
-        FROM exercise_logs el
-        JOIN workout_sessions ws ON ws.id = el.session_id
-        WHERE el.exercise_id = ? AND ws.completed_at IS NOT NULL AND el.deleted_at IS NULL AND ws.deleted_at IS NULL
-        GROUP BY el.session_id
-        ORDER BY ws.started_at ASC
-      `,
-      args: [exerciseId],
-    });
-
-    const rows = res.rows as unknown as Array<{
-      session_id: string;
-      date: string;
-      max_weight: number | null;
-      avg_reps: number;
-      total_sets: number;
-    }>;
+  async getExerciseProgress(
+    exerciseId: string,
+    userId = "default",
+  ): Promise<ExerciseProgressPoint[]> {
+    const rows = await this.db
+      .select({
+        sessionId: exerciseLogs.sessionId,
+        date: workoutSessions.startedAt,
+        maxWeight: max(exerciseLogs.actualWeight),
+        avgReps: avg(exerciseLogs.actualReps),
+        totalSets: count(),
+      })
+      .from(exerciseLogs)
+      .innerJoin(workoutSessions, eq(workoutSessions.id, exerciseLogs.sessionId))
+      .where(
+        and(
+          eq(exerciseLogs.exerciseId, exerciseId),
+          or(eq(workoutSessions.userId, userId), eq(workoutSessions.userId, "")),
+          isNotNull(workoutSessions.completedAt),
+          isNull(exerciseLogs.deletedAt),
+          isNull(workoutSessions.deletedAt),
+        ),
+      )
+      .groupBy(exerciseLogs.sessionId)
+      .orderBy(asc(workoutSessions.startedAt));
 
     return rows.map((row) => ({
-      sessionId: row.session_id,
+      sessionId: row.sessionId,
       date: row.date,
-      maxWeight: row.max_weight ?? 0,
-      avgReps: Math.round(row.avg_reps * 10) / 10,
-      totalSets: row.total_sets,
+      maxWeight: Number(row.maxWeight ?? 0),
+      avgReps: Math.round(Number(row.avgReps ?? 0) * 10) / 10,
+      totalSets: row.totalSets,
     }));
   }
 }

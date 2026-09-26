@@ -13,11 +13,7 @@
 
 ## 1. Vision
 
-A personal, local-first **life operating system** for a single user — not a
-SaaS product, not multi-tenant, no auth, no cloud sync (initially). It exists
-to counteract a specific, named set of problems in the owner's daily life and
-give them a single always-on surface (external monitor) that shows what to do
-right now and how they're trending over time.
+A personal, local-first **life operating system** for a single user — initially no auth or cloud sync, but it has now evolved to support both local desktop usage (via Tauri) and web deployments (Vercel + Cloudflare Pages) with cloud sync (Turso) and authentication (Better-Auth). It exists to counteract a specific, named set of problems in the owner's daily life and give them a single always-on surface (external monitor) that shows what to do right now and how they're trending over time.
 
 **Core belief driving the design:** the system succeeds if it reduces friction
 between "deciding to do the right thing" and "doing it." Every feature should
@@ -224,13 +220,12 @@ corruption. Examples:
 
 ### Explicit non-goals (do not introduce these without a new decision record)
 
-- No authentication / user accounts / multi-tenancy.
-- No ORM (raw SQL / Kysely via `@libsql/client`).
+- ~~No authentication / user accounts / multi-tenancy.~~ (Update: Authentication is now handled via Better-Auth)
+- ~~No ORM (raw SQL / Kysely via `@libsql/client`).~~ (Update: Drizzle ORM is now used)
 - No domain event bus / pub-sub between modules.
 - No CQRS.
-- No microservices — single backend process, single SQLite file.
-- No cloud sync in the initial phase (may become a _later_ phase — see
-  Roadmap — but is not in scope now).
+- No microservices — single backend process, single SQLite database.
+- ~~No cloud sync in the initial phase...~~ (Update: Cloud sync is now supported via Turso remote DB)
 
 ---
 
@@ -241,17 +236,18 @@ corruption. Examples:
 | Backend runtime         | Node.js (TypeScript, ESM)                               | `tsx` for dev, `tsc` for build                                                                                  |
 | Backend framework       | Express                                                 | Thin HTTP layer only                                                                                            |
 | Validation              | Zod                                                     | At the API boundary only                                                                                        |
-| Database                | SQLite via `@libsql/client`                             | Single local/embedded LibSQL SQLite database                                                                    |
+| Database                | SQLite via Drizzle ORM + `@libsql/client`               | Single local/embedded LibSQL SQLite database or remote Turso database                                           |
+| Authentication          | Better-Auth                                             | Handles user sessions and cloud sync                                                                            |
 | Frontend build          | Vite                                                    | React + TypeScript template                                                                                     |
-| Frontend framework      | React                                                   | Function components, hooks only                                                                                 |
+| Frontend framework      | React 19 + React Router 7                               | SPA routing and hooks                                                                                           |
+| Data Fetching           | Tanstack Query 5                                        | Client-side caching, synchronization, and state management                                                      |
 | Styling                 | Tailwind CSS v4                                         | Dark theme by default (always-on monitor use)                                                                   |
-| Charts (planned)        | Recharts or Chart.js                                    | Not yet integrated — defer until a specific useful chart is known                                               |
-| Realtime push (planned) | Server-Sent Events (`EventSource`, plain Express route) | For reminders only — one-directional server→client. Not WebSockets/socket.io; see §7.6                          |
+| Desktop App             | Tauri 2                                                 | Native desktop application shell for macOS/Windows/Linux                                                        |
+| Realtime push           | Server-Sent Events (`EventSource`, plain Express route) | For reminders only — one-directional server→client.                                                             |
 | Testing                 | Vitest                                                  | Natural fit given Vite/TS stack; see §11                                                                        |
-| Deployment target       | Local machine only (macOS, M1)                          | Optionally wrapped later in Tauri/Electron for a native always-on window; currently a browser tab is sufficient |
+| Deployment target       | Local machine (Tauri) OR Web (Vercel + CF Pages)        | Support for both local-first native app and cloud-synced web app                                                |
 
-No cloud infra, no CI/CD requirement, no containerization requirement at this
-stage — optimize for "runs with `npm run dev` on one Mac."
+No complex cloud infra required at this stage — optimize for "runs with `pnpm run dev` on one Mac."
 
 ### Future technology decisions
 
@@ -269,10 +265,7 @@ backend domain internals.
 
 #### Native application shell
 
-If LifeOS becomes daily-critical, a **Tauri** wrapper is likely a valuable
-future step. It can improve always-on behavior, application launching, system
-integrations, and notifications. It should remain deferred until browser
-limitations are demonstrated in daily use.
+A **Tauri** wrapper has been added to support desktop execution natively. It provides always-on behavior, application launching, system integrations, and native notifications.
 
 #### Charts
 
@@ -301,7 +294,14 @@ lifeos/
           ports/DashboardReadRepository.ts       (if Pattern B needed)
           adapters/sqlite/SqliteDashboardReadRepository.ts
           api/dashboardRoutes.ts
-        <future: workout/, finance/, skills/, habits/, news/, notifications/>
+        finance/
+        habits/
+        health/
+        skills/
+        workouts/
+        auth/
+        sync/
+        settings/
       shared/
         db.ts              SQLite connection + schema bootstrap
         migrations/        Versioned SQL migration files

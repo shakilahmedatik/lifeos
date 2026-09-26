@@ -45,18 +45,3 @@ export function useExercises() {
     refresh: () => exercisesQuery.refetch(),
   };
 }
-
-export function useExerciseProgress(exerciseId: string | null) {
-  const query = useQuery<api.ExerciseProgressPoint[]>({
-    queryKey: queryKeys.workouts.exerciseProgress(exerciseId || ""),
-    queryFn: () => (exerciseId ? api.fetchExerciseProgress(exerciseId) : Promise.resolve([])),
-    enabled: !!exerciseId,
-  });
-
-  return {
-    progress: query.data ?? [],
-    loading: query.isLoading,
-    error: query.error ? (query.error as Error).message : null,
-    refresh: () => query.refetch(),
-  };
-}

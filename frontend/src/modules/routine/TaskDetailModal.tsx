@@ -1,6 +1,5 @@
 import type { Task, TaskStatus, TaskSubtask } from "@lifeos/contracts";
 import {
-  Bell as BellIcon,
   Calendar as CalendarIcon,
   Clock as ClockIcon,
   Edit as EditIcon,
@@ -157,17 +156,6 @@ export default function TaskDetailModal({
           <div className="bg-card p-3.5 rounded-xl border border-border space-y-1">
             <h3 className="text-xs font-semibold text-secondary uppercase tracking-wider">Notes</h3>
             <p className="text-xs text-primary whitespace-pre-wrap leading-relaxed">{task.notes}</p>
-          </div>
-        )}
-
-        {/* Reminder Info */}
-        {task.reminderMinutesBefore && (
-          <div className="bg-card p-3.5 rounded-xl border border-border flex items-center gap-2 text-xs text-blue-300">
-            <BellIcon size={16} className="text-blue-400" />
-            <span>
-              Reminder set for {task.reminderMinutesBefore} minutes before (
-              {task.reminderSilent ? "Silent" : "Sound Enabled"})
-            </span>
           </div>
         )}
       </div>

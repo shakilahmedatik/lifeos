@@ -4,6 +4,7 @@ import type {
   Category,
   CategoryBreakdown,
   DashboardSummary,
+  DataSource,
   Exercise,
   ExerciseLog,
   ExerciseProgressPoint,
@@ -19,24 +20,15 @@ import type {
   NewExerciseInput,
   NewExerciseLogInput,
   NewHabitDefinitionInput,
-  NewNotificationInput,
-  NewReminderInput,
   NewRoutineCategoryInput,
-  NewsArticle,
   NewTransactionInput,
   NewWorkoutExerciseInput,
   NewWorkoutInput,
-  Notification,
-  NotificationSoundType,
-  NotificationWithTask,
-  Reminder,
   RoutineCategory,
   RoutineStats,
-  RssFeed,
   Task,
   TaskHistoryQuery,
   Transaction,
-  UpdateReminderInput,
   UpdateRoutineCategoryInput,
   WeeklySummary,
   Workout,
@@ -129,7 +121,7 @@ export async function request<T>(url: string, options?: RequestInit): Promise<T>
   return res.json() as Promise<T>;
 }
 
-export const api = {
+export const api: DataSource = {
   // Dashboard
   getSummary: (date?: string) => {
     const d = date || new Date().toISOString().split("T")[0];
@@ -243,13 +235,6 @@ export const api = {
     request<WeeklySummary>(
       `/api/habits/weekly-review${weekStart ? `?weekStart=${weekStart}` : ""}`,
     ),
-  exportHabits: () => request<{ habits: HabitDefinition[] }>("/api/habits/export"),
-  importHabits: (data: unknown) =>
-    request<void>("/api/habits/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    }),
 
   // Skills
   getSkillAreas: () => request<import("@lifeos/contracts").SkillArea[]>("/api/skills/areas"),
@@ -316,22 +301,6 @@ export const api = {
     request<import("@lifeos/contracts").LearningLog[]>(
       `/api/skills/logs/range?startDate=${startDate}&endDate=${endDate}`,
     ),
-  // Skills import
-  importBackup: (input: {
-    areas: import("@lifeos/contracts").NewSkillAreaInput[];
-    resources: import("@lifeos/contracts").NewLearningResourceInput[];
-    logs: import("@lifeos/contracts").NewLearningLogInput[];
-  }) =>
-    request<{
-      success: boolean;
-      areasCreated: number;
-      resourcesCreated: number;
-      logsCreated: number;
-    }>("/api/skills/import", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }),
   getProgressBatch: (resourceIds: string[]) =>
     request<import("@lifeos/contracts").ResourceWithProgress[]>(
       "/api/skills/resources/progress-batch",
@@ -447,63 +416,6 @@ export const api = {
     };
   },
 
-  // Backup
-  downloadBackup: () => request<{ filename: string; path: string }>("/api/backup"),
-  exportBackupJson: async () => {
-    const token =
-      typeof localStorage !== "undefined" ? localStorage.getItem("lifeos_session_token") : null;
-    const headers: Record<string, string> = {};
-    if (token) headers.Authorization = `Bearer ${token}`;
-
-    const res = await fetch(`${getApiBaseUrl()}/api/backup/export`, {
-      headers,
-      credentials: "include",
-    });
-    if (!res.ok) throw new Error("Failed to export database backup");
-    return res.blob();
-  },
-
-  // Notifications
-  getNotifications: () => request<NotificationWithTask[]>("/api/notifications"),
-  getDueNotifications: () => request<NotificationWithTask[]>("/api/notifications/due"),
-  getUnreadCount: () => request<{ count: number }>("/api/notifications/unread-count"),
-  createNotification: (input: NewNotificationInput) =>
-    request<Notification>("/api/notifications", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }),
-  deleteNotification: (id: string) =>
-    request<void>(`/api/notifications/${id}`, { method: "DELETE" }),
-  deleteNotificationsByTaskId: (taskId: string) =>
-    request<void>(`/api/notifications/task/${taskId}`, { method: "DELETE" }),
-  getSoundSettings: () =>
-    request<{ soundType: NotificationSoundType }>("/api/notifications/settings/sound"),
-  updateSoundSettings: (soundType: NotificationSoundType) =>
-    request<{ soundType: NotificationSoundType }>("/api/notifications/settings/sound", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ soundType }),
-    }),
-
-  // Reminders
-  getReminders: (date?: string) =>
-    request<Reminder[]>(`/api/reminders${date ? `?date=${date}` : ""}`),
-  getTodayReminders: () => request<Reminder[]>("/api/reminders/today"),
-  createReminder: (input: NewReminderInput) =>
-    request<Reminder>("/api/reminders", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }),
-  updateReminder: (id: string, patch: UpdateReminderInput) =>
-    request<Reminder>(`/api/reminders/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    }),
-  deleteReminder: (id: string) => request<void>(`/api/reminders/${id}`, { method: "DELETE" }),
-
   // Workouts
   getWorkouts: () => request<Workout[]>("/api/workouts"),
   getWorkout: (id: string) => request<WorkoutWithExercises>(`/api/workouts/${id}`),
@@ -593,51 +505,6 @@ export const api = {
     request<WorkoutSession[]>(`/api/workouts/history/recent?limit=${limit}`),
   getExerciseProgress: (exerciseId: string) =>
     request<ExerciseProgressPoint[]>(`/api/workouts/exercises/${exerciseId}/progress`),
-
-  // News
-  getNewsFeeds: () => request<RssFeed[]>("/api/news/feeds"),
-  getNewsFeed: (id: string) => request<RssFeed>(`/api/news/feeds/${id}`),
-  createNewsFeed: (input: { title: string; url: string }) =>
-    request<RssFeed>("/api/news/feeds", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(input),
-    }),
-  updateNewsFeed: (id: string, patch: { title?: string; url?: string }) =>
-    request<RssFeed>(`/api/news/feeds/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(patch),
-    }),
-  deleteNewsFeed: (id: string) => request<void>(`/api/news/feeds/${id}`, { method: "DELETE" }),
-  toggleNewsFeedStatus: (id: string) =>
-    request<RssFeed>(`/api/news/feeds/${id}/toggle`, { method: "PATCH" }),
-  refreshNewsFeed: (id: string) =>
-    request<{ newArticles: number }>(`/api/news/feeds/${id}/refresh`, { method: "POST" }),
-  refreshAllNewsFeeds: () =>
-    request<{ success: boolean; totalFeeds: number; newArticles: number }>(
-      "/api/news/feeds/refresh-all",
-      {
-        method: "POST",
-      },
-    ),
-  getNewsArticles: (params?: {
-    feedId?: string;
-    search?: string;
-    limit?: number;
-    offset?: number;
-  }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.feedId) searchParams.set("feedId", params.feedId);
-    if (params?.search) searchParams.set("search", params.search);
-    if (params?.limit) searchParams.set("limit", params.limit.toString());
-    if (params?.offset) searchParams.set("offset", params.offset.toString());
-    const queryString = searchParams.toString();
-    return request<NewsArticle[]>(`/api/news/articles${queryString ? `?${queryString}` : ""}`);
-  },
-  getTickerArticles: () => request<NewsArticle[]>("/api/news/articles/ticker"),
-  markNewsArticleAsRead: (id: string) =>
-    request<NewsArticle>(`/api/news/articles/${id}/read`, { method: "PATCH" }),
 
   // User Profile & System Settings
   updateProfile: (input: { name?: string; email?: string }) =>

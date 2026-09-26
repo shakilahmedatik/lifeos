@@ -1,134 +1,114 @@
-import type { Client } from "@libsql/client";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 
+import type { DrizzleClient } from "../../../../shared/db.js";
+import { exercises } from "../../../../shared/schema.js";
 import type { Exercise, NewExerciseInput } from "../../domain/types.js";
 import type { ExerciseRepository } from "../../ports/exercise-repository.js";
 
-interface ExerciseRow {
-  id: string;
-  name: string;
-  category?: string;
-  muscle_group?: string;
-  equipment: string;
-  video_url: string | null;
-  created_at: string;
-  updated_at?: string;
-}
-
-function rowToExercise(row: ExerciseRow): Exercise {
+function rowToExercise(row: typeof exercises.$inferSelect): Exercise {
   return {
     id: row.id,
     name: row.name,
-    muscleGroup: (row.category || row.muscle_group || "general") as Exercise["muscleGroup"],
+    muscleGroup: (row.category || "general") as Exercise["muscleGroup"],
     equipment: row.equipment as Exercise["equipment"],
-    videoUrl: row.video_url ?? undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at || row.created_at,
+    videoUrl: row.videoUrl ?? undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt || row.createdAt,
   };
 }
 
-export class SqliteExerciseRepository implements ExerciseRepository {
-  constructor(private readonly client: Client) {}
+function userScope(userId: string) {
+  return and(
+    or(eq(exercises.userId, userId), eq(exercises.userId, "")),
+    isNull(exercises.deletedAt),
+  );
+}
 
-  async getById(id: string, _userId?: string): Promise<Exercise | undefined> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM exercises WHERE id = ? AND deleted_at IS NULL",
-      args: [id],
-    });
-    const row = res.rows[0] as unknown as ExerciseRow | undefined;
+export class DrizzleExerciseRepository implements ExerciseRepository {
+  constructor(private readonly db: DrizzleClient) {}
+
+  async getById(id: string, userId = "default"): Promise<Exercise | undefined> {
+    const [row] = await this.db
+      .select()
+      .from(exercises)
+      .where(and(eq(exercises.id, id), userScope(userId)));
     return row ? rowToExercise(row) : undefined;
   }
 
-  async getAll(_userId?: string): Promise<Exercise[]> {
-    const res = await this.client.execute("SELECT * FROM exercises WHERE deleted_at IS NULL ORDER BY name");
-    const rows = res.rows as unknown as ExerciseRow[];
+  async getAll(userId = "default"): Promise<Exercise[]> {
+    const rows = await this.db
+      .select()
+      .from(exercises)
+      .where(userScope(userId))
+      .orderBy(asc(exercises.name));
     return rows.map(rowToExercise);
   }
 
-  async getByMuscleGroup(muscleGroup: string, _userId?: string): Promise<Exercise[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM exercises WHERE category = ? AND deleted_at IS NULL ORDER BY name",
-      args: [muscleGroup],
-    });
-    const rows = res.rows as unknown as ExerciseRow[];
+  async getByMuscleGroup(muscleGroup: string, userId = "default"): Promise<Exercise[]> {
+    const rows = await this.db
+      .select()
+      .from(exercises)
+      .where(and(eq(exercises.category, muscleGroup), userScope(userId)))
+      .orderBy(asc(exercises.name));
     return rows.map(rowToExercise);
   }
 
-  async create(id: string, input: NewExerciseInput, _userId?: string): Promise<Exercise> {
+  async create(id: string, input: NewExerciseInput, userId = "default"): Promise<Exercise> {
     const now = new Date().toISOString();
-    await this.client.execute({
-      sql: `INSERT INTO exercises (id, name, category, equipment, video_url, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        id,
-        input.name,
-        input.muscleGroup ?? "general",
-        input.equipment ?? "other",
-        input.videoUrl ?? null,
-        now,
-        now,
-      ],
+    await this.db.insert(exercises).values({
+      id,
+      userId,
+      name: input.name,
+      category: input.muscleGroup ?? "general",
+      equipment: input.equipment ?? "other",
+      videoUrl: input.videoUrl ?? null,
+      createdAt: now,
+      updatedAt: now,
     });
 
-    return (await this.getById(id)) as Exercise;
+    return (await this.getById(id, userId)) as Exercise;
   }
 
   async update(
     id: string,
     patch: Partial<NewExerciseInput>,
-    _userId?: string,
+    userId = "default",
   ): Promise<Exercise | undefined> {
-    const existing = await this.getById(id);
+    const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
-    const fields: string[] = [];
-    const values: (string | number | null)[] = [];
+    const updates: Record<string, unknown> = {};
+    if (patch.name !== undefined) updates.name = patch.name;
+    if (patch.muscleGroup !== undefined) updates.category = patch.muscleGroup;
+    if (patch.equipment !== undefined) updates.equipment = patch.equipment;
+    if (patch.videoUrl !== undefined) updates.videoUrl = patch.videoUrl ?? null;
 
-    if (patch.name !== undefined) {
-      fields.push("name = ?");
-      values.push(patch.name);
-    }
-    if (patch.muscleGroup !== undefined) {
-      fields.push("category = ?");
-      values.push(patch.muscleGroup);
-    }
-    if (patch.equipment !== undefined) {
-      fields.push("equipment = ?");
-      values.push(patch.equipment);
-    }
-    if (patch.videoUrl !== undefined) {
-      fields.push("video_url = ?");
-      values.push(patch.videoUrl ?? null);
-    }
+    if (Object.keys(updates).length === 0) return existing;
 
-    if (fields.length === 0) return existing;
+    updates.updatedAt = new Date().toISOString();
 
-    fields.push("updated_at = ?");
-    values.push(new Date().toISOString());
-    values.push(id);
+    await this.db
+      .update(exercises)
+      .set(updates)
+      .where(and(eq(exercises.id, id), userScope(userId)));
 
-    await this.client.execute({
-      sql: `UPDATE exercises SET ${fields.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
-      args: values,
-    });
-
-    return await this.getById(id);
+    return await this.getById(id, userId);
   }
 
-  async delete(id: string, _userId?: string): Promise<boolean> {
+  async delete(id: string, userId = "default"): Promise<boolean> {
     const now = new Date().toISOString();
-    const res = await this.client.execute({
-      sql: "UPDATE exercises SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
-      args: [now, now, id],
-    });
-    return res.rowsAffected > 0;
+    const result = await this.db
+      .update(exercises)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(and(eq(exercises.id, id), userScope(userId)));
+    return result.rowsAffected > 0;
   }
 
-  async getByName(name: string, _userId?: string): Promise<Exercise | undefined> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM exercises WHERE name = ? AND deleted_at IS NULL",
-      args: [name],
-    });
-    const row = res.rows[0] as unknown as ExerciseRow | undefined;
+  async getByName(name: string, userId = "default"): Promise<Exercise | undefined> {
+    const [row] = await this.db
+      .select()
+      .from(exercises)
+      .where(and(eq(exercises.name, name), userScope(userId)));
     return row ? rowToExercise(row) : undefined;
   }
 }

@@ -1,68 +1,68 @@
-import type { Client } from "@libsql/client";
+import {
+  SYSTEM_CATEGORY_OPENING_BALANCE_EXPENSE_ID,
+  SYSTEM_CATEGORY_OPENING_BALANCE_ID,
+} from "@lifeos/contracts";
+import { and, asc, desc, eq, gte, isNull, lte, notInArray, or, sql } from "drizzle-orm";
 
+import type { DrizzleClient } from "../../../../shared/db.js";
+import { categories, transactions } from "../../../../shared/schema.js";
 import type { NewTransactionInput, Transaction } from "../../domain/types.js";
 import type { TransactionRepository } from "../../ports/transaction-repository.js";
 
-interface TransactionRow {
-  id: string;
-  account_id: string;
-  category_id: string;
-  date: string;
-  amount_minor: number;
-  currency: string;
-  note: string | null;
-  transfer_pair_id: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-function rowToTransaction(row: TransactionRow): Transaction {
+function rowToTransaction(row: typeof transactions.$inferSelect): Transaction {
   return {
     id: row.id,
-    accountId: row.account_id,
-    categoryId: row.category_id,
+    accountId: row.accountId,
+    categoryId: row.categoryId,
     date: row.date,
-    amountMinor: row.amount_minor,
+    amountMinor: row.amountMinor,
     currency: row.currency,
     note: row.note ?? undefined,
-    transferPairId: row.transfer_pair_id ?? undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    transferPairId: row.transferPairId ?? undefined,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 
-export class SqliteTransactionRepository implements TransactionRepository {
-  constructor(private readonly client: Client) {}
+function userScope(userId: string) {
+  return and(
+    userId ? eq(transactions.userId, userId) : eq(transactions.userId, ""),
+    isNull(transactions.deletedAt),
+  );
+}
 
-  async getById(id: string): Promise<Transaction | undefined> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM transactions WHERE id = ? AND deleted_at IS NULL",
-      args: [id],
-    });
-    const row = res.rows[0] as unknown as TransactionRow | undefined;
+export class DrizzleTransactionRepository implements TransactionRepository {
+  constructor(private readonly db: DrizzleClient) {}
+
+  async getById(id: string, userId: string): Promise<Transaction | undefined> {
+    const [row] = await this.db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.id, id), userScope(userId)));
     return row ? rowToTransaction(row) : undefined;
   }
 
-  async getByDateRange(startDate: string, endDate: string): Promise<Transaction[]> {
-    const res = await this.client.execute({
-      sql: `SELECT * FROM transactions 
-            WHERE deleted_at IS NULL AND (
-              substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?
-              OR (date >= ? AND (date <= ? OR date <= ? || 'T23:59:59.999Z' OR date <= ? || ' 23:59:59'))
-            ) 
-            ORDER BY date ASC`,
-      args: [startDate, endDate, startDate, endDate, endDate, endDate],
-    });
-    const rows = res.rows as unknown as TransactionRow[];
+  async getByDateRange(startDate: string, endDate: string, userId: string): Promise<Transaction[]> {
+    const rows = await this.db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          userScope(userId),
+          sql`substr(${transactions.date}, 1, 10) >= ${startDate}`,
+          sql`substr(${transactions.date}, 1, 10) <= ${endDate}`,
+        ),
+      )
+      .orderBy(asc(transactions.date));
     return rows.map(rowToTransaction);
   }
 
-  async getByAccountId(accountId: string): Promise<Transaction[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM transactions WHERE account_id = ? AND deleted_at IS NULL ORDER BY date ASC",
-      args: [accountId],
-    });
-    const rows = res.rows as unknown as TransactionRow[];
+  async getByAccountId(accountId: string, userId: string): Promise<Transaction[]> {
+    const rows = await this.db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.accountId, accountId), userScope(userId)))
+      .orderBy(asc(transactions.date));
     return rows.map(rowToTransaction);
   }
 
@@ -70,122 +70,103 @@ export class SqliteTransactionRepository implements TransactionRepository {
     accountId: string,
     startDate: string,
     endDate: string,
+    userId: string,
   ): Promise<Transaction[]> {
-    const res = await this.client.execute({
-      sql: `SELECT * FROM transactions 
-            WHERE account_id = ? 
-              AND deleted_at IS NULL
-              AND (
-                substr(date, 1, 10) >= ? AND substr(date, 1, 10) <= ?
-                OR (date >= ? AND (date <= ? OR date <= ? || 'T23:59:59.999Z' OR date <= ? || ' 23:59:59'))
-              ) 
-            ORDER BY date ASC`,
-      args: [accountId, startDate, endDate, startDate, endDate, endDate, endDate],
-    });
-    const rows = res.rows as unknown as TransactionRow[];
+    const rows = await this.db
+      .select()
+      .from(transactions)
+      .where(
+        and(
+          eq(transactions.accountId, accountId),
+          userScope(userId),
+          sql`substr(${transactions.date}, 1, 10) >= ${startDate}`,
+          sql`substr(${transactions.date}, 1, 10) <= ${endDate}`,
+        ),
+      )
+      .orderBy(asc(transactions.date));
     return rows.map(rowToTransaction);
   }
 
-  async getByCategoryId(categoryId: string): Promise<Transaction[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM transactions WHERE category_id = ? AND deleted_at IS NULL ORDER BY date ASC",
-      args: [categoryId],
-    });
-    const rows = res.rows as unknown as TransactionRow[];
+  async getByCategoryId(categoryId: string, userId: string): Promise<Transaction[]> {
+    const rows = await this.db
+      .select()
+      .from(transactions)
+      .where(and(eq(transactions.categoryId, categoryId), userScope(userId)))
+      .orderBy(asc(transactions.date));
     return rows.map(rowToTransaction);
   }
 
-  async create(id: string, input: NewTransactionInput, userId = ""): Promise<Transaction> {
+  async create(id: string, input: NewTransactionInput, userId: string): Promise<Transaction> {
     const now = new Date().toISOString();
-    await this.client.execute({
-      sql: `INSERT INTO transactions (id, user_id, account_id, category_id, date, amount_minor, currency, note, transfer_pair_id, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        id,
-        userId,
-        input.accountId,
-        input.categoryId,
-        input.date,
-        input.amountMinor,
-        input.currency ?? "BDT",
-        input.note ?? null,
-        input.transferPairId ?? null,
-        now,
-        now,
-      ],
+    await this.db.insert(transactions).values({
+      id,
+      userId,
+      accountId: input.accountId,
+      categoryId: input.categoryId,
+      date: input.date,
+      amountMinor: input.amountMinor,
+      currency: input.currency ?? "BDT",
+      note: input.note ?? null,
+      transferPairId: input.transferPairId ?? null,
+      createdAt: now,
+      updatedAt: now,
     });
 
-    return (await this.getById(id)) as Transaction;
+    return (await this.getById(id, userId)) as Transaction;
   }
 
-  async update(id: string, patch: Partial<NewTransactionInput>): Promise<Transaction | undefined> {
-    const existing = await this.getById(id);
+  async update(
+    id: string,
+    patch: Partial<NewTransactionInput>,
+    userId: string,
+  ): Promise<Transaction | undefined> {
+    const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
-    const fields: string[] = [];
-    const values: (string | number | null)[] = [];
+    const updates: Record<string, unknown> = {};
+    if (patch.accountId !== undefined) updates.accountId = patch.accountId;
+    if (patch.categoryId !== undefined) updates.categoryId = patch.categoryId;
+    if (patch.date !== undefined) updates.date = patch.date;
+    if (patch.amountMinor !== undefined) updates.amountMinor = patch.amountMinor;
+    if (patch.currency !== undefined) updates.currency = patch.currency;
+    if (patch.note !== undefined) updates.note = patch.note ?? null;
+    if (patch.transferPairId !== undefined) updates.transferPairId = patch.transferPairId ?? null;
 
-    if (patch.accountId !== undefined) {
-      fields.push("account_id = ?");
-      values.push(patch.accountId);
-    }
-    if (patch.categoryId !== undefined) {
-      fields.push("category_id = ?");
-      values.push(patch.categoryId);
-    }
-    if (patch.date !== undefined) {
-      fields.push("date = ?");
-      values.push(patch.date);
-    }
-    if (patch.amountMinor !== undefined) {
-      fields.push("amount_minor = ?");
-      values.push(patch.amountMinor);
-    }
-    if (patch.currency !== undefined) {
-      fields.push("currency = ?");
-      values.push(patch.currency);
-    }
-    if (patch.note !== undefined) {
-      fields.push("note = ?");
-      values.push(patch.note ?? null);
-    }
-    if (patch.transferPairId !== undefined) {
-      fields.push("transfer_pair_id = ?");
-      values.push(patch.transferPairId ?? null);
-    }
+    if (Object.keys(updates).length === 0) return existing;
 
-    if (fields.length === 0) return existing;
+    updates.updatedAt = new Date().toISOString();
 
-    fields.push("updated_at = ?");
-    values.push(new Date().toISOString());
-    values.push(id);
+    await this.db
+      .update(transactions)
+      .set(updates)
+      .where(and(eq(transactions.id, id), userScope(userId)));
 
-    await this.client.execute({
-      sql: `UPDATE transactions SET ${fields.join(", ")} WHERE id = ? AND deleted_at IS NULL`,
-      args: values,
-    });
-
-    return await this.getById(id);
+    return await this.getById(id, userId);
   }
 
-  async delete(id: string): Promise<boolean> {
-    const tx = await this.getById(id);
+  async delete(id: string, userId: string): Promise<boolean> {
+    const tx = await this.getById(id, userId);
     if (!tx) return false;
 
     const now = new Date().toISOString();
     if (tx.transferPairId) {
-      const res = await this.client.execute({
-        sql: "UPDATE transactions SET deleted_at = ?, updated_at = ? WHERE (id = ? OR transfer_pair_id = ?) AND deleted_at IS NULL",
-        args: [now, now, id, tx.transferPairId],
-      });
-      return res.rowsAffected > 0;
+      const result = await this.db
+        .update(transactions)
+        .set({ deletedAt: now, updatedAt: now })
+        .where(
+          and(
+            or(eq(transactions.id, id), eq(transactions.transferPairId, tx.transferPairId)),
+            userScope(userId),
+          ),
+        );
+      return result.rowsAffected > 0;
     }
 
-    const res = await this.client.execute({
-      sql: "UPDATE transactions SET deleted_at = ?, updated_at = ? WHERE id = ? AND deleted_at IS NULL",
-      args: [now, now, id],
-    });
-    return res.rowsAffected > 0;
+    const result = await this.db
+      .update(transactions)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(and(eq(transactions.id, id), userScope(userId)));
+    return result.rowsAffected > 0;
   }
 
   private getMonthDateRange(yearMonth: string): { startDate: string; endDate: string } {
@@ -203,67 +184,128 @@ export class SqliteTransactionRepository implements TransactionRepository {
 
   async getMonthlyTotals(
     yearMonth: string,
+    userId: string,
   ): Promise<{ totalIncome: number; totalExpense: number }> {
     const { startDate, endDate } = this.getMonthDateRange(yearMonth);
 
-    const incomeRes = await this.client.execute({
-      sql: `SELECT COALESCE(SUM(amount_minor), 0) as total
-            FROM transactions t
-            JOIN categories c ON t.category_id = c.id
-            WHERE t.date >= ? AND t.date <= ? AND c.kind = 'income' AND t.transfer_pair_id IS NULL AND t.deleted_at IS NULL AND c.deleted_at IS NULL`,
-      args: [startDate, endDate],
-    });
+    const txUserScope = userId ? eq(transactions.userId, userId) : eq(transactions.userId, "");
+    const catUserScope = or(
+      userId ? eq(categories.userId, userId) : eq(categories.userId, ""),
+      eq(categories.isSystem, 1),
+    );
 
-    const expenseRes = await this.client.execute({
-      sql: `SELECT COALESCE(SUM(amount_minor), 0) as total
-            FROM transactions t
-            JOIN categories c ON t.category_id = c.id
-            WHERE t.date >= ? AND t.date <= ? AND c.kind = 'expense' AND t.transfer_pair_id IS NULL AND t.deleted_at IS NULL AND c.deleted_at IS NULL`,
-      args: [startDate, endDate],
-    });
+    const [incomeResult] = await this.db
+      .select({ total: sql<number>`COALESCE(SUM(${transactions.amountMinor}), 0)` })
+      .from(transactions)
+      .innerJoin(categories, eq(transactions.categoryId, categories.id))
+      .where(
+        and(
+          gte(transactions.date, startDate),
+          lte(transactions.date, endDate),
+          eq(categories.kind, "income"),
+          isNull(transactions.transferPairId),
+          isNull(transactions.deletedAt),
+          isNull(categories.deletedAt),
+          notInArray(categories.id, [
+            SYSTEM_CATEGORY_OPENING_BALANCE_ID,
+            SYSTEM_CATEGORY_OPENING_BALANCE_EXPENSE_ID,
+          ]),
+          txUserScope,
+          catUserScope,
+        ),
+      );
 
-    const totalIncome = Number(incomeRes.rows[0]?.total ?? 0);
-    const totalExpense = Number(expenseRes.rows[0]?.total ?? 0);
+    const [expenseResult] = await this.db
+      .select({ total: sql<number>`COALESCE(SUM(${transactions.amountMinor}), 0)` })
+      .from(transactions)
+      .innerJoin(categories, eq(transactions.categoryId, categories.id))
+      .where(
+        and(
+          gte(transactions.date, startDate),
+          lte(transactions.date, endDate),
+          eq(categories.kind, "expense"),
+          isNull(transactions.transferPairId),
+          isNull(transactions.deletedAt),
+          isNull(categories.deletedAt),
+          notInArray(categories.id, [
+            SYSTEM_CATEGORY_OPENING_BALANCE_ID,
+            SYSTEM_CATEGORY_OPENING_BALANCE_EXPENSE_ID,
+          ]),
+          txUserScope,
+          catUserScope,
+        ),
+      );
 
     return {
-      totalIncome,
-      totalExpense,
+      totalIncome: Number(incomeResult?.total ?? 0),
+      totalExpense: Number(expenseResult?.total ?? 0),
     };
   }
 
-  async getCategoryBreakdown(yearMonth: string): Promise<{ categoryId: string; total: number }[]> {
+  async getCategoryBreakdown(
+    yearMonth: string,
+    userId: string,
+  ): Promise<{ categoryId: string; total: number }[]> {
     const { startDate, endDate } = this.getMonthDateRange(yearMonth);
+    const txUserScope = userId ? eq(transactions.userId, userId) : eq(transactions.userId, "");
 
-    const res = await this.client.execute({
-      sql: `SELECT category_id as categoryId, SUM(amount_minor) as total
-            FROM transactions
-            WHERE date >= ? AND date <= ? AND transfer_pair_id IS NULL AND deleted_at IS NULL
-            GROUP BY category_id
-            ORDER BY total DESC`,
-      args: [startDate, endDate],
-    });
+    const rows = await this.db
+      .select({
+        categoryId: transactions.categoryId,
+        total: sql<number>`SUM(${transactions.amountMinor})`,
+      })
+      .from(transactions)
+      .where(
+        and(
+          gte(transactions.date, startDate),
+          lte(transactions.date, endDate),
+          isNull(transactions.transferPairId),
+          isNull(transactions.deletedAt),
+          notInArray(transactions.categoryId, [
+            SYSTEM_CATEGORY_OPENING_BALANCE_ID,
+            SYSTEM_CATEGORY_OPENING_BALANCE_EXPENSE_ID,
+          ]),
+          txUserScope,
+        ),
+      )
+      .groupBy(transactions.categoryId)
+      .orderBy(desc(sql`SUM(${transactions.amountMinor})`));
 
-    return res.rows.map((row) => ({
-      categoryId: String(row.categoryId),
+    return rows.map((row) => ({
+      categoryId: row.categoryId,
       total: Number(row.total),
     }));
   }
 
-  async getAccountBalance(accountId: string): Promise<number> {
-    const res = await this.client.execute({
-      sql: `SELECT COALESCE(SUM(
-               CASE
-                 WHEN c.kind = 'income' THEN amount_minor
-                 WHEN c.kind = 'expense' THEN -amount_minor
-                 ELSE 0
-               END
-             ), 0) as balance
-             FROM transactions t
-             JOIN categories c ON t.category_id = c.id
-             WHERE t.account_id = ? AND t.deleted_at IS NULL AND c.deleted_at IS NULL`,
-      args: [accountId],
-    });
+  async getAccountBalance(accountId: string, userId: string): Promise<number> {
+    const txUserScope = userId ? eq(transactions.userId, userId) : eq(transactions.userId, "");
+    const catUserScope = or(
+      userId ? eq(categories.userId, userId) : eq(categories.userId, ""),
+      eq(categories.isSystem, 1),
+    );
 
-    return Number(res.rows[0]?.balance ?? 0);
+    const [result] = await this.db
+      .select({
+        balance: sql<number>`COALESCE(SUM(
+          CASE
+            WHEN ${categories.kind} = 'income' THEN ${transactions.amountMinor}
+            WHEN ${categories.kind} = 'expense' THEN -${transactions.amountMinor}
+            ELSE 0
+          END
+        ), 0)`,
+      })
+      .from(transactions)
+      .innerJoin(categories, eq(transactions.categoryId, categories.id))
+      .where(
+        and(
+          eq(transactions.accountId, accountId),
+          isNull(transactions.deletedAt),
+          isNull(categories.deletedAt),
+          txUserScope,
+          catUserScope,
+        ),
+      );
+
+    return Number(result?.balance ?? 0);
   }
 }

@@ -35,7 +35,7 @@ export function createRoutineRouter(
   const router = Router();
 
   router.get("/tasks", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     const date = req.query.date as string | undefined;
     if (!date || !isValidDateString(date)) {
       res.status(400).json({ error: "Missing or invalid ?date=YYYY-MM-DD query param" });
@@ -50,7 +50,7 @@ export function createRoutineRouter(
   });
 
   router.get("/tasks/history", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     try {
       const tasks = await getTaskHistory(
         repo,
@@ -70,7 +70,7 @@ export function createRoutineRouter(
   });
 
   router.get("/stats", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     try {
       const stats = await getRoutineStats(repo, userId);
       res.json(stats);
@@ -83,7 +83,7 @@ export function createRoutineRouter(
     "/tasks",
     validateBody(NewTaskInputSchema),
     async (req: AuthenticatedRequest, res) => {
-      const userId = req.user?.id || (req.query.userId as string) || "default";
+      const userId = req.user?.id || "default";
       try {
         const result = await createTask(repo, req.body, userId);
         res.status(201).json(result);
@@ -98,7 +98,7 @@ export function createRoutineRouter(
     "/tasks/:id",
     validateBody(UpdateTaskSchema),
     async (req: AuthenticatedRequest, res) => {
-      const userId = req.user?.id || (req.query.userId as string) || "default";
+      const userId = req.user?.id || "default";
       try {
         const result = await updateTask(repo, req.params.id as string, req.body, userId);
         res.json(result);
@@ -117,7 +117,7 @@ export function createRoutineRouter(
     "/tasks/:id/status",
     validateBody(UpdateStatusSchema),
     async (req: AuthenticatedRequest, res) => {
-      const userId = req.user?.id || (req.query.userId as string) || "default";
+      const userId = req.user?.id || "default";
       try {
         const result = await setTaskStatus(repo, req.params.id as string, req.body.status, userId);
         res.json(result);
@@ -133,7 +133,7 @@ export function createRoutineRouter(
   );
 
   router.delete("/tasks/:id", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     try {
       await deleteTask(repo, req.params.id as string, userId);
       res.status(204).send();
@@ -153,7 +153,7 @@ export function createRoutineRouter(
       res.status(501).json({ error: "Category repository not configured" });
       return;
     }
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     try {
       const categories = await getRoutineCategories(categoryRepo, userId);
       res.json(categories);
@@ -170,7 +170,7 @@ export function createRoutineRouter(
         res.status(501).json({ error: "Category repository not configured" });
         return;
       }
-      const userId = req.user?.id || (req.query.userId as string) || "default";
+      const userId = req.user?.id || "default";
       try {
         const category = await createRoutineCategory(categoryRepo, req.body, userId);
         res.status(201).json(category);
@@ -189,7 +189,7 @@ export function createRoutineRouter(
         res.status(501).json({ error: "Category repository not configured" });
         return;
       }
-      const userId = req.user?.id || (req.query.userId as string) || "default";
+      const userId = req.user?.id || "default";
       try {
         const category = await updateRoutineCategory(
           categoryRepo,
@@ -214,7 +214,7 @@ export function createRoutineRouter(
       res.status(501).json({ error: "Category repository not configured" });
       return;
     }
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     try {
       const fallback = (req.query.fallback as string) || "general";
       const result = await deleteRoutineCategory(

@@ -1,10 +1,4 @@
-import type {
-  NewNotificationInput,
-  NewTaskInput,
-  Task,
-  TaskStatus,
-  TaskSubtask,
-} from "@lifeos/contracts";
+import type { NewTaskInput, Task, TaskStatus, TaskSubtask } from "@lifeos/contracts";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppToast } from "../../../components/Toast.js";
 import { getDataSource } from "../../../lib/dataSource.js";
@@ -33,28 +27,7 @@ export function useRoutineTasks(date: string) {
   };
 
   const createTaskMutation = useMutation({
-    mutationFn: async (input: NewTaskInput) => {
-      const result = await ds.createTask(input);
-      if (input.reminderMinutesBefore) {
-        try {
-          const [y, m, d] = input.date.split("-").map(Number);
-          const [hh, mm] = input.startTime.split(":").map(Number);
-          const dt = new Date(y, m - 1, d, hh, mm);
-          dt.setMinutes(dt.getMinutes() - input.reminderMinutesBefore);
-
-          const soundType = input.reminderSound || (input.reminderSilent ? undefined : "default");
-
-          await ds.createNotification({
-            taskId: result.task.id,
-            reminderTime: dt.toISOString(),
-            soundType: soundType as NewNotificationInput["soundType"],
-          });
-        } catch {
-          toast.warning("Task created, but failed to schedule reminder notification");
-        }
-      }
-      return result;
-    },
+    mutationFn: (input: NewTaskInput) => ds.createTask(input),
     onSuccess: (result) => {
       toast.success("Task created successfully");
       if (result.overlapsWith && result.overlapsWith.length > 0) {
@@ -91,36 +64,8 @@ export function useRoutineTasks(date: string) {
   });
 
   const updateTaskMutation = useMutation({
-    mutationFn: async ({ id, patch }: { id: string; patch: Partial<NewTaskInput> }) => {
-      const result = await ds.updateTask(id, patch);
-      if (result.task.reminderMinutesBefore) {
-        try {
-          await ds.deleteNotificationsByTaskId(id);
-          const [y, m, d] = result.task.date.split("-").map(Number);
-          const [hh, mm] = result.task.startTime.split(":").map(Number);
-          const dt = new Date(y, m - 1, d, hh, mm);
-          dt.setMinutes(dt.getMinutes() - result.task.reminderMinutesBefore);
-
-          const soundType =
-            patch.reminderSound || (result.task.reminderSilent ? undefined : "default");
-
-          await ds.createNotification({
-            taskId: result.task.id,
-            reminderTime: dt.toISOString(),
-            soundType: soundType as NewNotificationInput["soundType"],
-          });
-        } catch {
-          // non-blocking warning
-        }
-      } else if (patch.reminderMinutesBefore === null) {
-        try {
-          await ds.deleteNotificationsByTaskId(id);
-        } catch {
-          // ignore error
-        }
-      }
-      return result;
-    },
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<NewTaskInput> }) =>
+      ds.updateTask(id, patch),
     onSuccess: (result) => {
       toast.success("Task updated");
       if (result.overlapsWith && result.overlapsWith.length > 0) {

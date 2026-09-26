@@ -1,7 +1,6 @@
 import type { Transaction } from "@lifeos/contracts";
 import { Plus } from "lucide-react";
 import { useCallback, useState } from "react";
-import BackupPanel from "../components/ui/BackupPanel.js";
 import Button from "../components/ui/Button.js";
 import Modal from "../components/ui/Modal.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
@@ -12,10 +11,9 @@ import {
   MonthlyView,
   TransactionForm,
   TransactionList,
-  useFinanceBackup,
 } from "../modules/finance/index.js";
 
-type Tab = "overview" | "transactions" | "accounts" | "categories" | "backup";
+type Tab = "overview" | "transactions" | "accounts" | "categories";
 
 export default function FinancePage() {
   const [activeTab, setActiveTab] = useState<Tab>("overview");
@@ -31,8 +29,6 @@ export default function FinancePage() {
     setEditingTransaction(tx);
     setShowTransactionModal(true);
   }, []);
-
-  const { exportCsv, exportJson, importJson } = useFinanceBackup(handleRefresh);
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -68,7 +64,6 @@ export default function FinancePage() {
           <TabsTrigger value="transactions">Transactions</TabsTrigger>
           <TabsTrigger value="accounts">Accounts</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
-          <TabsTrigger value="backup">Backup & Export</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="mt-6">
@@ -89,15 +84,6 @@ export default function FinancePage() {
 
         <TabsContent value="categories" className="mt-6">
           <CategoryList refreshTrigger={refreshTrigger} onDataChange={handleRefresh} />
-        </TabsContent>
-
-        <TabsContent value="backup" className="mt-6">
-          <BackupPanel
-            entityName="Finance"
-            onExportCsv={exportCsv}
-            onExportJson={exportJson}
-            onImportJson={importJson}
-          />
         </TabsContent>
       </Tabs>
 

@@ -17,9 +17,7 @@ function formatIsoWithOffset(input: Date, offsetMinutes: number): string {
 }
 
 export function nowInTimezone(): Date {
-  const now = new Date();
-  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
-  return new Date(utcMs + TIMEZONE_OFFSET_MINUTES * 60000);
+  return new Date(Date.now() + TIMEZONE_OFFSET_MINUTES * 60000);
 }
 
 export function todayInTimezone(): string {

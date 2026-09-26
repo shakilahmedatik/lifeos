@@ -1,4 +1,7 @@
-import type { Client } from "@libsql/client";
+import { and, asc, count, eq, isNull, or, sql } from "drizzle-orm";
+
+import type { DrizzleClient } from "../../../../shared/db.js";
+import { routineCategories, tasks } from "../../../../shared/schema.js";
 import type {
   NewRoutineCategoryInput,
   RoutineCategory,
@@ -6,29 +9,16 @@ import type {
 } from "../../domain/types.js";
 import type { RoutineCategoryRepository } from "../../ports/routine-category-repository.js";
 
-interface CategoryRow {
-  id: string;
-  user_id: string;
-  name: string;
-  color: string;
-  icon: string | null;
-  is_default: number;
-  sort_order: number;
-  created_at: string;
-  updated_at: string;
-  deleted_at?: string | null;
-}
-
-function rowToCategory(row: CategoryRow): RoutineCategory {
+function rowToCategory(row: typeof routineCategories.$inferSelect): RoutineCategory {
   return {
     id: row.id,
     name: row.name,
     color: row.color,
     icon: row.icon ?? undefined,
-    isDefault: row.is_default === 1,
-    sortOrder: row.sort_order,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    isDefault: row.isDefault === 1,
+    sortOrder: row.sortOrder,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 
@@ -50,45 +40,64 @@ export const DEFAULT_ROUTINE_CATEGORIES: Array<{
   { id: "general", name: "General", color: "#6b7280", icon: "CheckSquare", sortOrder: 8 },
 ];
 
-export class SqliteRoutineCategoryRepository implements RoutineCategoryRepository {
-  constructor(private readonly client: Client) {}
+function userScope(userId: string) {
+  return and(
+    or(
+      eq(routineCategories.userId, userId),
+      eq(routineCategories.userId, ""),
+      sql`${routineCategories.userId} IS NULL`,
+    ),
+    isNull(routineCategories.deletedAt),
+  );
+}
+
+export class DrizzleRoutineCategoryRepository implements RoutineCategoryRepository {
+  constructor(private readonly db: DrizzleClient) {}
 
   private async ensureDefaults(userId: string): Promise<void> {
-    const res = await this.client.execute({
-      sql: "SELECT COUNT(*) as count FROM routine_categories WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL",
-      args: [userId],
-    });
-    const count = Number(res.rows[0]?.count ?? 0);
-    if (count === 0) {
+    const [result] = await this.db
+      .select({ count: count() })
+      .from(routineCategories)
+      .where(userScope(userId));
+
+    if ((result?.count ?? 0) === 0) {
       const now = new Date().toISOString();
       for (const cat of DEFAULT_ROUTINE_CATEGORIES) {
-        await this.client.execute({
-          sql: `INSERT OR IGNORE INTO routine_categories (id, user_id, name, color, icon, is_default, sort_order, created_at, updated_at)
-                VALUES (?, ?, ?, ?, ?, 1, ?, ?, ?)`,
-          args: [cat.id, userId, cat.name, cat.color, cat.icon, cat.sortOrder, now, now],
-        });
+        await this.db
+          .insert(routineCategories)
+          .values({
+            id: cat.id,
+            userId,
+            name: cat.name,
+            color: cat.color,
+            icon: cat.icon,
+            isDefault: 1,
+            sortOrder: cat.sortOrder,
+            createdAt: now,
+            updatedAt: now,
+          })
+          .onConflictDoNothing();
       }
     }
   }
 
   async getById(id: string, userId: string): Promise<RoutineCategory | undefined> {
     await this.ensureDefaults(userId);
-    const res = await this.client.execute({
-      sql: "SELECT * FROM routine_categories WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL",
-      args: [id, userId],
-    });
-    const row = res.rows[0] as unknown as CategoryRow | undefined;
+    const [row] = await this.db
+      .select()
+      .from(routineCategories)
+      .where(and(eq(routineCategories.id, id), userScope(userId)));
     return row ? rowToCategory(row) : undefined;
   }
 
   async getAll(userId: string): Promise<RoutineCategory[]> {
     await this.ensureDefaults(userId);
-    const res = await this.client.execute({
-      sql: "SELECT * FROM routine_categories WHERE (user_id = ? OR user_id = '' OR user_id IS NULL) AND deleted_at IS NULL ORDER BY sort_order ASC, created_at ASC",
-      args: [userId],
-    });
-    const rows = res.rows as unknown as CategoryRow[];
-    return rows.map((r) => rowToCategory(r));
+    const rows = await this.db
+      .select()
+      .from(routineCategories)
+      .where(userScope(userId))
+      .orderBy(asc(routineCategories.sortOrder), asc(routineCategories.createdAt));
+    return rows.map(rowToCategory);
   }
 
   async create(
@@ -98,13 +107,17 @@ export class SqliteRoutineCategoryRepository implements RoutineCategoryRepositor
   ): Promise<RoutineCategory> {
     await this.ensureDefaults(userId);
     const now = new Date().toISOString();
-    const color = input.color || "#3b82f6";
-    const sortOrder = input.sortOrder ?? 100;
 
-    await this.client.execute({
-      sql: `INSERT INTO routine_categories (id, user_id, name, color, icon, is_default, sort_order, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?)`,
-      args: [id, userId, input.name, color, input.icon ?? null, sortOrder, now, now],
+    await this.db.insert(routineCategories).values({
+      id,
+      userId,
+      name: input.name,
+      color: input.color || "#3b82f6",
+      icon: input.icon ?? null,
+      isDefault: 0,
+      sortOrder: input.sortOrder ?? 100,
+      createdAt: now,
+      updatedAt: now,
     });
 
     const created = await this.getById(id, userId);
@@ -122,62 +135,47 @@ export class SqliteRoutineCategoryRepository implements RoutineCategoryRepositor
     const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
-    const fields: string[] = [];
-    const values: (string | number | null)[] = [];
+    const updates: Record<string, unknown> = {};
+    if (patch.name !== undefined) updates.name = patch.name;
+    if (patch.color !== undefined) updates.color = patch.color;
+    if (patch.icon !== undefined) updates.icon = patch.icon ?? null;
+    if (patch.sortOrder !== undefined) updates.sortOrder = patch.sortOrder;
 
-    if (patch.name !== undefined) {
-      fields.push("name = ?");
-      values.push(patch.name);
-    }
-    if (patch.color !== undefined) {
-      fields.push("color = ?");
-      values.push(patch.color);
-    }
-    if (patch.icon !== undefined) {
-      fields.push("icon = ?");
-      values.push(patch.icon ?? null);
-    }
-    if (patch.sortOrder !== undefined) {
-      fields.push("sort_order = ?");
-      values.push(patch.sortOrder);
-    }
+    if (Object.keys(updates).length === 0) return existing;
 
-    if (fields.length === 0) return existing;
+    updates.updatedAt = new Date().toISOString();
 
-    fields.push("updated_at = ?");
-    values.push(new Date().toISOString());
-    values.push(id);
-    values.push(userId);
-
-    await this.client.execute({
-      sql: `UPDATE routine_categories SET ${fields.join(", ")} WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)`,
-      args: values,
-    });
+    await this.db
+      .update(routineCategories)
+      .set(updates)
+      .where(and(eq(routineCategories.id, id), userScope(userId)));
 
     return await this.getById(id, userId);
   }
 
   async delete(id: string, userId: string): Promise<boolean> {
     const now = new Date().toISOString();
-    const res = await this.client.execute({
-      sql: "UPDATE routine_categories SET deleted_at = ?, updated_at = ? WHERE id = ? AND (user_id = ? OR user_id = '' OR user_id IS NULL)",
-      args: [now, now, id, userId],
-    });
-    return res.rowsAffected > 0;
+    const result = await this.db
+      .update(routineCategories)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(and(eq(routineCategories.id, id), userScope(userId)));
+    return result.rowsAffected > 0;
   }
 
   async countTasksByCategoryId(categoryId: string, userId: string): Promise<number> {
-    // Check both by category ID and by matching name (in case legacy tasks store standard name)
     const cat = await this.getById(categoryId, userId);
     const catName = cat ? cat.name.toLowerCase() : "";
 
-    const res = await this.client.execute({
-      sql: `SELECT COUNT(*) as count FROM tasks 
-            WHERE (category = ? OR lower(category) = ?) 
-            AND (user_id = ? OR user_id = '' OR user_id IS NULL)`,
-      args: [categoryId, catName, userId],
-    });
-    return Number(res.rows[0]?.count ?? 0);
+    const [result] = await this.db
+      .select({ count: count() })
+      .from(tasks)
+      .where(
+        and(
+          or(eq(tasks.category, categoryId), sql`lower(${tasks.category}) = ${catName}`),
+          or(eq(tasks.userId, userId), eq(tasks.userId, ""), sql`${tasks.userId} IS NULL`),
+        ),
+      );
+    return result?.count ?? 0;
   }
 
   async reassignTasksCategory(
@@ -188,12 +186,15 @@ export class SqliteRoutineCategoryRepository implements RoutineCategoryRepositor
     const cat = await this.getById(fromCategoryId, userId);
     const catName = cat ? cat.name.toLowerCase() : "";
 
-    const res = await this.client.execute({
-      sql: `UPDATE tasks SET category = ?, updated_at = ? 
-            WHERE (category = ? OR lower(category) = ?) 
-            AND (user_id = ? OR user_id = '' OR user_id IS NULL)`,
-      args: [toCategoryId, new Date().toISOString(), fromCategoryId, catName, userId],
-    });
-    return res.rowsAffected;
+    const result = await this.db
+      .update(tasks)
+      .set({ category: toCategoryId, updatedAt: new Date().toISOString() })
+      .where(
+        and(
+          or(eq(tasks.category, fromCategoryId), sql`lower(${tasks.category}) = ${catName}`),
+          or(eq(tasks.userId, userId), eq(tasks.userId, ""), sql`${tasks.userId} IS NULL`),
+        ),
+      );
+    return result.rowsAffected;
   }
 }

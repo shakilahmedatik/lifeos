@@ -1,5 +1,6 @@
-import type { Client } from "@libsql/client";
+import { sql } from "drizzle-orm";
 import { Router } from "express";
+import type { DrizzleClient } from "../../../shared/db.js";
 
 export interface SchedulerStatus {
   name: string;
@@ -9,7 +10,7 @@ export interface SchedulerStatus {
 }
 
 export function createHealthRouter(
-  client: Client,
+  db: DrizzleClient,
   getSchedulerStatus?: () => SchedulerStatus[],
 ): Router {
   const router = Router();
@@ -17,7 +18,7 @@ export function createHealthRouter(
   router.get("/", async (_req, res) => {
     let dbOk = false;
     try {
-      await client.execute("SELECT 1 AS alive");
+      await db.run(sql`SELECT 1 AS alive`);
       dbOk = true;
     } catch {
       dbOk = false;

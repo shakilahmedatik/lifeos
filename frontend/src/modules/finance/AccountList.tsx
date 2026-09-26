@@ -44,6 +44,7 @@ export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) 
 
   const [newName, setNewName] = useState("");
   const [newType, setNewType] = useState<"bank" | "cash" | "card" | "savings" | "mfs">("bank");
+  const [newBalance, setNewBalance] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const toast = useAppToast();
 
@@ -56,6 +57,14 @@ export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) 
   function resetForm() {
     setNewName("");
     setNewType("bank");
+    setNewBalance("");
+  }
+
+  function handleBalanceChange(val: string) {
+    const sanitized = val.replace(/,/g, "");
+    if (sanitized === "" || sanitized === "-" || /^-?\d*\.?\d{0,2}$/.test(sanitized)) {
+      setNewBalance(val);
+    }
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -63,7 +72,20 @@ export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) 
     if (!newName.trim()) return;
     setSubmitting(true);
     try {
-      await apiCreateAccount({ name: newName.trim(), type: newType });
+      const cleanBalance = newBalance.replace(/,/g, "").trim();
+      let initialBalanceMinor: number | undefined;
+      if (cleanBalance && cleanBalance !== "-") {
+        const parsed = Number.parseFloat(cleanBalance);
+        if (!Number.isNaN(parsed) && parsed !== 0) {
+          initialBalanceMinor = Math.round(parsed * 100);
+        }
+      }
+
+      await apiCreateAccount({
+        name: newName.trim(),
+        type: newType,
+        initialBalanceMinor,
+      });
       await queryClient.invalidateQueries({ queryKey: ["finance"] });
       await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       toast.success("Account created successfully");
@@ -320,6 +342,14 @@ export function AccountList({ refreshTrigger, onDataChange }: AccountListProps) 
               { value: "savings", label: "Savings" },
               { value: "mfs", label: "MFS (Mobile Banking)" },
             ]}
+          />
+          <Input
+            label="Opening Balance (BDT)"
+            type="text"
+            value={newBalance}
+            onChange={(e) => handleBalanceChange(e.target.value)}
+            placeholder="0.00"
+            helperText="Optional starting balance. Will not affect your monthly earnings."
           />
           <ModalFooter>
             <Button

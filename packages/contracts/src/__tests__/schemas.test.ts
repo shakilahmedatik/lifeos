@@ -1,14 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
   CategorySchema,
+  NewAccountInputSchema,
   NewCategoryInputSchema,
   NewExerciseInputSchema,
-  NewNotificationInputSchema,
   NewRoutineCategoryInputSchema,
   NewTransactionInputSchema,
   TransferInputSchema,
   UpdateCategorySchema,
-  UpdateNotificationInputSchema,
   UpdateRoutineCategoryInputSchema,
 } from "../schemas.js";
 
@@ -104,40 +103,6 @@ describe("TransferInputSchema", () => {
   });
 });
 
-describe("UpdateNotificationInputSchema", () => {
-  it("accepts valid status update", () => {
-    const result = UpdateNotificationInputSchema.safeParse({ status: "sent" });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts valid reminderTime update", () => {
-    const result = UpdateNotificationInputSchema.safeParse({
-      reminderTime: "2026-07-22T09:00:00Z",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts valid soundType update", () => {
-    const result = UpdateNotificationInputSchema.safeParse({ soundType: "urgent" });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts empty object (no fields to update)", () => {
-    const result = UpdateNotificationInputSchema.safeParse({});
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects invalid status", () => {
-    const result = UpdateNotificationInputSchema.safeParse({ status: "invalid" });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects invalid soundType", () => {
-    const result = UpdateNotificationInputSchema.safeParse({ soundType: "invalid" });
-    expect(result.success).toBe(false);
-  });
-});
-
 describe("NewTransactionInputSchema", () => {
   it("accepts valid transaction input", () => {
     const result = NewTransactionInputSchema.safeParse({
@@ -164,39 +129,6 @@ describe("NewTransactionInputSchema", () => {
       categoryId: "cat-1",
       date: "2026-07-22",
       amountMinor: 10.5,
-    });
-    expect(result.success).toBe(false);
-  });
-});
-
-describe("NewNotificationInputSchema", () => {
-  it("accepts valid notification input", () => {
-    const result = NewNotificationInputSchema.safeParse({
-      taskId: "task-1",
-      reminderTime: "2026-07-22T09:00:00Z",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("accepts notification with soundType", () => {
-    const result = NewNotificationInputSchema.safeParse({
-      taskId: "task-1",
-      reminderTime: "2026-07-22T09:00:00Z",
-      soundType: "gentle",
-    });
-    expect(result.success).toBe(true);
-  });
-
-  it("rejects missing taskId", () => {
-    const result = NewNotificationInputSchema.safeParse({
-      reminderTime: "2026-07-22T09:00:00Z",
-    });
-    expect(result.success).toBe(false);
-  });
-
-  it("rejects missing reminderTime", () => {
-    const result = NewNotificationInputSchema.safeParse({
-      taskId: "task-1",
     });
     expect(result.success).toBe(false);
   });
@@ -296,6 +228,22 @@ describe("Finance Category Schemas", () => {
     expect(result.success).toBe(false);
   });
 
+  it("rejects NewCategoryInput with reserved name 'Opening Balance'", () => {
+    const result = NewCategoryInputSchema.safeParse({
+      name: "Opening Balance",
+      kind: "income",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects NewCategoryInput with reserved name 'opening balance (liability)'", () => {
+    const result = NewCategoryInputSchema.safeParse({
+      name: "  opening balance (liability)  ",
+      kind: "expense",
+    });
+    expect(result.success).toBe(false);
+  });
+
   it("rejects UpdateCategorySchema with reserved name 'Transfer In'", () => {
     const result = UpdateCategorySchema.safeParse({
       name: "Transfer In",
@@ -307,6 +255,25 @@ describe("Finance Category Schemas", () => {
     const result = UpdateCategorySchema.safeParse({
       name: "Groceries",
       kind: "expense",
+    });
+    expect(result.success).toBe(true);
+  });
+});
+
+describe("Account Schemas", () => {
+  it("accepts NewAccountInput with initialBalanceMinor", () => {
+    const result = NewAccountInputSchema.safeParse({
+      name: "City Bank",
+      type: "bank",
+      initialBalanceMinor: 500000,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts NewAccountInput without initialBalanceMinor", () => {
+    const result = NewAccountInputSchema.safeParse({
+      name: "Cash Wallet",
+      type: "cash",
     });
     expect(result.success).toBe(true);
   });

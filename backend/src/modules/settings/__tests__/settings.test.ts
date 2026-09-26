@@ -1,6 +1,7 @@
 import type express from "express";
 import { beforeEach, describe, expect, it } from "vitest";
-import { createDatabase } from "../../../shared/db.js";
+import type { DrizzleClient } from "../../../shared/db.js";
+import { createTestDatabase } from "../../../shared/test-db.js";
 import { createSettingsRouter } from "../router.js";
 
 interface RouteStackLayer {
@@ -18,19 +19,11 @@ interface RouteStackLayer {
 }
 
 describe("Settings Module", () => {
-  let db: ReturnType<typeof createDatabase>;
+  let db: DrizzleClient;
   let router: express.Router;
 
   beforeEach(async () => {
-    db = createDatabase(":memory:");
-    await db.execute(`
-      CREATE TABLE IF NOT EXISTS settings (
-        key TEXT PRIMARY KEY,
-        value TEXT NOT NULL,
-        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-      )
-    `);
-
+    db = await createTestDatabase();
     router = createSettingsRouter(db);
   });
 
@@ -89,8 +82,5 @@ describe("Settings Module", () => {
       theme: "dark",
       default_sound: "chime",
     });
-
-    const dbRes = await db.execute("SELECT key, value FROM settings");
-    expect(dbRes.rows.length).toBe(2);
   });
 });

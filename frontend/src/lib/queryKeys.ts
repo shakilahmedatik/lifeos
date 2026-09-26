@@ -57,29 +57,10 @@ export const queryKeys = {
     widget: () => ["finance", "widget"] as const,
     balances: () => ["finance", "balances"] as const,
   },
-  // Reminders
-  reminders: {
-    all: (date?: string) => ["reminders", date] as const,
-    today: () => ["reminders", "today"] as const,
-  },
-  // Notifications
-  notifications: {
-    all: () => ["notifications"] as const,
-    due: () => ["notifications", "due"] as const,
-    unreadCount: () => ["notifications", "unread-count"] as const,
-    soundSettings: () => ["notifications", "sound-settings"] as const,
-  },
   // Settings
   settings: () => ["settings"] as const,
   // Health
   health: () => ["health"] as const,
-  // News
-  news: {
-    feeds: () => ["news", "feeds"] as const,
-    feed: (id: string) => ["news", "feeds", id] as const,
-    articles: (feedId?: string, search?: string) => ["news", "articles", feedId, search] as const,
-    ticker: () => ["news", "ticker"] as const,
-  },
   // Auth
   auth: {
     session: () => ["auth", "session"] as const,

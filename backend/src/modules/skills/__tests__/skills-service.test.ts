@@ -220,7 +220,7 @@ describe("LearningResourceService", () => {
   });
 
   it("creates a learning resource when area exists", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
     const resource = await service.create({
       skillAreaId: area.id,
       title: "TypeScript Course",
@@ -242,16 +242,16 @@ describe("LearningResourceService", () => {
   });
 
   it("lists all resources", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const area2 = await skillAreaRepo.create("area-2", { name: "Design" });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const area2 = await skillAreaRepo.create("area-2", { name: "Design" }, "default");
     await service.create({ skillAreaId: area.id, title: "Resource 1", type: "course" });
     await service.create({ skillAreaId: area2.id, title: "Resource 2", type: "book" });
     expect(await service.list()).toHaveLength(2);
   });
 
   it("gets resources by skill area", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const area2 = await skillAreaRepo.create("area-2", { name: "Design" });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const area2 = await skillAreaRepo.create("area-2", { name: "Design" }, "default");
     await service.create({ skillAreaId: area.id, title: "TS Course", type: "course" });
     await service.create({ skillAreaId: area.id, title: "JS Book", type: "book" });
     await service.create({ skillAreaId: area2.id, title: "Figma Tutorial", type: "project" });
@@ -261,7 +261,7 @@ describe("LearningResourceService", () => {
   });
 
   it("gets a resource by id", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
     const resource = await service.create({
       skillAreaId: area.id,
       title: "TypeScript Course",
@@ -272,7 +272,7 @@ describe("LearningResourceService", () => {
   });
 
   it("updates a resource", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
     const resource = await service.create({
       skillAreaId: area.id,
       title: "TypeScript Course",
@@ -283,7 +283,7 @@ describe("LearningResourceService", () => {
   });
 
   it("validates skillAreaId in update (rejects invalid skillAreaId)", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
     const resource = await service.create({
       skillAreaId: area.id,
       title: "TypeScript Course",
@@ -295,7 +295,7 @@ describe("LearningResourceService", () => {
   });
 
   it("allows update without changing skillAreaId", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
     const resource = await service.create({
       skillAreaId: area.id,
       title: "TypeScript Course",
@@ -306,7 +306,7 @@ describe("LearningResourceService", () => {
   });
 
   it("deletes a resource", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
     const resource = await service.create({
       skillAreaId: area.id,
       title: "TypeScript Course",
@@ -336,12 +336,16 @@ describe("LearningLogService", () => {
   });
 
   it("logs a learning session", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const resource = await resourceRepo.create("res-1", {
-      skillAreaId: area.id,
-      title: "TypeScript Course",
-      type: "course",
-    });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const resource = await resourceRepo.create(
+      "res-1",
+      {
+        skillAreaId: area.id,
+        title: "TypeScript Course",
+        type: "course",
+      },
+      "default",
+    );
     const log = await service.log({
       resourceId: resource.id,
       date: "2025-01-15",
@@ -354,12 +358,16 @@ describe("LearningLogService", () => {
   });
 
   it("gets logs by resource id", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const resource = await resourceRepo.create("res-1", {
-      skillAreaId: area.id,
-      title: "Course",
-      type: "course",
-    });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const resource = await resourceRepo.create(
+      "res-1",
+      {
+        skillAreaId: area.id,
+        title: "Course",
+        type: "course",
+      },
+      "default",
+    );
     await service.log({ resourceId: resource.id, date: "2025-01-15", minutesSpent: 30 });
     await service.log({ resourceId: resource.id, date: "2025-01-16", minutesSpent: 60 });
     const logs = await service.getByResourceId(resource.id);
@@ -367,12 +375,16 @@ describe("LearningLogService", () => {
   });
 
   it("gets logs by date range", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const resource = await resourceRepo.create("res-1", {
-      skillAreaId: area.id,
-      title: "Course",
-      type: "course",
-    });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const resource = await resourceRepo.create(
+      "res-1",
+      {
+        skillAreaId: area.id,
+        title: "Course",
+        type: "course",
+      },
+      "default",
+    );
     await service.log({ resourceId: resource.id, date: "2025-01-10", minutesSpent: 20 });
     await service.log({ resourceId: resource.id, date: "2025-01-15", minutesSpent: 40 });
     await service.log({ resourceId: resource.id, date: "2025-01-20", minutesSpent: 50 });
@@ -382,14 +394,18 @@ describe("LearningLogService", () => {
   });
 
   it("computes resource progress", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const resource = await resourceRepo.create("res-1", {
-      skillAreaId: area.id,
-      title: "Course",
-      type: "course",
-      totalUnits: 10,
-      unit: "chapters",
-    });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const resource = await resourceRepo.create(
+      "res-1",
+      {
+        skillAreaId: area.id,
+        title: "Course",
+        type: "course",
+        totalUnits: 10,
+        unit: "chapters",
+      },
+      "default",
+    );
     await service.log({
       resourceId: resource.id,
       date: "2025-01-15",
@@ -415,25 +431,33 @@ describe("LearningLogService", () => {
   });
 
   it("computes resource progress with no total units", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const resource = await resourceRepo.create("res-1", {
-      skillAreaId: area.id,
-      title: "Open Course",
-      type: "course",
-    });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const resource = await resourceRepo.create(
+      "res-1",
+      {
+        skillAreaId: area.id,
+        title: "Open Course",
+        type: "course",
+      },
+      "default",
+    );
     await service.log({ resourceId: resource.id, date: "2025-01-15", minutesSpent: 45 });
     const progress = (await service.getResourceProgress(resource.id)) as ResourceWithProgress;
     expect(progress.completionPercent).toBe(0);
   });
 
   it("caps completion percent at 100", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const resource = await resourceRepo.create("res-1", {
-      skillAreaId: area.id,
-      title: "Course",
-      type: "course",
-      totalUnits: 2,
-    });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const resource = await resourceRepo.create(
+      "res-1",
+      {
+        skillAreaId: area.id,
+        title: "Course",
+        type: "course",
+        totalUnits: 2,
+      },
+      "default",
+    );
     await service.log({
       resourceId: resource.id,
       date: "2025-01-15",
@@ -445,17 +469,25 @@ describe("LearningLogService", () => {
   });
 
   it("gets skill area summary", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const resource1 = await resourceRepo.create("res-1", {
-      skillAreaId: area.id,
-      title: "Course 1",
-      type: "course",
-    });
-    const resource2 = await resourceRepo.create("res-2", {
-      skillAreaId: area.id,
-      title: "Book 1",
-      type: "book",
-    });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const resource1 = await resourceRepo.create(
+      "res-1",
+      {
+        skillAreaId: area.id,
+        title: "Course 1",
+        type: "course",
+      },
+      "default",
+    );
+    const resource2 = await resourceRepo.create(
+      "res-2",
+      {
+        skillAreaId: area.id,
+        title: "Book 1",
+        type: "book",
+      },
+      "default",
+    );
     await service.log({ resourceId: resource1.id, date: "2025-01-15", minutesSpent: 45 });
     await service.log({ resourceId: resource1.id, date: "2025-01-16", minutesSpent: 30 });
     await service.log({ resourceId: resource2.id, date: "2025-01-17", minutesSpent: 60 });
@@ -467,12 +499,16 @@ describe("LearningLogService", () => {
   });
 
   it("filters skill area summary by date range", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const resource = await resourceRepo.create("res-1", {
-      skillAreaId: area.id,
-      title: "Course 1",
-      type: "course",
-    });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const resource = await resourceRepo.create(
+      "res-1",
+      {
+        skillAreaId: area.id,
+        title: "Course 1",
+        type: "course",
+      },
+      "default",
+    );
     await service.log({ resourceId: resource.id, date: "2025-01-10", minutesSpent: 60 });
     await service.log({ resourceId: resource.id, date: "2025-01-15", minutesSpent: 30 });
     await service.log({ resourceId: resource.id, date: "2025-01-20", minutesSpent: 90 });
@@ -488,12 +524,16 @@ describe("LearningLogService", () => {
   });
 
   it("updates a log", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const resource = await resourceRepo.create("res-1", {
-      skillAreaId: area.id,
-      title: "Course",
-      type: "course",
-    });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const resource = await resourceRepo.create(
+      "res-1",
+      {
+        skillAreaId: area.id,
+        title: "Course",
+        type: "course",
+      },
+      "default",
+    );
     const log = await service.log({
       resourceId: resource.id,
       date: "2025-01-15",
@@ -506,12 +546,16 @@ describe("LearningLogService", () => {
   });
 
   it("deletes a log", async () => {
-    const area = await skillAreaRepo.create("area-1", { name: "Programming" });
-    const resource = await resourceRepo.create("res-1", {
-      skillAreaId: area.id,
-      title: "Course",
-      type: "course",
-    });
+    const area = await skillAreaRepo.create("area-1", { name: "Programming" }, "default");
+    const resource = await resourceRepo.create(
+      "res-1",
+      {
+        skillAreaId: area.id,
+        title: "Course",
+        type: "course",
+      },
+      "default",
+    );
     const log = await service.log({
       resourceId: resource.id,
       date: "2025-01-15",

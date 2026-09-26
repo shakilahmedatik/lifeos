@@ -6,7 +6,6 @@ import { ConfirmDialog } from "../../components/ui/ConfirmDialog.js";
 import { Input } from "../../components/ui/Input.js";
 import { request } from "../../lib/api.js";
 import { getDataSource } from "../../lib/dataSource.js";
-import { playNotificationSound } from "../notifications/sound-player.js";
 import { addExerciseLog, cancelSession, completeSession, startSession } from "./api.js";
 import { CoachStartModal } from "./components/CoachStartModal.js";
 import { RestTimerDisplay } from "./components/RestTimerDisplay.js";
@@ -48,16 +47,22 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
   const [startTime, setStartTime] = useState<Date | null>(null);
   const [isExitConfirmOpen, setIsExitConfirmOpen] = useState(false);
   const isFinishedRef = useRef(false);
+  const sessionIdRef = useRef<string | null>(null);
+  const taskIdRef = useRef<string | null>(null);
+  sessionIdRef.current = sessionId;
+  taskIdRef.current = taskId ?? null;
 
   useEffect(() => {
     const handleBeforeUnload = () => {
-      if (sessionId && !isFinishedRef.current) {
-        request(`/api/workouts/sessions/${sessionId}`, {
+      const activeSessionId = sessionIdRef.current;
+      const activeTaskId = taskIdRef.current;
+      if (activeSessionId && !isFinishedRef.current) {
+        request(`/api/workouts/sessions/${activeSessionId}`, {
           method: "DELETE",
           keepalive: true,
         }).catch(console.error);
-        if (taskId) {
-          request(`/api/routine/tasks/${taskId}/status`, {
+        if (activeTaskId) {
+          request(`/api/routine/tasks/${activeTaskId}/status`, {
             method: "PATCH",
             body: JSON.stringify({ status: "planned" }),
             headers: { "Content-Type": "application/json" },
@@ -70,14 +75,16 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
 
     return () => {
       window.removeEventListener("beforeunload", handleBeforeUnload);
-      if (sessionId && !isFinishedRef.current) {
-        cancelSession(sessionId).catch(console.error);
-        if (taskId) {
-          getDataSource().updateTaskStatus(taskId, "planned").catch(console.error);
+      const activeSessionId = sessionIdRef.current;
+      const activeTaskId = taskIdRef.current;
+      if (activeSessionId && !isFinishedRef.current) {
+        cancelSession(activeSessionId).catch(console.error);
+        if (activeTaskId) {
+          getDataSource().updateTaskStatus(activeTaskId, "planned").catch(console.error);
         }
       }
     };
-  }, [sessionId, taskId]);
+  }, []);
 
   const currentExercise = workout?.exercises?.[currentExerciseIndex];
   const exercise = exercises.find((e) => e.id === currentExercise?.exerciseId);
@@ -185,7 +192,6 @@ function CoachModeInner({ workoutId, taskId, onComplete, onExit }: CoachModeProp
       if (taskId) {
         await getDataSource().updateTaskStatus(taskId, "done").catch(console.error);
       }
-      playNotificationSound("workout_complete");
       onComplete();
     } catch (err) {
       console.error("Failed to complete session", err);

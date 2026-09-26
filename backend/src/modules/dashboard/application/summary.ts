@@ -1,10 +1,8 @@
 import type {
   DashboardHabitConsistency,
-  DashboardNewsItem,
   DashboardSkillProgress,
   DashboardSummary,
   DashboardWorkoutDay,
-  Reminder,
 } from "@lifeos/contracts";
 import type { Task } from "../../routine/domain/types.js";
 import type { DashboardDependencies } from "../ports/dashboard-dependencies.js";
@@ -139,13 +137,7 @@ export async function getDashboardSummary(
     ? await deps.habitLogService.getTodayDueHabits(today, userId)
     : [];
 
-  // 2. Upcoming Reminders
-  let upcomingReminders: Reminder[] = [];
-  if (deps.reminderService) {
-    upcomingReminders = await deps.reminderService.getUpcomingToday(today, userId, 4);
-  }
-
-  // 3. Habit Consistency (7 days sparkline data)
+  // 2. Habit Consistency (7 days sparkline data)
   const habitConsistency: DashboardHabitConsistency[] = [];
   if (deps.habitRepo && deps.habitStatsService) {
     const activeHabits = (await deps.habitRepo.getAll(false, userId)).slice(0, 4);
@@ -189,13 +181,13 @@ export async function getDashboardSummary(
     const mondayStr = monday.toISOString().split("T")[0];
     const weekEndStr = weekEnd.toISOString().split("T")[0];
 
-    const allSessions = await deps.workoutSessionRepo.getAll();
+    const allSessions = await deps.workoutSessionRepo.getAll(userId);
     const weekSessions = allSessions.filter((s) => {
       const sessionDate = s.startedAt.slice(0, 10);
       return sessionDate >= mondayStr && sessionDate <= weekEndStr;
     });
 
-    const workoutsMap = new Map((await deps.workoutRepo.getAll()).map((w) => [w.id, w.name]));
+    const workoutsMap = new Map((await deps.workoutRepo.getAll(userId)).map((w) => [w.id, w.name]));
 
     // Initialize 7 days
     const dayBuckets: Record<string, Record<string, number>> = {};
@@ -249,33 +241,6 @@ export async function getDashboardSummary(
     }
   }
 
-  // 6. News Ticker Items
-  const newsItems: DashboardNewsItem[] = [];
-  if (deps.newsArticleRepo && deps.rssFeedRepo) {
-    let articles = await deps.newsArticleRepo.getRecent(5, userId);
-    if (articles.length === 0 && deps.rssFetchService) {
-      const feeds = await deps.rssFeedRepo.getAll(userId);
-      if (feeds.length > 0) {
-        await deps.rssFetchService.fetchAllActiveFeeds(userId);
-        articles = await deps.newsArticleRepo.getRecent(5, userId);
-      }
-    }
-    const feedsMap = new Map((await deps.rssFeedRepo.getAll(userId)).map((f) => [f.id, f.title]));
-
-    for (const article of articles) {
-      const feedTitle = feedsMap.get(article.feedId) || "tech";
-      const shortSource = feedTitle.toLowerCase().split(" ")[0].slice(0, 10);
-
-      newsItems.push({
-        id: article.id,
-        source: shortSource,
-        title: article.title,
-        url: article.url,
-        publishedAt: article.publishedAt || null,
-      });
-    }
-  }
-
   return {
     now,
     next,
@@ -283,11 +248,9 @@ export async function getDashboardSummary(
     todayCount: tasks.length,
     todayDoneCount: tasks.filter((t) => t.status === "done").length,
     dueHabits,
-    upcomingReminders,
     habitConsistency,
     workoutWeek,
     workoutLabels: Array.from(workoutLabelsSet),
     skillsProgress,
-    newsItems,
   };
 }

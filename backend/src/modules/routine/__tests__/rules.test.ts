@@ -12,7 +12,6 @@ function makeTask(overrides: Partial<Task> = {}): Task {
     startTime: "09:00",
     endTime: "10:00",
     status: "planned",
-    reminderSilent: false,
     createdAt: "2026-07-22T00:00:00Z",
     updatedAt: "2026-07-22T00:00:00Z",
     ...overrides,

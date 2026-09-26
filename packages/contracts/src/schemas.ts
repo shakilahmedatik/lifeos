@@ -62,8 +62,6 @@ export const TaskSubtaskSchema = z.object({
   completed: z.boolean(),
 });
 
-export const NotificationSoundTypeSchema = z.enum(["default", "gentle", "urgent", "chime", "bell"]);
-
 export const NewTaskInputSchema = z
   .object({
     title: z.string().min(1, "Title is required").max(200, "Title is too long"),
@@ -72,9 +70,6 @@ export const NewTaskInputSchema = z
     startTime: StrictTimeSchema,
     endTime: StrictTimeSchema,
     notes: z.string().optional(),
-    reminderMinutesBefore: z.number().min(1).max(1440).nullable().optional(),
-    reminderSilent: z.boolean().optional(),
-    reminderSound: NotificationSoundTypeSchema.optional(),
     recurrence: TaskRecurrenceSchema.optional(),
     subtasks: z.array(TaskSubtaskSchema).optional(),
     referenceId: z.string().optional(),
@@ -91,9 +86,6 @@ export const UpdateTaskSchema = z.object({
   startTime: StrictTimeSchema.optional(),
   endTime: StrictTimeSchema.optional(),
   notes: z.string().optional(),
-  reminderMinutesBefore: z.number().min(1).max(1440).nullable().optional(),
-  reminderSilent: z.boolean().optional(),
-  reminderSound: NotificationSoundTypeSchema.optional(),
   recurrence: TaskRecurrenceSchema.optional(),
   subtasks: z.array(TaskSubtaskSchema).optional(),
   isOvernight: z.boolean().optional(),
@@ -244,11 +236,17 @@ export const AccountTypeSchema = z.enum(["cash", "bank", "card", "savings", "mfs
 export const NewAccountInputSchema = z.object({
   name: z.string().min(1, "Account name is required"),
   type: AccountTypeSchema,
+  initialBalanceMinor: z.number().int().optional(),
 });
 
 export const CategoryKindSchema = z.enum(["income", "expense"]);
 
-export const RESERVED_CATEGORY_NAMES = ["Transfer In", "Transfer Out"] as const;
+export const RESERVED_CATEGORY_NAMES = [
+  "Transfer In",
+  "Transfer Out",
+  "Opening Balance",
+  "Opening Balance (Liability)",
+] as const;
 
 export const CategorySchema = z.object({
   id: z.string(),
@@ -329,24 +327,6 @@ export const UpdateTransactionSchema = z.object({
     .optional(),
   currency: z.string().optional(),
   note: z.string().optional(),
-});
-
-export const NewRssFeedInputSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  url: z.string().url("Must be a valid RSS URL"),
-});
-
-export const NewNotificationInputSchema = z.object({
-  taskId: z.string().min(1),
-  userId: z.string().optional(),
-  reminderTime: z.string(),
-  soundType: z.enum(["default", "gentle", "urgent", "chime", "bell"]).optional(),
-});
-
-export const UpdateNotificationInputSchema = z.object({
-  reminderTime: z.string().optional(),
-  soundType: z.enum(["default", "gentle", "urgent", "chime", "bell"]).optional(),
-  status: z.enum(["scheduled", "sent", "cancelled", "expired"]).optional(),
 });
 
 // Workout schemas
@@ -451,38 +431,6 @@ export const NewSkillAreaInputSchema = z.object({
 export const UpdateSkillAreaInputSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
   weeklyGoalHours: z.number().positive().optional(),
-});
-
-export const NewReminderSchema = z.object({
-  title: z.string().min(1, "Title is required"),
-  time: z.string().regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)"),
-  date: z.preprocess(
-    (val) => (val === "" ? null : val),
-    z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
-      .nullable()
-      .optional(),
-  ),
-  kind: z.enum(["reminder", "event"]).optional(),
-});
-
-export const UpdateReminderSchema = z.object({
-  title: z.string().min(1, "Title is required").optional(),
-  time: z
-    .string()
-    .regex(/^([01]\d|2[0-3]):([0-5]\d)$/, "Invalid time format (HH:MM)")
-    .optional(),
-  date: z.preprocess(
-    (val) => (val === "" ? null : val),
-    z
-      .string()
-      .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date format (YYYY-MM-DD)")
-      .nullable()
-      .optional(),
-  ),
-  kind: z.enum(["reminder", "event"]).optional(),
-  completed: z.boolean().optional(),
 });
 
 export const LearningResourceTypeSchema = z.enum(["course", "book", "project", "article"]);

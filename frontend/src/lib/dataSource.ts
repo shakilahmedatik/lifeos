@@ -1,10 +1,11 @@
+import type { DataSource } from "@lifeos/contracts";
 import { api } from "./api.js";
 import { log } from "./logger.js";
 import { isTauri } from "./platform.js";
 
 const dataLog = log.child("data");
 
-let _localDal: typeof import("./local-db/dal.js").localDal | null = null;
+let _localDal: DataSource | null = null;
 let _initPromise: Promise<void> | null = null;
 
 // Initialize the local DAL if in Tauri environment
@@ -27,7 +28,7 @@ export async function initDataSource(): Promise<void> {
   return _initPromise;
 }
 
-export function getDataSource() {
+export function getDataSource(): DataSource {
   if (isTauri() && _localDal) {
     return _localDal;
   }

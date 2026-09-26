@@ -1,16 +1,9 @@
 import { useCallback, useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useAppToast } from "../components/Toast.js";
-import BackupPanel from "../components/ui/BackupPanel.js";
 import { PageHeader } from "../components/ui/PageHeader.js";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/Tabs.js";
 import { getDataSource } from "../lib/dataSource.js";
-import {
-  exportBackup,
-  importBackup,
-  markBackupCompleted,
-  shouldShowBackupReminder,
-} from "../modules/skills/backup.js";
 import CategoriesTab from "../modules/skills/components/CategoriesTab.js";
 import CoursesTab from "../modules/skills/components/CoursesTab.js";
 import SessionsTab from "../modules/skills/components/SessionsTab.js";
@@ -20,7 +13,7 @@ import { useLearningResources } from "../modules/skills/hooks/useLearningResourc
 import { useSkillAreas } from "../modules/skills/hooks/useSkillCategories.js";
 import type { ResourceWithProgress } from "../modules/skills/types.js";
 
-type Tab = "overview" | "sessions" | "resources" | "areas" | "backup";
+type Tab = "overview" | "sessions" | "resources" | "areas";
 
 export default function SkillsPage() {
   const location = useLocation();
@@ -41,7 +34,6 @@ export default function SkillsPage() {
     addLog,
     editLog,
     removeLog,
-    refresh: refreshLogs,
   } = useLearningLogs();
 
   const {
@@ -51,7 +43,6 @@ export default function SkillsPage() {
     addArea,
     editArea,
     removeArea,
-    refresh: refreshAreas,
   } = useSkillAreas();
 
   const {
@@ -61,7 +52,6 @@ export default function SkillsPage() {
     addResource,
     editResource,
     removeResource,
-    refresh: refreshResources,
   } = useLearningResources();
 
   // Batch progress data loaded and updated when resources or logs change
@@ -158,7 +148,6 @@ export default function SkillsPage() {
           <TabsTrigger value="sessions">Sessions</TabsTrigger>
           <TabsTrigger value="resources">Resources</TabsTrigger>
           <TabsTrigger value="areas">Areas</TabsTrigger>
-          <TabsTrigger value="backup">Backup</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview">
@@ -204,44 +193,6 @@ export default function SkillsPage() {
             onEditArea={editArea}
             onRemoveArea={removeArea}
           />
-        </TabsContent>
-
-        <TabsContent value="backup">
-          <div className="flex flex-col gap-6">
-            <div>
-              <h2 className="text-xl font-semibold text-primary">Backup & Export</h2>
-              <p className="text-sm text-muted mt-1">
-                Export your learning data to a JSON file or restore from a backup.
-              </p>
-            </div>
-            <BackupPanel
-              entityName="Learning"
-              header={
-                shouldShowBackupReminder() ? (
-                  <div className="p-4 bg-warning/20 border border-warning/30 rounded-xl">
-                    <p className="text-sm text-warning">
-                      <strong>Backup reminder:</strong> Consider exporting your data to prevent
-                      loss.
-                    </p>
-                  </div>
-                ) : undefined
-              }
-              onExportJson={async () => {
-                const data = await exportBackup();
-                markBackupCompleted();
-                return data;
-              }}
-              onImportJson={async (data) => {
-                const result = await importBackup(data);
-                if (result.success) {
-                  refreshLogs();
-                  refreshAreas();
-                  refreshResources();
-                }
-                return result;
-              }}
-            />
-          </div>
         </TabsContent>
       </Tabs>
     </div>

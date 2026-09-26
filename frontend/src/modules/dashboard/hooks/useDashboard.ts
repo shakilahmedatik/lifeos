@@ -1,4 +1,4 @@
-import type { DashboardSummary, NewReminderInput } from "@lifeos/contracts";
+import type { DashboardSummary } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts/date-utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppToast } from "../../../components/Toast.js";
@@ -26,9 +26,6 @@ export function useDashboard() {
     });
     queryClient.invalidateQueries({
       queryKey: queryKeys.habits.today(),
-    });
-    queryClient.invalidateQueries({
-      queryKey: queryKeys.reminders.all(),
     });
   };
 
@@ -63,21 +60,6 @@ export function useDashboard() {
     onError: () => toast.error("Failed to undo habit log"),
   });
 
-  const completeReminderMutation = useMutation({
-    mutationFn: (id: string) => ds.updateReminder(id, { completed: true }),
-    onSuccess: () => invalidateSummary(),
-    onError: () => toast.error("Failed to update reminder"),
-  });
-
-  const createReminderMutation = useMutation({
-    mutationFn: (input: NewReminderInput) => ds.createReminder(input),
-    onSuccess: () => {
-      toast.success("Reminder added");
-      invalidateSummary();
-    },
-    onError: () => toast.error("Failed to create reminder"),
-  });
-
   return {
     summary: summaryQuery.data ?? null,
     loading: summaryQuery.isLoading,
@@ -88,7 +70,5 @@ export function useDashboard() {
     logHabit: (habitId: string, value: number, meta?: string) =>
       logHabitMutation.mutateAsync({ habitId, value, meta }),
     unlogHabit: (logId: string) => unlogHabitMutation.mutateAsync(logId),
-    completeReminder: (id: string) => completeReminderMutation.mutateAsync(id),
-    createReminder: (input: NewReminderInput) => createReminderMutation.mutateAsync(input),
   };
 }

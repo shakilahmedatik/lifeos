@@ -12,7 +12,10 @@
     "build": "pnpm --filter @lifeos/contracts build && pnpm --filter @lifeos/backend build && pnpm --filter @lifeos/frontend build",
     "check": "biome check backend/src frontend/src packages",
     "format": "biome format backend/src frontend/src packages --write",
-    "test": "vitest run"
+    "test": "vitest run",
+    "db:push": "pnpm --filter @lifeos/backend db:push",
+    "db:studio": "pnpm --filter @lifeos/backend db:studio",
+    "db:generate": "pnpm --filter @lifeos/backend db:generate"
   },
   "onlyBuiltDependencies": [
     "esbuild",

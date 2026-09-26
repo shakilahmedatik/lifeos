@@ -294,7 +294,7 @@ export function ScheduleWidget({
                     <span className="text-muted font-normal mr-1">Up next:</span>
                     {next.title}
                   </div>
-                  <div className="font-mono text-xs sm:text-sm font-bold text-amber-400 tabular-nums shrink-0">
+                  <div className="font-mono text-xs sm:text-sm font-bold text-amber-600 dark:text-amber-400 tabular-nums shrink-0">
                     in {nextCountdown}
                   </div>
                 </div>

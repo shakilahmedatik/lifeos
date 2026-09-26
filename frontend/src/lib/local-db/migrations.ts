@@ -253,33 +253,6 @@ export const localMigrations = [
     _sync_status TEXT NOT NULL DEFAULT 'synced'
   );
 
-  CREATE TABLE IF NOT EXISTS reminders (
-    id TEXT PRIMARY KEY,
-    user_id TEXT NOT NULL DEFAULT '',
-    title TEXT NOT NULL,
-    time TEXT NOT NULL,
-    date TEXT,
-    kind TEXT NOT NULL DEFAULT 'reminder',
-    completed INTEGER NOT NULL DEFAULT 0,
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    deleted_at TEXT,
-    _sync_status TEXT NOT NULL DEFAULT 'synced'
-  );
-
-  CREATE TABLE IF NOT EXISTS notifications (
-    id TEXT PRIMARY KEY,
-    task_id TEXT NOT NULL,
-    user_id TEXT NOT NULL DEFAULT '',
-    reminder_time TEXT NOT NULL,
-    sound_type TEXT NOT NULL DEFAULT 'default',
-    status TEXT NOT NULL DEFAULT 'scheduled' CHECK (status IN ('scheduled', 'sent', 'cancelled')),
-    created_at TEXT NOT NULL DEFAULT (datetime('now')),
-    updated_at TEXT NOT NULL DEFAULT (datetime('now')),
-    deleted_at TEXT,
-    _sync_status TEXT NOT NULL DEFAULT 'synced'
-  );
-
   CREATE TABLE IF NOT EXISTS settings (
     key TEXT PRIMARY KEY,
     value TEXT NOT NULL,
@@ -332,21 +305,8 @@ export const localMigrations = [
   CREATE INDEX IF NOT EXISTS idx_learning_logs_user_id ON learning_logs(user_id);
   CREATE INDEX IF NOT EXISTS idx_learning_logs_date ON learning_logs(date);
   CREATE INDEX IF NOT EXISTS idx_learning_logs_sync_status ON learning_logs(_sync_status);
-
-  CREATE INDEX IF NOT EXISTS idx_reminders_user_id ON reminders(user_id);
-  CREATE INDEX IF NOT EXISTS idx_reminders_date ON reminders(date);
-  CREATE INDEX IF NOT EXISTS idx_reminders_sync_status ON reminders(_sync_status);
-
-  CREATE INDEX IF NOT EXISTS idx_notifications_user_id ON notifications(user_id);
-  CREATE INDEX IF NOT EXISTS idx_notifications_status ON notifications(status);
-  CREATE INDEX IF NOT EXISTS idx_notifications_reminder_time ON notifications(reminder_time);
-  CREATE INDEX IF NOT EXISTS idx_notifications_task_id ON notifications(task_id);
-  CREATE INDEX IF NOT EXISTS idx_notifications_sync_status ON notifications(_sync_status);
-
-  CREATE INDEX IF NOT EXISTS idx_rss_feeds_user_id ON rss_feeds(user_id);
-  CREATE INDEX IF NOT EXISTS idx_rss_feeds_sync_status ON rss_feeds(_sync_status);
-  CREATE INDEX IF NOT EXISTS idx_news_articles_user_id ON news_articles(user_id);
-  CREATE INDEX IF NOT EXISTS idx_news_articles_feed_id ON news_articles(feed_id);
-  CREATE INDEX IF NOT EXISTS idx_news_articles_sync_status ON news_articles(_sync_status);
+  `,
+  `
+  ALTER TABLE categories ADD COLUMN is_system INTEGER NOT NULL DEFAULT 0;
   `,
 ];

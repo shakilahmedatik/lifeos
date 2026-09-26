@@ -141,13 +141,13 @@ describe("FinanceReportService", () => {
     service = new FinanceReportService(transactionRepo, accountRepo, categoryRepo);
 
     // Seed test data
-    await accountRepo.create("acc-1", { name: "Bank", type: "bank" });
-    await categoryRepo.create("cat-expense-food", { name: "Food", kind: "expense" });
-    await categoryRepo.create("cat-income-salary", { name: "Salary", kind: "income" });
+    await accountRepo.create("acc-1", { name: "Bank", type: "bank" }, "test-user");
+    await categoryRepo.create("cat-expense-food", { name: "Food", kind: "expense" }, "test-user");
+    await categoryRepo.create("cat-income-salary", { name: "Salary", kind: "income" }, "test-user");
   });
 
   it("gets monthly summary", async () => {
-    const summary = await service.getMonthlySummary("2026-07");
+    const summary = await service.getMonthlySummary("2026-07", "test-user");
     expect(summary.yearMonth).toBe("2026-07");
     expect(summary.totalIncome).toBe(500000);
     expect(summary.totalExpense).toBe(300000);
@@ -155,20 +155,20 @@ describe("FinanceReportService", () => {
   });
 
   it("gets category breakdown", async () => {
-    const breakdown = await service.getCategoryBreakdown("2026-07");
+    const breakdown = await service.getCategoryBreakdown("2026-07", "test-user");
     expect(breakdown).toHaveLength(1);
     expect(breakdown[0].categoryName).toBe("Food");
     expect(breakdown[0].total).toBe(150000);
   });
 
   it("gets account balances", async () => {
-    const balances = await service.getAccountBalances();
+    const balances = await service.getAccountBalances("test-user");
     expect(balances).toHaveLength(1);
     expect(balances[0].name).toBe("Bank");
   });
 
   it("gets monthly transactions", async () => {
-    const transactions = await service.getMonthlyTransactions("2026-07");
+    const transactions = await service.getMonthlyTransactions("2026-07", "test-user");
     expect(Array.isArray(transactions)).toBe(true);
   });
 });

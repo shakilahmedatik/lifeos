@@ -42,7 +42,7 @@ async function main() {
     log.info(`${signal} received, shutting down gracefully`);
     container.stopBackgroundJobs();
     server.close(() => {
-      container.db.close();
+      // DB connection managed by Drizzle
       log.info("Server closed");
       process.exit(0);
     });

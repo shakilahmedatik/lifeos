@@ -7,6 +7,7 @@ import {
 } from "../lib/auth/tauriAuth.js";
 import { isTauri } from "../lib/dataSource.js";
 import { useLocalStorage } from "../lib/hooks/useLocalStorage.js";
+import { getLocalDb, resetLocalDatabase } from "../lib/local-db/index.js";
 
 export interface UserSession {
   id: string;
@@ -41,6 +42,20 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       if (isTauri()) {
         const stored = await getTauriStoredSession();
         if (stored?.user && isMounted) {
+          try {
+            const db = await getLocalDb();
+            const meta = await db.select<{ user_id: string | null }[]>(
+              "SELECT user_id FROM _sync_meta WHERE id = 1",
+            );
+            const prevUser = meta[0]?.user_id || null;
+            if (prevUser && prevUser !== stored.user.id) {
+              await resetLocalDatabase(db);
+              await db.execute(
+                "UPDATE _sync_meta SET last_sync_at = NULL, user_id = ? WHERE id = 1",
+                [stored.user.id],
+              );
+            }
+          } catch {}
           setUser(stored.user);
           setToken(stored.token);
           setIsLoadingSession(false);
@@ -102,13 +117,21 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
       setToken(newToken);
       if (isTauri()) {
         setTauriStoredSession({ token: newToken, user: newUser });
-        import("../lib/local-db/index.js").then(({ getLocalDb }) => {
-          getLocalDb().then((db) => {
-            db.execute("UPDATE _sync_meta SET last_sync_at = NULL, user_id = ? WHERE id = 1", [
-              newUser.id,
-            ]).catch(() => {});
-          });
-        });
+        getLocalDb()
+          .then(async (db) => {
+            const meta = await db.select<{ user_id: string | null }[]>(
+              "SELECT user_id FROM _sync_meta WHERE id = 1",
+            );
+            const prevUser = meta[0]?.user_id || null;
+            if (prevUser !== newUser.id) {
+              await resetLocalDatabase(db);
+            }
+            await db.execute(
+              "UPDATE _sync_meta SET last_sync_at = NULL, user_id = ? WHERE id = 1",
+              [newUser.id],
+            );
+          })
+          .catch(() => {});
       }
     } else {
       removeToken();
@@ -134,13 +157,7 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
     removeUser();
     if (isTauri()) {
       clearTauriStoredSession();
-      import("../lib/local-db/index.js").then(({ getLocalDb }) => {
-        getLocalDb().then((db) => {
-          db.execute(
-            "UPDATE _sync_meta SET last_sync_at = NULL, user_id = NULL WHERE id = 1",
-          ).catch(() => {});
-        });
-      });
+      resetLocalDatabase().catch(() => {});
     }
   };
 

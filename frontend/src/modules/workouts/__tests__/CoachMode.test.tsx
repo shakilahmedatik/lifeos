@@ -64,10 +64,6 @@ vi.mock("../useWorkouts.js", () => ({
   }),
 }));
 
-vi.mock("../notifications/sound-player.js", () => ({
-  playNotificationSound: vi.fn(),
-}));
-
 vi.mock("../api.js", () => ({
   startSession: vi.fn().mockResolvedValue({ id: "session-1" }),
   completeSession: vi.fn().mockResolvedValue({}),

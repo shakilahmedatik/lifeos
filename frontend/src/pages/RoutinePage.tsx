@@ -54,11 +54,14 @@ export default function RoutinePage() {
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [deletingTaskId, setDeletingTaskId] = useState<string | null>(null);
 
-  // Date Navigation Helpers
+  // Date Navigation Helpers (pure calendar date arithmetic to avoid timezone skew)
   const handleShiftDate = (days: number) => {
-    const d = new Date(`${date}T00:00:00`);
-    d.setDate(d.getDate() + days);
-    setDate(d.toISOString().split("T")[0]);
+    const [y, m, d] = date.split("-").map(Number);
+    const dt = new Date(Date.UTC(y, m - 1, d + days));
+    const year = dt.getUTCFullYear();
+    const month = String(dt.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(dt.getUTCDate()).padStart(2, "0");
+    setDate(`${year}-${month}-${day}`);
   };
 
   const handleCreateTask = async (input: NewTaskInput) => {

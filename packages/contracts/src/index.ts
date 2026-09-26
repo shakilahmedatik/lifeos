@@ -62,9 +62,6 @@ export interface Task {
   endTime: string;
   status: TaskStatus;
   notes?: string;
-  reminderMinutesBefore?: number | null;
-  reminderSilent: boolean;
-  reminderSound?: NotificationSoundType;
   recurrence?: TaskRecurrence;
   isOvernight?: boolean;
   subtasks?: TaskSubtask[];
@@ -80,9 +77,6 @@ export interface NewTaskInput {
   startTime: string;
   endTime: string;
   notes?: string;
-  reminderMinutesBefore?: number | null;
-  reminderSilent?: boolean;
-  reminderSound?: NotificationSoundType;
   recurrence?: TaskRecurrence;
   subtasks?: TaskSubtask[];
   referenceId?: string;
@@ -442,10 +436,13 @@ export interface Account {
 export interface NewAccountInput {
   name: string;
   type: AccountType;
+  initialBalanceMinor?: number;
 }
 
 export const SYSTEM_CATEGORY_TRANSFER_IN_ID = "cat-system-transfer-in";
 export const SYSTEM_CATEGORY_TRANSFER_OUT_ID = "cat-system-transfer-out";
+export const SYSTEM_CATEGORY_OPENING_BALANCE_ID = "cat-system-opening-balance";
+export const SYSTEM_CATEGORY_OPENING_BALANCE_EXPENSE_ID = "cat-system-opening-balance-expense";
 
 export const DEFAULT_FINANCE_CATEGORIES = [
   {
@@ -457,6 +454,18 @@ export const DEFAULT_FINANCE_CATEGORIES = [
   {
     id: SYSTEM_CATEGORY_TRANSFER_OUT_ID,
     name: "Transfer Out",
+    kind: "expense" as const,
+    isSystem: true,
+  },
+  {
+    id: SYSTEM_CATEGORY_OPENING_BALANCE_ID,
+    name: "Opening Balance",
+    kind: "income" as const,
+    isSystem: true,
+  },
+  {
+    id: SYSTEM_CATEGORY_OPENING_BALANCE_EXPENSE_ID,
+    name: "Opening Balance (Liability)",
     kind: "expense" as const,
     isSystem: true,
   },
@@ -612,111 +621,6 @@ export interface SkillAreaSummary {
   totalSessions: number;
 }
 
-export interface BackupInfo {
-  filename: string;
-  path: string;
-  sizeBytes: number;
-  createdAt: string;
-}
-
-export type FeedStatus = "active" | "inactive";
-
-export interface RssFeed {
-  id: string;
-  userId?: string;
-  title: string;
-  url: string;
-  status: FeedStatus;
-  lastFetchedAt?: string;
-  lastFetchError?: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface NewRssFeedInput {
-  title: string;
-  url: string;
-}
-
-export interface NewsArticle {
-  id: string;
-  userId?: string;
-  feedId: string;
-  title: string;
-  url: string;
-  summary?: string;
-  publishedAt?: string;
-  fetchedAt: string;
-  isRead: boolean;
-}
-
-export interface FeedWithArticleCount extends RssFeed {
-  articleCount: number;
-}
-
-export type NotificationSoundType = "default" | "gentle" | "urgent" | "chime" | "bell";
-
-export type NotificationStatus = "scheduled" | "sent" | "cancelled" | "expired";
-
-export interface Notification {
-  id: string;
-  taskId: string;
-  userId: string;
-  reminderTime: string;
-  soundType: NotificationSoundType;
-  status: NotificationStatus;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface NewNotificationInput {
-  taskId: string;
-  userId?: string;
-  reminderTime: string;
-  soundType?: NotificationSoundType;
-}
-
-export interface UpdateNotificationInput {
-  reminderTime?: string;
-  soundType?: NotificationSoundType;
-  status?: NotificationStatus;
-}
-
-export interface NotificationWithTask extends Notification {
-  taskTitle: string;
-  taskDate: string;
-  taskStartTime: string;
-}
-
-// --- Reminders ---
-export type ReminderKind = "reminder" | "event";
-
-export interface Reminder {
-  id: string;
-  title: string;
-  time: string; // HH:MM
-  date: string | null; // YYYY-MM-DD, null = recurring daily
-  kind: ReminderKind;
-  completed: boolean;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface NewReminderInput {
-  title: string;
-  time: string;
-  date?: string | null;
-  kind?: ReminderKind;
-}
-
-export interface UpdateReminderInput {
-  title?: string;
-  time?: string;
-  date?: string | null;
-  kind?: ReminderKind;
-  completed?: boolean;
-}
-
 // --- Enriched Dashboard Summary ---
 export interface DashboardHabitConsistency {
   habitId: string;
@@ -740,14 +644,6 @@ export interface DashboardSkillProgress {
   pct: number;
 }
 
-export interface DashboardNewsItem {
-  id: string;
-  source: string;
-  title: string;
-  url: string;
-  publishedAt: string | null;
-}
-
 export interface DashboardSummary {
   now: Task | null;
   next: Task | null;
@@ -755,12 +651,10 @@ export interface DashboardSummary {
   todayDoneCount: number;
   dueHabits: HabitWithStreak[];
   previous: Task | null;
-  upcomingReminders: Reminder[];
   habitConsistency: DashboardHabitConsistency[];
   workoutWeek: DashboardWorkoutDay[];
   workoutLabels: string[];
   skillsProgress: DashboardSkillProgress[];
-  newsItems: DashboardNewsItem[];
 }
 
 export interface UserProfile {
@@ -777,9 +671,166 @@ export interface UpdateProfileInput {
 
 export interface SystemSettings {
   theme?: "dark" | "light" | "system";
-  notificationSound?: NotificationSoundType;
-  desktopNotifications?: boolean;
   [key: string]: unknown;
+}
+
+// ---------------------------------------------------------------------------
+// DataSource interface — the contract both `api` and `localDal` must satisfy.
+// Uses the wider parameter/return types so both surfaces compile.
+// ---------------------------------------------------------------------------
+export interface DataSource {
+  // Dashboard
+  getSummary(date?: string): Promise<DashboardSummary>;
+
+  // Routine — tasks
+  getTasks(date: string): Promise<Task[]>;
+  createTask(input: NewTaskInput): Promise<{ task: Task; overlapsWith: Task[] }>;
+  updateTaskStatus(id: string, status: TaskStatus): Promise<Task>;
+  updateTask(
+    id: string,
+    patch: Partial<NewTaskInput>,
+  ): Promise<{ task: Task; overlapsWith: Task[] }>;
+  deleteTask(id: string): Promise<void>;
+  getTaskHistory(query?: TaskHistoryQuery): Promise<Task[]>;
+  getRoutineStats(): Promise<RoutineStats>;
+
+  // Routine — categories
+  getRoutineCategories(): Promise<RoutineCategory[]>;
+  createRoutineCategory(input: NewRoutineCategoryInput): Promise<RoutineCategory>;
+  updateRoutineCategory(id: string, patch: UpdateRoutineCategoryInput): Promise<RoutineCategory>;
+  deleteRoutineCategory(
+    id: string,
+    fallback?: string,
+  ): Promise<{ success: boolean; reassignedCount: number }>;
+
+  // Habits
+  getHabits(): Promise<HabitDefinition[]>;
+  getHabit(id: string): Promise<HabitDefinition>;
+  createHabit(input: NewHabitDefinitionInput): Promise<HabitDefinition>;
+  updateHabit(id: string, patch: Partial<HabitDefinition>): Promise<HabitDefinition>;
+  deleteHabit(id: string): Promise<void>;
+  archiveHabit(id: string, archived: boolean): Promise<void>;
+  reorderHabits(orders: { id: string; sortOrder: number }[]): Promise<void>;
+  logHabit(habitId: string, date?: string, value?: number, meta?: string): Promise<HabitLogEntry>;
+  unlogHabit(habitId: string, date: string): Promise<void>;
+  unlogHabitByLogId(logId: string): Promise<void>;
+  getHabitLogs(habitId: string, date: string): Promise<HabitLogEntry[]>;
+  getTodayHabits(date?: string): Promise<HabitWithStreak[]>;
+  getHabitStats(id: string, startDate: string, endDate: string): Promise<HabitStats>;
+  getHabitAnalytics(
+    id: string,
+    period?: "week" | "month",
+    endDate?: string,
+  ): Promise<HabitAnalyticsData | undefined>;
+  getWeeklyReview(weekStart?: string): Promise<WeeklySummary>;
+
+  // Skills
+  getSkillAreas(): Promise<SkillArea[]>;
+  createSkillArea(input: NewSkillAreaInput): Promise<SkillArea>;
+  updateSkillArea(id: string, patch: UpdateSkillAreaInput): Promise<SkillArea>;
+  deleteSkillArea(id: string): Promise<void>;
+  getSkillAreaSummary(areaId: string): Promise<SkillAreaSummary>;
+  getLearningResources(): Promise<LearningResource[]>;
+  getResourcesByArea(areaId: string): Promise<LearningResource[]>;
+  createLearningResource(input: NewLearningResourceInput): Promise<LearningResource>;
+  updateLearningResource(id: string, patch: UpdateLearningResourceInput): Promise<LearningResource>;
+  deleteLearningResource(id: string): Promise<void>;
+  getResourceProgress(id: string): Promise<ResourceWithProgress>;
+  logLearningSession(input: NewLearningLogInput): Promise<LearningLog>;
+  updateLearningLog(id: string, patch: UpdateLearningLogInput): Promise<LearningLog>;
+  deleteLearningLog(id: string): Promise<void>;
+  getLearningLogsByResource(resourceId: string): Promise<LearningLog[]>;
+  getLearningLogsByRange(startDate: string, endDate: string): Promise<LearningLog[]>;
+  getProgressBatch(resourceIds: string[]): Promise<ResourceWithProgress[]>;
+
+  // Finance
+  getAccounts(): Promise<AccountWithBalance[]>;
+  getActiveAccounts(): Promise<Account[]>;
+  getAccount(id: string): Promise<Account | null>;
+  getAccountBalance(id: string): Promise<number>;
+  getAccountBalances(): Promise<AccountWithBalance[]>;
+  createAccount(input: NewAccountInput): Promise<Account>;
+  updateAccount(id: string, patch: Partial<NewAccountInput>): Promise<Account>;
+  archiveAccount(id: string): Promise<void>;
+  unarchiveAccount(id: string): Promise<void>;
+  deleteAccount(id: string): Promise<void>;
+  getCategories(): Promise<Category[]>;
+  getActiveCategories(): Promise<Category[]>;
+  getIncomeCategories(): Promise<Category[]>;
+  getExpenseCategories(): Promise<Category[]>;
+  getCategory(id: string): Promise<Category | null>;
+  createCategory(input: NewCategoryInput): Promise<Category>;
+  updateCategory(id: string, patch: Partial<NewCategoryInput>): Promise<Category>;
+  archiveCategory(id: string): Promise<void>;
+  unarchiveCategory(id: string): Promise<void>;
+  deleteCategory(id: string): Promise<void>;
+  getTransactions(accountId?: string): Promise<Transaction[]>;
+  getTransactionsByDateRange(startDate: string, endDate: string): Promise<Transaction[]>;
+  getTransactionsByAccount(accountId: string): Promise<Transaction[]>;
+  getTransaction(id: string): Promise<Transaction | null>;
+  createTransaction(input: NewTransactionInput): Promise<Transaction>;
+  updateTransaction(id: string, patch: Partial<NewTransactionInput>): Promise<Transaction>;
+  deleteTransaction(id: string): Promise<void>;
+  createTransfer(
+    fromAccountId: string,
+    toAccountId: string,
+    amountMinor: number,
+    date: string,
+    note?: string,
+  ): Promise<{ from: Transaction; to: Transaction }>;
+  getMonthlySummary(yearMonth: string): Promise<MonthlySummary>;
+  getCategoryBreakdown(yearMonth: string): Promise<CategoryBreakdown[]>;
+  getMonthlyTransactions(yearMonth: string): Promise<Transaction[]>;
+  getFinanceWidget(): Promise<FinanceDashboardWidget>;
+
+  // Workouts
+  getWorkouts(): Promise<Workout[]>;
+  getWorkout(id: string): Promise<WorkoutWithExercises>;
+  createWorkout(input: NewWorkoutInput): Promise<Workout>;
+  updateWorkout(id: string, patch: Partial<NewWorkoutInput>): Promise<Workout>;
+  deleteWorkout(id: string): Promise<void>;
+  addExerciseToWorkout(
+    workoutId: string,
+    exerciseId: string,
+    input: NewWorkoutExerciseInput,
+  ): Promise<WorkoutExercise>;
+  updateWorkoutExercise(
+    workoutId: string,
+    exerciseId: string,
+    patch: Partial<NewWorkoutExerciseInput>,
+  ): Promise<WorkoutExercise>;
+  removeExerciseFromWorkout(workoutId: string, exerciseId: string): Promise<void>;
+  reorderWorkoutExercises(workoutId: string, exerciseIds: string[]): Promise<void>;
+  getExercises(): Promise<Exercise[]>;
+  getExercise(id: string): Promise<Exercise>;
+  createExercise(input: NewExerciseInput): Promise<Exercise>;
+  updateExercise(id: string, patch: Partial<NewExerciseInput>): Promise<Exercise>;
+  deleteExercise(id: string): Promise<void>;
+  getWorkoutSessions(): Promise<WorkoutSession[]>;
+  getWorkoutSession(id: string): Promise<WorkoutSessionWithLogs>;
+  startWorkoutSession(workoutId: string): Promise<WorkoutSession>;
+  completeWorkoutSession(
+    id: string,
+    durationSeconds: number,
+    notes?: string,
+  ): Promise<WorkoutSession>;
+  deleteWorkoutSession(id: string): Promise<void>;
+  cancelWorkoutSession(sessionId: string): Promise<void>;
+  addExerciseLog(sessionId: string, input: NewExerciseLogInput): Promise<ExerciseLog>;
+  getExerciseLogs(sessionId: string): Promise<ExerciseLog[]>;
+  getWorkoutHistory(): Promise<WorkoutSession[]>;
+  getWorkoutStats(): Promise<WorkoutStats>;
+  getRecentWorkoutSessions(limit?: number): Promise<WorkoutSession[]>;
+  getExerciseProgress(exerciseId: string): Promise<ExerciseProgressPoint[]>;
+
+  // Profile & Settings
+  updateProfile(input: {
+    name?: string;
+    email?: string;
+  }): Promise<{ user: { id: string; name: string; email: string; createdAt?: string } }>;
+  getSettings(): Promise<Record<string, string>>;
+  updateSettings(settings: Record<string, string>): Promise<Record<string, string>>;
+  getHealth(): Promise<{ status: string; timestamp: string; version?: string }>;
 }
 
 export {

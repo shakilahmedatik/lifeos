@@ -119,3 +119,9 @@ export const apiRateLimiter = createRateLimiter({
   max: 2500, // Limit each IP to 2500 requests per 15 min
   skip: (req) => req.path.startsWith("/health"),
 });
+
+export const authRateLimiter = createRateLimiter({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 30, // Limit sensitive auth operations to 30 requests per 15 min
+  message: "Too many authentication attempts, please try again later.",
+});
