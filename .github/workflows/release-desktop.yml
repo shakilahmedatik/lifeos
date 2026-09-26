@@ -64,3 +64,14 @@ jobs:
             - **Updater Fixes:** Fixed GitHub Action pipeline to properly generate auto-updater signatures.
           releaseDraft: false
           prerelease: false
+
+      - name: Ensure latest.json exists for v0.1.0 compatibility
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Tauri v2 action creates updater.json by default, but our v0.1.0 app expects latest.json
+          gh release download ${{ github.ref_name }} -p "updater.json" || true
+          if [ -f updater.json ]; then
+            cp updater.json latest.json
+            gh release upload ${{ github.ref_name }} latest.json --clobber
+          fi
