@@ -2439,29 +2439,9 @@ export const localDal: DataSource = {
       // ignore
     }
 
-    // --- Merge with Server Summary if reachable ---
-    let serverSummary: DashboardSummary | null = null;
-    try {
-      const { api } = await import("../api.js");
-      serverSummary = await api.getSummary(today);
-    } catch {
-      // offline / local mode
-    }
-
-    const hasLocalWorkouts = workoutWeek.some((d) =>
-      Object.keys(d).some((k) => k !== "day" && Number(d[k]) > 0),
-    );
-    const finalWorkoutWeek = hasLocalWorkouts
-      ? workoutWeek
-      : serverSummary?.workoutWeek && serverSummary.workoutWeek.length > 0
-        ? serverSummary.workoutWeek
-        : workoutWeek;
-
-    const finalWorkoutLabels =
-      workoutLabelsSet.size > 0 ? Array.from(workoutLabelsSet) : serverSummary?.workoutLabels || [];
-
-    const finalSkillsProgress =
-      skillsProgress.length > 0 ? skillsProgress : serverSummary?.skillsProgress || [];
+    const finalWorkoutWeek = workoutWeek;
+    const finalWorkoutLabels = workoutLabelsSet.size > 0 ? Array.from(workoutLabelsSet) : [];
+    const finalSkillsProgress = skillsProgress;
 
     return {
       now: nowTask,
