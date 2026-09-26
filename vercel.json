@@ -5,5 +5,10 @@
       "source": "/api/(.*)",
       "destination": "/api/server.ts"
     }
-  ]
+  ],
+  "functions": {
+    "api/server.ts": {
+      "includeFiles": "backend/src/shared/migrations/*.sql"
+    }
+  }
 }
