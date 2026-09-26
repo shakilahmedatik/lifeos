@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { SYSTEM_CATEGORY_TRANSFER_IN_ID, SYSTEM_CATEGORY_TRANSFER_OUT_ID } from "@lifeos/contracts";
 
 import type { NewTransactionInput, Transaction } from "../domain/types.js";
 import type { AccountRepository } from "../ports/account-repository.js";
@@ -12,8 +13,8 @@ export class TransactionService {
     private readonly categoryRepo: CategoryRepository,
   ) {}
 
-  async createTransaction(input: NewTransactionInput): Promise<Transaction> {
-    const account = await this.accountRepo.getById(input.accountId);
+  async createTransaction(input: NewTransactionInput, userId: string): Promise<Transaction> {
+    const account = await this.accountRepo.getById(input.accountId, userId);
     if (!account) {
       throw new Error("Account not found");
     }
@@ -21,7 +22,7 @@ export class TransactionService {
       throw new Error("Cannot create transaction for archived account");
     }
 
-    const category = await this.categoryRepo.getById(input.categoryId);
+    const category = await this.categoryRepo.getById(input.categoryId, userId);
     if (!category) {
       throw new Error("Category not found");
     }
@@ -34,27 +35,32 @@ export class TransactionService {
     }
 
     const id = randomUUID();
-    return await this.transactionRepo.create(id, input);
+    return await this.transactionRepo.create(id, input, userId);
   }
 
-  async listTransactionsByDateRange(startDate: string, endDate: string): Promise<Transaction[]> {
-    return await this.transactionRepo.getByDateRange(startDate, endDate);
+  async listTransactionsByDateRange(
+    startDate: string,
+    endDate: string,
+    userId: string,
+  ): Promise<Transaction[]> {
+    return await this.transactionRepo.getByDateRange(startDate, endDate, userId);
   }
 
-  async listTransactionsByAccount(accountId: string): Promise<Transaction[]> {
-    return await this.transactionRepo.getByAccountId(accountId);
+  async listTransactionsByAccount(accountId: string, userId: string): Promise<Transaction[]> {
+    return await this.transactionRepo.getByAccountId(accountId, userId);
   }
 
-  async getTransaction(id: string): Promise<Transaction | undefined> {
-    return await this.transactionRepo.getById(id);
+  async getTransaction(id: string, userId: string): Promise<Transaction | undefined> {
+    return await this.transactionRepo.getById(id, userId);
   }
 
   async updateTransaction(
     id: string,
     patch: Partial<NewTransactionInput>,
+    userId: string,
   ): Promise<Transaction | undefined> {
     if (patch.accountId !== undefined) {
-      const account = await this.accountRepo.getById(patch.accountId);
+      const account = await this.accountRepo.getById(patch.accountId, userId);
       if (!account) {
         throw new Error("Account not found");
       }
@@ -64,7 +70,7 @@ export class TransactionService {
     }
 
     if (patch.categoryId !== undefined) {
-      const category = await this.categoryRepo.getById(patch.categoryId);
+      const category = await this.categoryRepo.getById(patch.categoryId, userId);
       if (!category) {
         throw new Error("Category not found");
       }
@@ -77,35 +83,41 @@ export class TransactionService {
       throw new Error("Amount must be positive");
     }
 
-    return await this.transactionRepo.update(id, patch);
+    return await this.transactionRepo.update(id, patch, userId);
   }
 
   async listTransactionsByAccountAndDateRange(
     accountId: string,
     startDate: string,
     endDate: string,
+    userId: string,
   ): Promise<Transaction[]> {
-    return await this.transactionRepo.getByAccountAndDateRange(accountId, startDate, endDate);
+    return await this.transactionRepo.getByAccountAndDateRange(
+      accountId,
+      startDate,
+      endDate,
+      userId,
+    );
   }
 
-  async deleteTransaction(id: string): Promise<boolean> {
-    return await this.transactionRepo.delete(id);
+  async deleteTransaction(id: string, userId: string): Promise<boolean> {
+    return await this.transactionRepo.delete(id, userId);
   }
 
-  private async ensureCategoryExists(
+  private async getSystemCategory(
     id: string,
     name: string,
     kind: "income" | "expense",
+    userId: string,
   ): Promise<string> {
-    const existing = await this.categoryRepo.getById(id);
+    const existing = await this.categoryRepo.getById(id, userId);
     if (existing) return existing.id;
 
-    const activeKindCats = await this.categoryRepo.getByKind(kind);
-    if (activeKindCats.length > 0) {
-      return activeKindCats[0].id;
-    }
+    const byKind = await this.categoryRepo.getByKind(kind, userId);
+    const found = byKind.find((c) => c.name.toLowerCase() === name.toLowerCase());
+    if (found) return found.id;
 
-    const created = await this.categoryRepo.create(id, { name, kind });
+    const created = await this.categoryRepo.create(id, { name, kind, isSystem: true }, userId);
     return created.id;
   }
 
@@ -115,12 +127,14 @@ export class TransactionService {
     amountMinor: number,
     date: string,
     note?: string,
+    userId?: string,
   ): Promise<{ from: Transaction; to: Transaction }> {
-    const fromAccount = await this.accountRepo.getById(fromAccountId);
+    const actualUserId = userId || "";
+    const fromAccount = await this.accountRepo.getById(fromAccountId, actualUserId);
     if (!fromAccount) {
       throw new Error("Source account not found");
     }
-    const toAccount = await this.accountRepo.getById(toAccountId);
+    const toAccount = await this.accountRepo.getById(toAccountId, actualUserId);
     if (!toAccount) {
       throw new Error("Destination account not found");
     }
@@ -133,38 +147,48 @@ export class TransactionService {
       throw new Error("Amount must be positive");
     }
 
-    const expenseCatId = await this.ensureCategoryExists(
-      "cat-expense-other",
+    const expenseCatId = await this.getSystemCategory(
+      SYSTEM_CATEGORY_TRANSFER_OUT_ID,
       "Transfer Out",
       "expense",
+      actualUserId,
     );
-    const incomeCatId = await this.ensureCategoryExists(
-      "cat-income-other",
+    const incomeCatId = await this.getSystemCategory(
+      SYSTEM_CATEGORY_TRANSFER_IN_ID,
       "Transfer In",
       "income",
+      actualUserId,
     );
 
     const transferPairId = randomUUID();
 
-    const fromTransaction = await this.transactionRepo.create(randomUUID(), {
-      accountId: fromAccountId,
-      categoryId: expenseCatId,
-      date,
-      amountMinor,
-      note: note ? `Transfer to ${toAccount.name}: ${note}` : `Transfer to ${toAccount.name}`,
-      transferPairId,
-    });
+    const fromTransaction = await this.transactionRepo.create(
+      randomUUID(),
+      {
+        accountId: fromAccountId,
+        categoryId: expenseCatId,
+        date,
+        amountMinor,
+        note: note ? `Transfer to ${toAccount.name}: ${note}` : `Transfer to ${toAccount.name}`,
+        transferPairId,
+      },
+      actualUserId,
+    );
 
-    const toTransaction = await this.transactionRepo.create(randomUUID(), {
-      accountId: toAccountId,
-      categoryId: incomeCatId,
-      date,
-      amountMinor,
-      note: note
-        ? `Transfer from ${fromAccount.name}: ${note}`
-        : `Transfer from ${fromAccount.name}`,
-      transferPairId,
-    });
+    const toTransaction = await this.transactionRepo.create(
+      randomUUID(),
+      {
+        accountId: toAccountId,
+        categoryId: incomeCatId,
+        date,
+        amountMinor,
+        note: note
+          ? `Transfer from ${fromAccount.name}: ${note}`
+          : `Transfer from ${fromAccount.name}`,
+        transferPairId,
+      },
+      actualUserId,
+    );
 
     return { from: fromTransaction, to: toTransaction };
   }

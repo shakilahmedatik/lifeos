@@ -1,5 +1,6 @@
 import type { Task, TaskCategory, TaskStatus } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
+import { useQuery } from "@tanstack/react-query";
 import {
   Calendar as CalendarIcon,
   CheckCircle2 as CheckCircle2Icon,
@@ -7,7 +8,7 @@ import {
   Filter as FilterIcon,
   RefreshCw as RefreshCwIcon,
 } from "lucide-react";
-import { useCallback, useEffect, useState } from "react";
+import { useMemo, useState } from "react";
 import Badge from "../../components/ui/Badge.js";
 import Button from "../../components/ui/Button.js";
 import Card from "../../components/ui/Card.js";
@@ -15,7 +16,9 @@ import { EmptyState } from "../../components/ui/EmptyState.js";
 import { Input } from "../../components/ui/Input.js";
 import { SearchInput } from "../../components/ui/SearchInput.js";
 import { Select } from "../../components/ui/Select.js";
-import { api } from "../../lib/api.js";
+import { getDataSource } from "../../lib/dataSource.js";
+import { queryKeys } from "../../lib/queryKeys.js";
+import { useRoutineCategories } from "./hooks/useRoutineCategories.js";
 import TaskCategoryBadge from "./TaskCategoryBadge.js";
 import { computeDurationMins } from "./TaskList.js";
 
@@ -49,30 +52,51 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
   const [categoryFilter, setCategoryFilter] = useState<TaskCategory | "all">("all");
   const [statusFilter, setStatusFilter] = useState<TaskStatus | "all">("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const { categories: routineCategories } = useRoutineCategories();
 
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  const fetchHistory = useCallback(async () => {
-    try {
-      setLoading(true);
-      const data = await api.getTaskHistory({
-        startDate: rangePreset === "all" ? undefined : startDate,
-        endDate: rangePreset === "all" ? undefined : endDate,
-        category: categoryFilter,
-        status: statusFilter,
-        search: searchQuery,
-      });
-      setTasks(data);
-    } catch {
-      console.error("Failed to load task history");
+  const categoryOptions = useMemo(() => {
+    const base = [{ value: "all", label: "All Categories" }];
+    if (routineCategories && routineCategories.length > 0) {
+      return [
+        ...base,
+        ...routineCategories.map((c) => ({
+          value: c.id,
+          label: `${c.icon ? `${c.icon} ` : ""}${c.name}`,
+        })),
+      ];
     }
-    setLoading(false);
-  }, [startDate, endDate, rangePreset, categoryFilter, statusFilter, searchQuery]);
+    return [
+      ...base,
+      { value: "general", label: "General" },
+      { value: "routine", label: "Routine" },
+      { value: "must_do", label: "Must Do" },
+      { value: "work", label: "Work" },
+      { value: "workout", label: "Workout" },
+      { value: "learning", label: "Learning" },
+      { value: "habit", label: "Habit" },
+      { value: "personal", label: "Personal" },
+      { value: "flex", label: "Flex" },
+    ];
+  }, [routineCategories]);
 
-  useEffect(() => {
-    fetchHistory();
-  }, [fetchHistory]);
+  const ds = getDataSource();
+
+  const historyQueryParams = {
+    startDate: rangePreset === "all" ? undefined : startDate,
+    endDate: rangePreset === "all" ? undefined : endDate,
+    category: categoryFilter,
+    status: statusFilter,
+    search: searchQuery,
+  };
+
+  const {
+    data: tasks = [],
+    isLoading: loading,
+    refetch: fetchHistory,
+  } = useQuery<Task[]>({
+    queryKey: queryKeys.routine.history(historyQueryParams),
+    queryFn: () => ds.getTaskHistory(historyQueryParams),
+  });
 
   const handleRangePresetChange = (preset: DateRangePreset) => {
     setRangePreset(preset);
@@ -123,7 +147,7 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
               variant="secondary"
               size="sm"
               icon={<RefreshCwIcon size={14} />}
-              onClick={fetchHistory}
+              onClick={() => fetchHistory()}
             >
               Refresh
             </Button>
@@ -149,15 +173,7 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
               label="Category"
               value={categoryFilter}
               onChange={(e) => setCategoryFilter(e.target.value as TaskCategory | "all")}
-              options={[
-                { value: "all", label: "All Categories" },
-                { value: "general", label: "General" },
-                { value: "work", label: "Work" },
-                { value: "workout", label: "Workout" },
-                { value: "learning", label: "Learning" },
-                { value: "habit", label: "Habit" },
-                { value: "personal", label: "Personal" },
-              ]}
+              options={categoryOptions}
             />
 
             {/* Status Filter */}
@@ -263,7 +279,7 @@ export function RoutineHistory({ onViewTask, onEditTask }: RoutineHistoryProps) 
                         {task.title}
                       </span>
 
-                      <TaskCategoryBadge category={task.category} />
+                      <TaskCategoryBadge category={task.category} categories={routineCategories} />
 
                       <Badge variant={STATUS_VARIANTS[task.status]} size="sm">
                         {task.status.replace("_", " ")}

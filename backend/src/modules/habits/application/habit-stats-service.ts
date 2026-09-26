@@ -26,11 +26,12 @@ export class HabitStatsService {
     habitId: string,
     period: "week" | "month",
     userId = "default",
+    endDate?: string,
   ): Promise<HabitAnalyticsData | undefined> {
     const habit = await this.habitRepo.getById(habitId, userId);
     if (!habit) return undefined;
 
-    const today = todayInDhaka();
+    const today = endDate || todayInDhaka();
     const endDateStr = today;
 
     const end = parseLocalDate(endDateStr);

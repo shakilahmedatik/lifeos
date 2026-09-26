@@ -1,16 +1,11 @@
-import type { Transaction } from "@lifeos/contracts";
+import type { NewTransactionInput, Transaction } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAppToast } from "../../../components/Toast.js";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { queryKeys } from "../../../lib/queryKeys.js";
 import * as api from "../api.js";
 
 export function useTransactions(startDate?: string, endDate?: string) {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const toast = useAppToast();
-  const mountedRef = useRef(true);
-
+  const queryClient = useQueryClient();
   const sd =
     startDate ??
     (() => {
@@ -19,33 +14,60 @@ export function useTransactions(startDate?: string, endDate?: string) {
     })();
   const ed = endDate ?? getClientDateString();
 
-  useEffect(() => {
-    mountedRef.current = true;
-    return () => {
-      mountedRef.current = false;
-    };
-  }, []);
+  const query = useQuery<Transaction[]>({
+    queryKey: queryKeys.finance.transactionsByRange(sd, ed),
+    queryFn: () => api.fetchTransactionsByDateRange(sd, ed),
+    refetchOnMount: "always",
+    staleTime: 0,
+  });
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const data = await api.fetchTransactionsByDateRange(sd, ed);
-      if (mountedRef.current) setTransactions(data);
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : "Failed to load transactions";
-      if (mountedRef.current) {
-        setError(msg);
-        toast.error(msg);
-      }
-    } finally {
-      if (mountedRef.current) setLoading(false);
-    }
-  }, [sd, ed, toast]);
+  const invalidateFinance = () => {
+    queryClient.invalidateQueries({ queryKey: ["finance"] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
+  };
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  const createTransactionMutation = useMutation({
+    mutationFn: (input: NewTransactionInput) => api.createTransaction(input),
+    onSuccess: () => invalidateFinance(),
+  });
 
-  return { transactions, loading, error, refresh: load, setTransactions };
+  const updateTransactionMutation = useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: Partial<NewTransactionInput> }) =>
+      api.updateTransaction(id, patch),
+    onSuccess: () => invalidateFinance(),
+  });
+
+  const deleteTransactionMutation = useMutation({
+    mutationFn: (id: string) => api.deleteTransaction(id),
+    onSuccess: () => invalidateFinance(),
+  });
+
+  const createTransferMutation = useMutation({
+    mutationFn: ({
+      fromAccountId,
+      toAccountId,
+      amountMinor,
+      date,
+      note,
+    }: {
+      fromAccountId: string;
+      toAccountId: string;
+      amountMinor: number;
+      date: string;
+      note?: string;
+    }) => api.createTransfer(fromAccountId, toAccountId, amountMinor, date, note),
+    onSuccess: () => invalidateFinance(),
+  });
+
+  return {
+    transactions: query.data ?? [],
+    loading: query.isLoading,
+    error: query.error ? (query.error as Error).message : null,
+    refresh: () => query.refetch(),
+    invalidate: invalidateFinance,
+    createTransaction: createTransactionMutation.mutateAsync,
+    updateTransaction: updateTransactionMutation.mutateAsync,
+    deleteTransaction: deleteTransactionMutation.mutateAsync,
+    createTransfer: createTransferMutation.mutateAsync,
+  };
 }

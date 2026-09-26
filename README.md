@@ -11,10 +11,13 @@
 
 | Layer | Technology | Description |
 |-------|------------|-------------|
-| **Frontend** | React 19, Vite 6, Tailwind CSS 4 | SPA client with modern dark cockpit theme |
-| **Backend** | Node.js (ESM), Express 4.21, SQLite | RESTful API server with modular domain architecture |
-| **Database** | SQLite (`@libsql/client`) | Remote (Turso) SQLite/LibSQL database with automated SQL migrations |
+| **Frontend** | React 19, Vite 6, Tailwind CSS 4, React Router 7 | SPA client with modern dark cockpit theme |
+| **Desktop App** | Tauri 2 | Native desktop application shell for macOS/Windows/Linux |
+| **Backend** | Node.js (ESM), Express 4.21, Drizzle ORM | RESTful API server with modular domain architecture |
+| **Database** | SQLite (`@libsql/client`), Turso | Remote (Turso) SQLite/LibSQL database or local file |
+| **Auth** | Better-Auth | Authentication handling for web deployments |
 | **Validation** | Zod 3.24 | Shared type boundary schemas across client and server |
+| **State/Data** | Tanstack Query 5 | Client-side data fetching and state management |
 | **Shared** | `@lifeos/contracts` | Monorepo contract package for domain entity interfaces |
 | **Tooling** | pnpm, Biome 1.9, Vitest 4 | Fast monorepo management, linting, and unit testing |
 
@@ -41,10 +44,10 @@ pnpm dev
 ## Architecture Overview
 
 ```
-┌──────────────┐     HTTP       ┌──────────────┐     WAL      ┌──────────────┐
-│   Frontend   │ ─────────────▶ │   Backend    │ ──────────▶ │  lifeos.sqlite│
-│  (React/Vite)│                │  (Express)   │             │  (SQLite)    │
-└──────────────┘                └──────────────┘             └──────────────┘
+┌──────────────┐     HTTP       ┌──────────────┐     TCP/HTTP     ┌──────────────┐
+│   Frontend   │ ─────────────▶ │   Backend    │ ───────────────▶ │ Turso SQLite │
+│(React/Tauri) │                │  (Express)   │                  │ (Remote/Local)│
+└──────────────┘                └──────────────┘                  └──────────────┘
             ▲                         │
             │                         │ imports
             │                         ▼
@@ -54,6 +57,10 @@ pnpm dev
                              └──────────────────────┘
 ```
 
+The system supports two deployment modes:
+1. **Local/Desktop Mode**: Tauri-based native app connecting to a local backend and local SQLite file.
+2. **Web/Cloud Mode**: Frontend deployed on Cloudflare Pages, backend on Vercel, and database on Turso.
+
 ## Module Inventory
 
 - **Dashboard**: Central cockpit showing "Now" and "Next" tasks, habit completion toggles, and daily progress.
@@ -62,8 +69,11 @@ pnpm dev
 - **Workouts**: Exercise library, custom workout routines, active session coach mode, and workout history.
 - **Skills**: Learning session logs, course progress tracking, and skill category organization.
 - **Finance**: Multi-account balances, income/expense categories, monthly financial summaries, and transaction logging.
-- **News**: RSS feed aggregator, background fetching, and unread article digest.
-- **Notifications**: Task reminder scheduling and background broadcaster notifications.
+- **Health**: Health metrics tracking and summaries.
+- **Auth & Profile**: User authentication (Better-Auth) and profile management for cloud sync.
+- **Settings & Sync**: Application preferences and data synchronization settings.
+- **News** (Planned): RSS feed aggregator, background fetching, and unread article digest.
+- **Notifications**: Task reminder scheduling and background broadcaster notifications (with Tauri desktop integration).
 
 ## Project Verification & Maintenance
 

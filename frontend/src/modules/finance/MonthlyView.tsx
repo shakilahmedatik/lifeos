@@ -1,6 +1,6 @@
 import { getClientMonthString } from "@lifeos/contracts";
 import { Calendar, TrendingDown, TrendingUp, Wallet } from "lucide-react";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
 import { DonutChart } from "../../components/ui/charts/DonutChart.js";
 import { HorizontalBarChart } from "../../components/ui/charts/HorizontalBarChart.js";
@@ -28,11 +28,9 @@ const EXPENSE_BAR_SHADES = ["#f59e0b", "#d97706", "#fbbf24", "#eab308", "#b45309
 export function MonthlyView({ refreshTrigger }: MonthlyViewProps) {
   const [yearMonth, setYearMonth] = useState(getClientMonthString());
   const { summary, breakdown, balances, loading, refresh } = useFinanceSummary(yearMonth);
-  const prevRefreshTrigger = useRef(refreshTrigger);
 
   useEffect(() => {
-    if (refreshTrigger !== prevRefreshTrigger.current) {
-      prevRefreshTrigger.current = refreshTrigger;
+    if (refreshTrigger !== undefined) {
       refresh();
     }
   }, [refreshTrigger, refresh]);

@@ -1,33 +1,23 @@
 import type { RoutineStats, TaskCategory } from "@lifeos/contracts";
 import {
-  Activity as ActivityIcon,
-  Calendar as CalendarIcon,
   CheckCircle2 as CheckCircle2Icon,
   Clock as ClockIcon,
   Flame as FlameIcon,
-  History as HistoryIcon,
-  Plus as PlusIcon,
   Target as TargetIcon,
   TrendingUp as TrendingUpIcon,
 } from "lucide-react";
 import Card, { CardContent, CardHeader, CardTitle } from "../../components/ui/Card.js";
+import { useRoutineCategories } from "./hooks/useRoutineCategories.js";
 import TaskCategoryBadge, { CATEGORY_COLORS } from "./TaskCategoryBadge.js";
 
 interface RoutineOverviewProps {
   stats: RoutineStats | null;
   loading: boolean;
-  onOpenCreateModal: () => void;
-  onNavigateToSchedule: () => void;
-  onNavigateToHistory: () => void;
 }
 
-export function RoutineOverview({
-  stats,
-  loading,
-  onOpenCreateModal,
-  onNavigateToSchedule,
-  onNavigateToHistory,
-}: RoutineOverviewProps) {
+export function RoutineOverview({ stats, loading }: RoutineOverviewProps) {
+  const { categories: routineCategories = [] } = useRoutineCategories();
+
   if (loading || !stats) {
     return (
       <div className="space-y-6 animate-pulse">
@@ -116,20 +106,15 @@ export function RoutineOverview({
         </Card>
       </div>
 
-      {/* Main Section: Category Distribution & Weekly Trends */}
+      {/* Main Charts & Breakdown Section */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Category Breakdown Card */}
-        <Card className="border-border">
-          <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <ActivityIcon size={18} className="text-blue-400" />
-                Category Distribution
-              </CardTitle>
-              <p className="text-xs text-secondary mt-0.5">
-                Time and task volume by routine category
-              </p>
-            </div>
+        {/* Category Distribution Card */}
+        <Card className="border-border flex flex-col">
+          <CardHeader className="pb-3 border-b border-border">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TargetIcon size={18} className="text-blue-400" />
+              Category Distribution
+            </CardTitle>
           </CardHeader>
           <CardContent className="pt-4 space-y-4">
             {stats.categoryDistribution.length === 0 ? (
@@ -138,6 +123,10 @@ export function RoutineOverview({
               </p>
             ) : (
               stats.categoryDistribution.map((cat) => {
+                const matchedCat = routineCategories.find(
+                  (c) =>
+                    c.id === cat.category || c.name.toLowerCase() === cat.category?.toLowerCase(),
+                );
                 const percentage =
                   stats.totalScheduledMinutes > 0
                     ? Math.round((cat.totalMinutes / stats.totalScheduledMinutes) * 100)
@@ -149,7 +138,11 @@ export function RoutineOverview({
                   <div key={cat.category} className="space-y-1.5">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <TaskCategoryBadge category={cat.category as TaskCategory} />
+                        <TaskCategoryBadge
+                          category={cat.category as TaskCategory}
+                          categoryObj={matchedCat}
+                          categories={routineCategories}
+                        />
                         <span className="text-secondary">
                           ({cat.taskCount} task{cat.taskCount !== 1 ? "s" : ""})
                         </span>
@@ -162,7 +155,10 @@ export function RoutineOverview({
                     <div className="w-full bg-card-hover h-2 rounded-full overflow-hidden">
                       <div
                         className={`h-full ${catStyle.borderLeft.replace("border-l-", "bg-")} transition-all duration-500`}
-                        style={{ width: `${percentage}%` }}
+                        style={{
+                          width: `${percentage}%`,
+                          ...(matchedCat?.color && { backgroundColor: matchedCat.color }),
+                        }}
                       />
                     </div>
                   </div>
@@ -174,16 +170,11 @@ export function RoutineOverview({
 
         {/* Weekly Trend Card */}
         <Card className="border-border flex flex-col">
-          <CardHeader className="pb-3 border-b border-border flex flex-row items-center justify-between">
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <TrendingUpIcon size={18} className="text-emerald-400" />
-                Last 7 Days Activity
-              </CardTitle>
-              <p className="text-xs text-secondary mt-0.5">
-                Daily completion rates across the past week
-              </p>
-            </div>
+          <CardHeader className="pb-3 border-b border-border">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUpIcon size={18} className="text-emerald-400" />
+              Weekly Trend
+            </CardTitle>
           </CardHeader>
 
           <CardContent className="pt-4 flex-1 flex flex-col justify-between">
@@ -221,63 +212,6 @@ export function RoutineOverview({
             </div>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Action Shortcut Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <button
-          type="button"
-          onClick={onOpenCreateModal}
-          className="p-4 bg-card hover:bg-card-solid border border-border hover:border-blue-500/40 rounded-xl text-left transition-all group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-blue-500/10 text-blue-400 rounded-lg group-hover:bg-blue-500/20 transition-colors">
-              <PlusIcon size={20} />
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-primary group-hover:text-blue-300">
-                Add New Routine Task
-              </h4>
-              <p className="text-xs text-secondary">Create time blocks & reminders</p>
-            </div>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={onNavigateToSchedule}
-          className="p-4 bg-card hover:bg-card-solid border border-border hover:border-emerald-500/40 rounded-xl text-left transition-all group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-emerald-500/10 text-emerald-400 rounded-lg group-hover:bg-emerald-500/20 transition-colors">
-              <CalendarIcon size={20} />
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-primary group-hover:text-emerald-300">
-                View Today's Schedule
-              </h4>
-              <p className="text-xs text-secondary">Manage list & 24h timeline</p>
-            </div>
-          </div>
-        </button>
-
-        <button
-          type="button"
-          onClick={onNavigateToHistory}
-          className="p-4 bg-card hover:bg-card-solid border border-border hover:border-purple-500/40 rounded-xl text-left transition-all group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="p-2.5 bg-purple-500/10 text-purple-400 rounded-lg group-hover:bg-purple-500/20 transition-colors">
-              <HistoryIcon size={20} />
-            </div>
-            <div>
-              <h4 className="text-sm font-semibold text-primary group-hover:text-purple-300">
-                Browse Task History
-              </h4>
-              <p className="text-xs text-secondary">Filter past logs & archives</p>
-            </div>
-          </div>
-        </button>
       </div>
     </div>
   );

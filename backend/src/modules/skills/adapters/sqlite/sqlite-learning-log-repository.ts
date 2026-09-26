@@ -1,50 +1,47 @@
-import type { Client } from "@libsql/client";
+import { and, asc, desc, eq, gte, inArray, isNull, lte, or } from "drizzle-orm";
 
+import type { DrizzleClient } from "../../../../shared/db.js";
+import { learningLogs } from "../../../../shared/schema.js";
 import type { LearningLog, NewLearningLogInput } from "../../domain/types.js";
 import type { LearningLogRepository } from "../../ports/learning-log-repository.js";
 
-interface LearningLogRow {
-  id: string;
-  resource_id: string;
-  date: string;
-  minutes_spent: number;
-  units_completed: number | null;
-  notes: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-function rowToLog(row: LearningLogRow): LearningLog {
+function rowToLog(row: typeof learningLogs.$inferSelect): LearningLog {
   return {
     id: row.id,
-    resourceId: row.resource_id,
+    resourceId: row.resourceId,
     date: row.date,
-    minutesSpent: row.minutes_spent,
-    unitsCompleted: row.units_completed ?? undefined,
+    minutesSpent: row.minutesSpent,
+    unitsCompleted: row.unitsCompleted ?? undefined,
     notes: row.notes ?? undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 
-export class SqliteLearningLogRepository implements LearningLogRepository {
-  constructor(private readonly client: Client) {}
+function userScope(userId: string) {
+  return and(
+    or(eq(learningLogs.userId, userId), eq(learningLogs.userId, "")),
+    isNull(learningLogs.deletedAt),
+  );
+}
 
-  async getById(id: string): Promise<LearningLog | undefined> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM learning_logs WHERE id = ?",
-      args: [id],
-    });
-    const row = res.rows[0] as unknown as LearningLogRow | undefined;
+export class DrizzleLearningLogRepository implements LearningLogRepository {
+  constructor(private readonly db: DrizzleClient) {}
+
+  async getById(id: string, userId = "default"): Promise<LearningLog | undefined> {
+    const [row] = await this.db
+      .select()
+      .from(learningLogs)
+      .where(and(eq(learningLogs.id, id), userScope(userId)));
     return row ? rowToLog(row) : undefined;
   }
 
-  async getByResourceId(resourceId: string): Promise<LearningLog[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM learning_logs WHERE resource_id = ? ORDER BY date DESC",
-      args: [resourceId],
-    });
-    const rows = res.rows as unknown as LearningLogRow[];
+  async getByResourceId(resourceId: string, userId = "default"): Promise<LearningLog[]> {
+    const rows = await this.db
+      .select()
+      .from(learningLogs)
+      .where(and(eq(learningLogs.resourceId, resourceId), userScope(userId)))
+      .orderBy(desc(learningLogs.date));
     return rows.map(rowToLog);
   }
 
@@ -52,96 +49,84 @@ export class SqliteLearningLogRepository implements LearningLogRepository {
     resourceIds: string[],
     startDate?: string,
     endDate?: string,
+    userId = "default",
   ): Promise<LearningLog[]> {
     if (resourceIds.length === 0) return [];
-    const placeholders = resourceIds.map(() => "?").join(",");
-    const args: (string | number)[] = [...resourceIds];
-    let sql = `SELECT * FROM learning_logs WHERE resource_id IN (${placeholders})`;
 
-    if (startDate) {
-      sql += " AND date >= ?";
-      args.push(startDate);
-    }
-    if (endDate) {
-      sql += " AND date <= ?";
-      args.push(endDate);
-    }
-    sql += " ORDER BY date";
+    const conditions = [inArray(learningLogs.resourceId, resourceIds), userScope(userId)];
+    if (startDate) conditions.push(gte(learningLogs.date, startDate));
+    if (endDate) conditions.push(lte(learningLogs.date, endDate));
 
-    const res = await this.client.execute({ sql, args });
-    const rows = res.rows as unknown as LearningLogRow[];
+    const rows = await this.db
+      .select()
+      .from(learningLogs)
+      .where(and(...conditions))
+      .orderBy(asc(learningLogs.date));
     return rows.map(rowToLog);
   }
 
-  async getByDateRange(startDate: string, endDate: string): Promise<LearningLog[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM learning_logs WHERE date >= ? AND date <= ? ORDER BY date",
-      args: [startDate, endDate],
-    });
-    const rows = res.rows as unknown as LearningLogRow[];
+  async getByDateRange(
+    startDate: string,
+    endDate: string,
+    userId = "default",
+  ): Promise<LearningLog[]> {
+    const rows = await this.db
+      .select()
+      .from(learningLogs)
+      .where(
+        and(gte(learningLogs.date, startDate), lte(learningLogs.date, endDate), userScope(userId)),
+      )
+      .orderBy(asc(learningLogs.date));
     return rows.map(rowToLog);
   }
 
-  async create(id: string, input: NewLearningLogInput): Promise<LearningLog> {
+  async create(id: string, input: NewLearningLogInput, userId = "default"): Promise<LearningLog> {
     const now = new Date().toISOString();
-    await this.client.execute({
-      sql: `INSERT INTO learning_logs (id, resource_id, date, minutes_spent, units_completed, notes, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        id,
-        input.resourceId,
-        input.date,
-        input.minutesSpent,
-        input.unitsCompleted ?? null,
-        input.notes ?? null,
-        now,
-        now,
-      ],
+    await this.db.insert(learningLogs).values({
+      id,
+      userId,
+      resourceId: input.resourceId,
+      date: input.date,
+      minutesSpent: input.minutesSpent,
+      unitsCompleted: input.unitsCompleted ?? null,
+      notes: input.notes ?? null,
+      createdAt: now,
+      updatedAt: now,
     });
-    return (await this.getById(id)) as LearningLog;
+    return (await this.getById(id, userId)) as LearningLog;
   }
 
-  async update(id: string, patch: Partial<NewLearningLogInput>): Promise<LearningLog | undefined> {
-    const existing = await this.getById(id);
+  async update(
+    id: string,
+    patch: Partial<NewLearningLogInput>,
+    userId = "default",
+  ): Promise<LearningLog | undefined> {
+    const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
-    const fields: string[] = [];
-    const values: (string | number | null)[] = [];
+    const updates: Record<string, unknown> = {};
+    if (patch.date !== undefined) updates.date = patch.date;
+    if (patch.minutesSpent !== undefined) updates.minutesSpent = patch.minutesSpent;
+    if (patch.unitsCompleted !== undefined) updates.unitsCompleted = patch.unitsCompleted ?? null;
+    if (patch.notes !== undefined) updates.notes = patch.notes ?? null;
 
-    if (patch.date !== undefined) {
-      fields.push("date = ?");
-      values.push(patch.date);
-    }
-    if (patch.minutesSpent !== undefined) {
-      fields.push("minutes_spent = ?");
-      values.push(patch.minutesSpent);
-    }
-    if (patch.unitsCompleted !== undefined) {
-      fields.push("units_completed = ?");
-      values.push(patch.unitsCompleted ?? null);
-    }
-    if (patch.notes !== undefined) {
-      fields.push("notes = ?");
-      values.push(patch.notes ?? null);
-    }
+    if (Object.keys(updates).length === 0) return existing;
 
-    if (fields.length === 0) return existing;
-    fields.push("updated_at = ?");
-    values.push(new Date().toISOString());
-    values.push(id);
+    updates.updatedAt = new Date().toISOString();
 
-    await this.client.execute({
-      sql: `UPDATE learning_logs SET ${fields.join(", ")} WHERE id = ?`,
-      args: values,
-    });
-    return await this.getById(id);
+    await this.db
+      .update(learningLogs)
+      .set(updates)
+      .where(and(eq(learningLogs.id, id), userScope(userId)));
+    return await this.getById(id, userId);
   }
 
-  async delete(id: string): Promise<boolean> {
-    const res = await this.client.execute({
-      sql: "DELETE FROM learning_logs WHERE id = ?",
-      args: [id],
-    });
-    return res.rowsAffected > 0;
+  async delete(id: string, userId = "default"): Promise<boolean> {
+    const now = new Date().toISOString();
+    const result = await this.db
+      .update(learningLogs)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(and(eq(learningLogs.id, id), userScope(userId)));
+    return result.rowsAffected > 0;
   }
 }

@@ -1,6 +1,8 @@
 import {
   isValidDateString,
+  NewRoutineCategoryInputSchema,
   NewTaskInputSchema,
+  UpdateRoutineCategoryInputSchema,
   UpdateStatusSchema,
   UpdateTaskSchema,
 } from "@lifeos/contracts";
@@ -8,6 +10,12 @@ import { Router } from "express";
 import { validateBody } from "../../../shared/validate.js";
 import type { AuthenticatedRequest } from "../../auth/middleware.js";
 
+import {
+  createRoutineCategory,
+  deleteRoutineCategory,
+  getRoutineCategories,
+  updateRoutineCategory,
+} from "../application/category-use-cases.js";
 import {
   createTask,
   deleteTask,
@@ -17,13 +25,17 @@ import {
   setTaskStatus,
   updateTask,
 } from "../application/use-cases.js";
+import type { RoutineCategoryRepository } from "../ports/routine-category-repository.js";
 import type { TaskRepository } from "../ports/task-repository.js";
 
-export function createRoutineRouter(repo: TaskRepository): Router {
+export function createRoutineRouter(
+  repo: TaskRepository,
+  categoryRepo?: RoutineCategoryRepository,
+): Router {
   const router = Router();
 
   router.get("/tasks", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     const date = req.query.date as string | undefined;
     if (!date || !isValidDateString(date)) {
       res.status(400).json({ error: "Missing or invalid ?date=YYYY-MM-DD query param" });
@@ -38,7 +50,7 @@ export function createRoutineRouter(repo: TaskRepository): Router {
   });
 
   router.get("/tasks/history", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     try {
       const tasks = await getTaskHistory(
         repo,
@@ -58,7 +70,7 @@ export function createRoutineRouter(repo: TaskRepository): Router {
   });
 
   router.get("/stats", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     try {
       const stats = await getRoutineStats(repo, userId);
       res.json(stats);
@@ -71,7 +83,7 @@ export function createRoutineRouter(repo: TaskRepository): Router {
     "/tasks",
     validateBody(NewTaskInputSchema),
     async (req: AuthenticatedRequest, res) => {
-      const userId = req.user?.id || (req.query.userId as string) || "default";
+      const userId = req.user?.id || "default";
       try {
         const result = await createTask(repo, req.body, userId);
         res.status(201).json(result);
@@ -86,7 +98,7 @@ export function createRoutineRouter(repo: TaskRepository): Router {
     "/tasks/:id",
     validateBody(UpdateTaskSchema),
     async (req: AuthenticatedRequest, res) => {
-      const userId = req.user?.id || (req.query.userId as string) || "default";
+      const userId = req.user?.id || "default";
       try {
         const result = await updateTask(repo, req.params.id as string, req.body, userId);
         res.json(result);
@@ -105,7 +117,7 @@ export function createRoutineRouter(repo: TaskRepository): Router {
     "/tasks/:id/status",
     validateBody(UpdateStatusSchema),
     async (req: AuthenticatedRequest, res) => {
-      const userId = req.user?.id || (req.query.userId as string) || "default";
+      const userId = req.user?.id || "default";
       try {
         const result = await setTaskStatus(repo, req.params.id as string, req.body.status, userId);
         res.json(result);
@@ -121,10 +133,97 @@ export function createRoutineRouter(repo: TaskRepository): Router {
   );
 
   router.delete("/tasks/:id", async (req: AuthenticatedRequest, res) => {
-    const userId = req.user?.id || (req.query.userId as string) || "default";
+    const userId = req.user?.id || "default";
     try {
       await deleteTask(repo, req.params.id as string, userId);
       res.status(204).send();
+    } catch (err) {
+      const msg = (err as Error).message;
+      if (msg.includes("not found")) {
+        res.status(404).json({ error: msg });
+      } else {
+        res.status(400).json({ error: msg });
+      }
+    }
+  });
+
+  // ── Categories Endpoints ────────────────────────────────────────────────
+  router.get("/categories", async (req: AuthenticatedRequest, res) => {
+    if (!categoryRepo) {
+      res.status(501).json({ error: "Category repository not configured" });
+      return;
+    }
+    const userId = req.user?.id || "default";
+    try {
+      const categories = await getRoutineCategories(categoryRepo, userId);
+      res.json(categories);
+    } catch (_err) {
+      res.status(500).json({ error: "Failed to retrieve routine categories" });
+    }
+  });
+
+  router.post(
+    "/categories",
+    validateBody(NewRoutineCategoryInputSchema),
+    async (req: AuthenticatedRequest, res) => {
+      if (!categoryRepo) {
+        res.status(501).json({ error: "Category repository not configured" });
+        return;
+      }
+      const userId = req.user?.id || "default";
+      try {
+        const category = await createRoutineCategory(categoryRepo, req.body, userId);
+        res.status(201).json(category);
+      } catch (err) {
+        const msg = (err as Error).message;
+        res.status(400).json({ error: msg });
+      }
+    },
+  );
+
+  router.patch(
+    "/categories/:id",
+    validateBody(UpdateRoutineCategoryInputSchema),
+    async (req: AuthenticatedRequest, res) => {
+      if (!categoryRepo) {
+        res.status(501).json({ error: "Category repository not configured" });
+        return;
+      }
+      const userId = req.user?.id || "default";
+      try {
+        const category = await updateRoutineCategory(
+          categoryRepo,
+          req.params.id as string,
+          req.body,
+          userId,
+        );
+        res.json(category);
+      } catch (err) {
+        const msg = (err as Error).message;
+        if (msg.includes("not found")) {
+          res.status(404).json({ error: msg });
+        } else {
+          res.status(400).json({ error: msg });
+        }
+      }
+    },
+  );
+
+  router.delete("/categories/:id", async (req: AuthenticatedRequest, res) => {
+    if (!categoryRepo) {
+      res.status(501).json({ error: "Category repository not configured" });
+      return;
+    }
+    const userId = req.user?.id || "default";
+    try {
+      const fallback = (req.query.fallback as string) || "general";
+      const result = await deleteRoutineCategory(
+        categoryRepo,
+        req.params.id as string,
+        userId,
+        fallback,
+      );
+      res.json({ success: true, ...result });
     } catch (err) {
       const msg = (err as Error).message;
       if (msg.includes("not found")) {

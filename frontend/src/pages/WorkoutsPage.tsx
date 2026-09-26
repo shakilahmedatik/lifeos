@@ -95,6 +95,7 @@ export default function WorkoutsPage() {
         onComplete={handleFinishCoaching}
         onExit={() => {
           setIsCoaching(false);
+          setSelectedWorkoutId(null);
           setSelectedTaskId(null);
         }}
       />

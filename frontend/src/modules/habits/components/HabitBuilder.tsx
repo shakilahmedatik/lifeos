@@ -253,8 +253,9 @@ export function HabitBuilder({
         onClose={() => setIsModalOpen(false)}
         title={editingHabit ? "Edit Habit" : `Configure ${selectedType} Habit`}
       >
-        {selectedType && (
+        {selectedType && isModalOpen && (
           <HabitConfigForm
+            key={`${editingHabit?.id || selectedType}-${editingHabit?.updatedAt || "new"}`}
             type={selectedType}
             initialData={initialFormValues}
             onSave={handleSave}

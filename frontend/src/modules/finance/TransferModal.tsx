@@ -1,5 +1,6 @@
 import type { Account } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts";
+import { useQueryClient } from "@tanstack/react-query";
 import { ArrowRightLeft } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useAppToast } from "../../components/Toast.js";
@@ -8,6 +9,7 @@ import { Input } from "../../components/ui/Input.js";
 import Modal from "../../components/ui/Modal.js";
 import ModalFooter from "../../components/ui/ModalFooter.js";
 import { Select } from "../../components/ui/Select.js";
+import { queryKeys } from "../../lib/queryKeys.js";
 import { createTransfer } from "./api.js";
 
 interface TransferModalProps {
@@ -18,6 +20,7 @@ interface TransferModalProps {
 }
 
 export function TransferModal({ open, onClose, onSuccess, accounts }: TransferModalProps) {
+  const queryClient = useQueryClient();
   const [fromAccountId, setFromAccountId] = useState("");
   const [toAccountId, setToAccountId] = useState("");
   const [amount, setAmount] = useState("");
@@ -69,6 +72,8 @@ export function TransferModal({ open, onClose, onSuccess, accounts }: TransferMo
     try {
       const amountMinor = Math.round(amountNum * 100);
       await createTransfer(fromAccountId, toAccountId, amountMinor, date, note.trim() || undefined);
+      await queryClient.invalidateQueries({ queryKey: ["finance"] });
+      await queryClient.invalidateQueries({ queryKey: queryKeys.dashboard.summary() });
       toast.success("Transfer completed successfully");
       onClose();
       onSuccess();

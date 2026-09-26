@@ -1,5 +1,6 @@
 import type { DashboardWorkoutDay } from "@lifeos/contracts";
 import { SimpleBarChart } from "../../../components/ui/charts/SimpleBarChart.js";
+import EmptyState from "../../../components/ui/EmptyState.js";
 import { DashboardPanel } from "../components/DashboardPanel.js";
 
 interface WorkoutChartWidgetProps {
@@ -24,19 +25,19 @@ export function WorkoutChartWidget({ data }: WorkoutChartWidgetProps) {
 
   return (
     <DashboardPanel title="Workout" subtitle="this week, min">
-      <div className="h-full w-full min-h-40">
+      <div className="h-full w-full overflow-hidden flex flex-col justify-center items-center">
         {data.length === 0 ? (
-          <div className="flex items-center justify-center h-full text-xs text-muted">
-            No workouts this week
-          </div>
+          <EmptyState title="No workouts this week" className="py-4" />
         ) : (
-          <SimpleBarChart
-            data={chartData}
-            showYAxis={true}
-            height={160}
-            formatValue={(v) => `${v} min`}
-            className="w-full"
-          />
+          <div className="w-full flex items-center justify-center">
+            <SimpleBarChart
+              data={chartData}
+              showYAxis={true}
+              height={145}
+              formatValue={(v) => `${v} min`}
+              className="w-full"
+            />
+          </div>
         )}
       </div>
     </DashboardPanel>

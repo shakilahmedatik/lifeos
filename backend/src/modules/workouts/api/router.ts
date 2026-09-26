@@ -34,7 +34,10 @@ export function createWorkoutsRouter(
   });
 
   router.get("/exercises/:id/progress", async (req: AuthenticatedRequest, res) => {
-    const progress = await workoutHistoryService.getExerciseProgress(req.params.id as string);
+    const progress = await workoutHistoryService.getExerciseProgress(
+      req.params.id as string,
+      req.user?.id,
+    );
     res.json(progress);
   });
 
@@ -66,25 +69,33 @@ export function createWorkoutsRouter(
     },
   );
 
-  router.patch("/exercises/:id", validateBody(UpdateExerciseSchema), async (req, res) => {
-    try {
-      const exercise = await exerciseService.updateExercise(req.params.id as string, req.body);
-      if (!exercise) {
-        res.status(404).json({ error: "Exercise not found" });
-        return;
+  router.patch(
+    "/exercises/:id",
+    validateBody(UpdateExerciseSchema),
+    async (req: AuthenticatedRequest, res) => {
+      try {
+        const exercise = await exerciseService.updateExercise(
+          req.params.id as string,
+          req.body,
+          req.user?.id,
+        );
+        if (!exercise) {
+          res.status(404).json({ error: "Exercise not found" });
+          return;
+        }
+        res.json(exercise);
+      } catch (error) {
+        if (error instanceof Error && error.message === "Exercise with this name already exists") {
+          res.status(409).json({ error: error.message });
+          return;
+        }
+        res.status(500).json({ error: "Failed to update exercise" });
       }
-      res.json(exercise);
-    } catch (error) {
-      if (error instanceof Error && error.message === "Exercise with this name already exists") {
-        res.status(409).json({ error: error.message });
-        return;
-      }
-      res.status(500).json({ error: "Failed to update exercise" });
-    }
-  });
+    },
+  );
 
-  router.delete("/exercises/:id", async (req, res) => {
-    const deleted = await exerciseService.deleteExercise(req.params.id);
+  router.delete("/exercises/:id", async (req: AuthenticatedRequest, res) => {
+    const deleted = await exerciseService.deleteExercise(req.params.id as string, req.user?.id);
     if (!deleted) {
       res.status(404).json({ error: "Exercise not found" });
       return;
@@ -93,13 +104,16 @@ export function createWorkoutsRouter(
   });
 
   // Session routes
-  router.get("/sessions", async (_req, res) => {
-    const sessions = await workoutSessionService.listSessions();
+  router.get("/sessions", async (req: AuthenticatedRequest, res) => {
+    const sessions = await workoutSessionService.listSessions(req.user?.id);
     res.json(sessions);
   });
 
-  router.get("/sessions/:id", async (req, res) => {
-    const session = await workoutSessionService.getSessionWithLogs(req.params.id);
+  router.get("/sessions/:id", async (req: AuthenticatedRequest, res) => {
+    const session = await workoutSessionService.getSessionWithLogs(
+      req.params.id as string,
+      req.user?.id,
+    );
     if (!session) {
       res.status(404).json({ error: "Session not found" });
       return;
@@ -107,19 +121,24 @@ export function createWorkoutsRouter(
     res.json(session);
   });
 
-  router.post("/sessions", validateBody(StartSessionInputSchema), async (req, res) => {
-    const session = await workoutSessionService.startSession(req.body.workoutId);
-    res.status(201).json(session);
-  });
+  router.post(
+    "/sessions",
+    validateBody(StartSessionInputSchema),
+    async (req: AuthenticatedRequest, res) => {
+      const session = await workoutSessionService.startSession(req.body.workoutId, req.user?.id);
+      res.status(201).json(session);
+    },
+  );
 
   router.patch(
     "/sessions/:id/complete",
     validateBody(CompleteSessionInputSchema),
-    async (req, res) => {
+    async (req: AuthenticatedRequest, res) => {
       const session = await workoutSessionService.completeSession(
         req.params.id as string,
         req.body.durationSeconds,
         req.body.notes,
+        req.user?.id,
       );
       if (!session) {
         res.status(404).json({ error: "Session not found" });
@@ -129,8 +148,11 @@ export function createWorkoutsRouter(
     },
   );
 
-  router.delete("/sessions/:id", async (req, res) => {
-    const deleted = await workoutSessionService.deleteSession(req.params.id);
+  router.delete("/sessions/:id", async (req: AuthenticatedRequest, res) => {
+    const deleted = await workoutSessionService.deleteSession(
+      req.params.id as string,
+      req.user?.id,
+    );
     if (!deleted) {
       res.status(404).json({ error: "Session not found" });
       return;
@@ -139,52 +161,63 @@ export function createWorkoutsRouter(
   });
 
   // Session logs
-  router.post("/sessions/:id/logs", validateBody(NewExerciseLogInputSchema), async (req, res) => {
-    const session = await workoutSessionService.getSession(req.params.id as string);
+  router.post(
+    "/sessions/:id/logs",
+    validateBody(NewExerciseLogInputSchema),
+    async (req: AuthenticatedRequest, res) => {
+      const session = await workoutSessionService.getSession(req.params.id as string, req.user?.id);
+      if (!session) {
+        res.status(404).json({ error: "Session not found" });
+        return;
+      }
+
+      const log = await workoutSessionService.addExerciseLog(
+        req.params.id as string,
+        req.body,
+        req.user?.id,
+      );
+      res.status(201).json(log);
+    },
+  );
+
+  router.get("/sessions/:id/logs", async (req: AuthenticatedRequest, res) => {
+    const session = await workoutSessionService.getSession(req.params.id as string, req.user?.id);
     if (!session) {
       res.status(404).json({ error: "Session not found" });
       return;
     }
-
-    const log = await workoutSessionService.addExerciseLog(req.params.id as string, req.body);
-    res.status(201).json(log);
-  });
-
-  router.get("/sessions/:id/logs", async (req, res) => {
-    const session = await workoutSessionService.getSession(req.params.id);
-    if (!session) {
-      res.status(404).json({ error: "Session not found" });
-      return;
-    }
-    const logs = await workoutSessionService.getSessionLogs(req.params.id);
+    const logs = await workoutSessionService.getSessionLogs(req.params.id as string, req.user?.id);
     res.json(logs);
   });
 
   // History routes
-  router.get("/history", async (_req, res) => {
-    const history = await workoutHistoryService.getWorkoutHistory();
+  router.get("/history", async (req: AuthenticatedRequest, res) => {
+    const history = await workoutHistoryService.getWorkoutHistory(req.user?.id);
     res.json(history);
   });
 
-  router.get("/history/stats", async (_req, res) => {
-    const stats = await workoutHistoryService.getWorkoutStats();
+  router.get("/history/stats", async (req: AuthenticatedRequest, res) => {
+    const stats = await workoutHistoryService.getWorkoutStats(req.user?.id);
     res.json(stats);
   });
 
-  router.get("/history/recent", async (req, res) => {
+  router.get("/history/recent", async (req: AuthenticatedRequest, res) => {
     const limit = Number(req.query.limit) || 10;
-    const sessions = await workoutHistoryService.getRecentSessions(limit);
+    const sessions = await workoutHistoryService.getRecentSessions(limit, req.user?.id);
     res.json(sessions);
   });
 
   // Workout routes
-  router.get("/", async (_req, res) => {
-    const workouts = await workoutService.listWorkouts();
+  router.get("/", async (req: AuthenticatedRequest, res) => {
+    const workouts = await workoutService.listWorkouts(req.user?.id);
     res.json(workouts);
   });
 
-  router.get("/:id", async (req, res) => {
-    const workout = await workoutService.getWorkoutWithExercises(req.params.id);
+  router.get("/:id", async (req: AuthenticatedRequest, res) => {
+    const workout = await workoutService.getWorkoutWithExercises(
+      req.params.id as string,
+      req.user?.id,
+    );
     if (!workout) {
       res.status(404).json({ error: "Workout not found" });
       return;
@@ -192,22 +225,30 @@ export function createWorkoutsRouter(
     res.json(workout);
   });
 
-  router.post("/", validateBody(NewWorkoutInputSchema), async (req, res) => {
-    const workout = await workoutService.createWorkout(req.body);
+  router.post("/", validateBody(NewWorkoutInputSchema), async (req: AuthenticatedRequest, res) => {
+    const workout = await workoutService.createWorkout(req.body, req.user?.id);
     res.status(201).json(workout);
   });
 
-  router.patch("/:id", validateBody(UpdateWorkoutSchema), async (req, res) => {
-    const workout = await workoutService.updateWorkout(req.params.id as string, req.body);
-    if (!workout) {
-      res.status(404).json({ error: "Workout not found" });
-      return;
-    }
-    res.json(workout);
-  });
+  router.patch(
+    "/:id",
+    validateBody(UpdateWorkoutSchema),
+    async (req: AuthenticatedRequest, res) => {
+      const workout = await workoutService.updateWorkout(
+        req.params.id as string,
+        req.body,
+        req.user?.id,
+      );
+      if (!workout) {
+        res.status(404).json({ error: "Workout not found" });
+        return;
+      }
+      res.json(workout);
+    },
+  );
 
-  router.delete("/:id", async (req, res) => {
-    const deleted = await workoutService.deleteWorkout(req.params.id);
+  router.delete("/:id", async (req: AuthenticatedRequest, res) => {
+    const deleted = await workoutService.deleteWorkout(req.params.id as string, req.user?.id);
     if (!deleted) {
       res.status(404).json({ error: "Workout not found" });
       return;
@@ -216,40 +257,47 @@ export function createWorkoutsRouter(
   });
 
   // Workout exercises
-  router.post("/:id/exercises", validateBody(NewWorkoutExerciseInputSchema), async (req, res) => {
-    const workout = await workoutService.getWorkout(req.params.id as string);
-    if (!workout) {
-      res.status(404).json({ error: "Workout not found" });
-      return;
-    }
+  router.post(
+    "/:id/exercises",
+    validateBody(NewWorkoutExerciseInputSchema),
+    async (req: AuthenticatedRequest, res) => {
+      const workout = await workoutService.getWorkout(req.params.id as string, req.user?.id);
+      if (!workout) {
+        res.status(404).json({ error: "Workout not found" });
+        return;
+      }
 
-    const exerciseId = req.body.exerciseId;
-    if (typeof exerciseId !== "string" || !exerciseId) {
-      res.status(400).json({ error: "exerciseId is required" });
-      return;
-    }
+      const exerciseId = req.body.exerciseId;
+      if (typeof exerciseId !== "string" || !exerciseId) {
+        res.status(400).json({ error: "exerciseId is required" });
+        return;
+      }
 
-    try {
-      const exercise = await workoutService.addExerciseToWorkout(
-        req.params.id as string,
-        exerciseId,
-        req.body,
-      );
-      res.status(201).json(exercise);
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to add exercise to workout";
-      res.status(400).json({ error: message });
-    }
-  });
+      try {
+        const exercise = await workoutService.addExerciseToWorkout(
+          req.params.id as string,
+          exerciseId,
+          req.body,
+          req.user?.id,
+        );
+        res.status(201).json(exercise);
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : "Failed to add exercise to workout";
+        res.status(400).json({ error: message });
+      }
+    },
+  );
 
   const PartialWorkoutExerciseInputSchema = NewWorkoutExerciseInputSchema.partial();
   router.patch(
     "/:workoutId/exercises/:exerciseId",
     validateBody(PartialWorkoutExerciseInputSchema),
-    async (req, res) => {
+    async (req: AuthenticatedRequest, res) => {
       const exercise = await workoutService.updateWorkoutExercise(
         req.params.exerciseId as string,
         req.body,
+        req.user?.id,
       );
       if (!exercise) {
         res.status(404).json({ error: "Exercise not found" });
@@ -259,8 +307,11 @@ export function createWorkoutsRouter(
     },
   );
 
-  router.delete("/:workoutId/exercises/:exerciseId", async (req, res) => {
-    const deleted = await workoutService.removeExerciseFromWorkout(req.params.exerciseId);
+  router.delete("/:workoutId/exercises/:exerciseId", async (req: AuthenticatedRequest, res) => {
+    const deleted = await workoutService.removeExerciseFromWorkout(
+      req.params.exerciseId as string,
+      req.user?.id,
+    );
     if (!deleted) {
       res.status(404).json({ error: "Exercise not found" });
       return;
@@ -268,9 +319,9 @@ export function createWorkoutsRouter(
     res.status(204).send();
   });
 
-  router.put("/:id/exercises/reorder", async (req, res) => {
+  router.put("/:id/exercises/reorder", async (req: AuthenticatedRequest, res) => {
     try {
-      const workout = await workoutService.getWorkout(req.params.id);
+      const workout = await workoutService.getWorkout(req.params.id as string, req.user?.id);
       if (!workout) {
         res.status(404).json({ error: "Workout not found" });
         return;
@@ -280,7 +331,7 @@ export function createWorkoutsRouter(
         res.status(400).json({ error: "exerciseIds must be an array of strings" });
         return;
       }
-      await workoutService.reorderExercises(req.params.id, exerciseIds);
+      await workoutService.reorderExercises(req.params.id as string, exerciseIds, req.user?.id);
       res.json({ success: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "Failed to reorder exercises";

@@ -1,28 +1,27 @@
-import type { Client } from "@libsql/client";
 import { toNodeHandler } from "better-auth/node";
+import { eq } from "drizzle-orm";
 import { Router } from "express";
+import type { DrizzleClient } from "../../shared/db.js";
+import { user } from "../../shared/schema.js";
 import type { AuthInstance } from "./auth.js";
 
-export function createAuthRouter(auth: AuthInstance, client: Client): Router {
+export function createAuthRouter(auth: AuthInstance, db: DrizzleClient): Router {
   const router = Router();
 
   // Custom route for updating user profile details
   router.patch("/profile", async (req, res, next) => {
     try {
-      const headers = new Headers();
-      for (const [key, value] of Object.entries(req.headers)) {
-        if (value !== undefined) {
-          if (Array.isArray(value)) {
-            for (const v of value) {
-              headers.append(key, v);
-            }
-          } else {
-            headers.set(key, value);
-          }
-        }
+      const cleanHeaders = new Headers();
+      const authHeader = req.headers.authorization;
+      if (authHeader) {
+        cleanHeaders.set("authorization", authHeader);
+      }
+      const cookieHeader = req.headers.cookie;
+      if (cookieHeader) {
+        cleanHeaders.set("cookie", cookieHeader);
       }
 
-      const session = await auth.api.getSession({ headers });
+      const session = await auth.api.getSession({ headers: cleanHeaders });
       if (!session?.user) {
         res.status(401).json({ error: "Unauthorized" });
         return;
@@ -36,47 +35,35 @@ export function createAuthRouter(auth: AuthInstance, client: Client): Router {
         return;
       }
 
-      const updates: string[] = [];
-      const args: (string | null)[] = [];
-
-      if (name && typeof name === "string") {
-        updates.push("name = ?");
-        args.push(name.trim());
-      }
+      const updates: Record<string, string> = {};
+      if (name && typeof name === "string") updates.name = name.trim();
       if (email && typeof email === "string") {
-        updates.push("email = ?");
-        args.push(email.trim());
+        const trimmedEmail = email.trim();
+        const [existing] = await db
+          .select({ id: user.id })
+          .from(user)
+          .where(eq(user.email, trimmedEmail));
+        if (existing && existing.id !== userId) {
+          res.status(409).json({ error: "Email already in use" });
+          return;
+        }
+        updates.email = trimmedEmail;
       }
+      updates.updatedAt = new Date().toISOString();
 
-      if (updates.length > 0) {
-        updates.push("updatedAt = datetime('now')");
-        args.push(userId);
+      await db.update(user).set(updates).where(eq(user.id, userId));
 
-        await client.execute({
-          sql: `UPDATE user SET ${updates.join(", ")} WHERE id = ?`,
-          args,
-        });
-      }
+      const [updatedRow] = await db
+        .select({ id: user.id, name: user.name, email: user.email, createdAt: user.createdAt })
+        .from(user)
+        .where(eq(user.id, userId));
 
-      const updatedUserRes = await client.execute({
-        sql: "SELECT id, name, email, createdAt FROM user WHERE id = ?",
-        args: [userId],
-      });
-
-      const updatedRow = updatedUserRes.rows[0];
       if (!updatedRow) {
         res.status(404).json({ error: "User not found" });
         return;
       }
 
-      const user = {
-        id: String(updatedRow.id),
-        name: String(updatedRow.name),
-        email: String(updatedRow.email),
-        createdAt: String(updatedRow.createdAt || ""),
-      };
-
-      res.json({ user });
+      res.json({ user: updatedRow });
     } catch (err) {
       next(err);
     }

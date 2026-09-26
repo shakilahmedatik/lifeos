@@ -1,126 +1,111 @@
-import type { Client } from "@libsql/client";
+import { and, asc, eq, isNull, or } from "drizzle-orm";
 
+import type { DrizzleClient } from "../../../../shared/db.js";
+import { learningResources } from "../../../../shared/schema.js";
 import type { LearningResource, NewLearningResourceInput } from "../../domain/types.js";
 import type { LearningResourceRepository } from "../../ports/learning-resource-repository.js";
 
-interface LearningResourceRow {
-  id: string;
-  skill_area_id: string;
-  title: string;
-  type: string;
-  total_units: number | null;
-  unit: string | null;
-  created_at: string;
-  updated_at: string;
-}
-
-function rowToResource(row: LearningResourceRow): LearningResource {
+function rowToResource(row: typeof learningResources.$inferSelect): LearningResource {
   return {
     id: row.id,
-    skillAreaId: row.skill_area_id,
+    skillAreaId: row.skillAreaId,
     title: row.title,
     type: row.type as LearningResource["type"],
-    totalUnits: row.total_units ?? undefined,
+    totalUnits: row.totalUnits ?? undefined,
     unit: row.unit as LearningResource["unit"] | undefined,
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
+    createdAt: row.createdAt,
+    updatedAt: row.updatedAt,
   };
 }
 
-export class SqliteLearningResourceRepository implements LearningResourceRepository {
-  constructor(private readonly client: Client) {}
+function userScope(userId: string) {
+  return and(
+    or(eq(learningResources.userId, userId), eq(learningResources.userId, "")),
+    isNull(learningResources.deletedAt),
+  );
+}
 
-  async getById(id: string): Promise<LearningResource | undefined> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM learning_resources WHERE id = ?",
-      args: [id],
-    });
-    const row = res.rows[0] as unknown as LearningResourceRow | undefined;
+export class DrizzleLearningResourceRepository implements LearningResourceRepository {
+  constructor(private readonly db: DrizzleClient) {}
+
+  async getById(id: string, userId = "default"): Promise<LearningResource | undefined> {
+    const [row] = await this.db
+      .select()
+      .from(learningResources)
+      .where(and(eq(learningResources.id, id), userScope(userId)));
     return row ? rowToResource(row) : undefined;
   }
 
-  async getBySkillArea(skillAreaId: string): Promise<LearningResource[]> {
-    const res = await this.client.execute({
-      sql: "SELECT * FROM learning_resources WHERE skill_area_id = ? ORDER BY title",
-      args: [skillAreaId],
-    });
-    const rows = res.rows as unknown as LearningResourceRow[];
+  async getBySkillArea(skillAreaId: string, userId = "default"): Promise<LearningResource[]> {
+    const rows = await this.db
+      .select()
+      .from(learningResources)
+      .where(and(eq(learningResources.skillAreaId, skillAreaId), userScope(userId)))
+      .orderBy(asc(learningResources.title));
     return rows.map(rowToResource);
   }
 
-  async getAll(): Promise<LearningResource[]> {
-    const res = await this.client.execute("SELECT * FROM learning_resources ORDER BY title");
-    const rows = res.rows as unknown as LearningResourceRow[];
+  async getAll(userId = "default"): Promise<LearningResource[]> {
+    const rows = await this.db
+      .select()
+      .from(learningResources)
+      .where(userScope(userId))
+      .orderBy(asc(learningResources.title));
     return rows.map(rowToResource);
   }
 
-  async create(id: string, input: NewLearningResourceInput): Promise<LearningResource> {
+  async create(
+    id: string,
+    input: NewLearningResourceInput,
+    userId = "default",
+  ): Promise<LearningResource> {
     const now = new Date().toISOString();
-    await this.client.execute({
-      sql: `INSERT INTO learning_resources (id, skill_area_id, title, type, total_units, unit, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      args: [
-        id,
-        input.skillAreaId,
-        input.title,
-        input.type,
-        input.totalUnits ?? null,
-        input.unit ?? null,
-        now,
-        now,
-      ],
+    await this.db.insert(learningResources).values({
+      id,
+      userId,
+      skillAreaId: input.skillAreaId,
+      title: input.title,
+      type: input.type,
+      totalUnits: input.totalUnits ?? null,
+      unit: input.unit ?? null,
+      createdAt: now,
+      updatedAt: now,
     });
-    return (await this.getById(id)) as LearningResource;
+    return (await this.getById(id, userId)) as LearningResource;
   }
 
   async update(
     id: string,
     patch: Partial<NewLearningResourceInput>,
+    userId = "default",
   ): Promise<LearningResource | undefined> {
-    const existing = await this.getById(id);
+    const existing = await this.getById(id, userId);
     if (!existing) return undefined;
 
-    const fields: string[] = [];
-    const values: (string | number | null)[] = [];
+    const updates: Record<string, unknown> = {};
+    if (patch.title !== undefined) updates.title = patch.title;
+    if (patch.type !== undefined) updates.type = patch.type;
+    if (patch.skillAreaId !== undefined) updates.skillAreaId = patch.skillAreaId;
+    if (patch.totalUnits !== undefined) updates.totalUnits = patch.totalUnits;
+    if (patch.unit !== undefined) updates.unit = patch.unit;
 
-    if (patch.title !== undefined) {
-      fields.push("title = ?");
-      values.push(patch.title);
-    }
-    if (patch.type !== undefined) {
-      fields.push("type = ?");
-      values.push(patch.type);
-    }
-    if (patch.skillAreaId !== undefined) {
-      fields.push("skill_area_id = ?");
-      values.push(patch.skillAreaId);
-    }
-    if (patch.totalUnits !== undefined) {
-      fields.push("total_units = ?");
-      values.push(patch.totalUnits);
-    }
-    if (patch.unit !== undefined) {
-      fields.push("unit = ?");
-      values.push(patch.unit);
-    }
+    if (Object.keys(updates).length === 0) return existing;
 
-    if (fields.length === 0) return existing;
-    fields.push("updated_at = ?");
-    values.push(new Date().toISOString());
-    values.push(id);
+    updates.updatedAt = new Date().toISOString();
 
-    await this.client.execute({
-      sql: `UPDATE learning_resources SET ${fields.join(", ")} WHERE id = ?`,
-      args: values,
-    });
-    return await this.getById(id);
+    await this.db
+      .update(learningResources)
+      .set(updates)
+      .where(and(eq(learningResources.id, id), userScope(userId)));
+    return await this.getById(id, userId);
   }
 
-  async delete(id: string): Promise<boolean> {
-    const res = await this.client.execute({
-      sql: "DELETE FROM learning_resources WHERE id = ?",
-      args: [id],
-    });
-    return res.rowsAffected > 0;
+  async delete(id: string, userId = "default"): Promise<boolean> {
+    const now = new Date().toISOString();
+    const result = await this.db
+      .update(learningResources)
+      .set({ deletedAt: now, updatedAt: now })
+      .where(and(eq(learningResources.id, id), userScope(userId)));
+    return result.rowsAffected > 0;
   }
 }

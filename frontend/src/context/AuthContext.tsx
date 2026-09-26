@@ -1,5 +1,13 @@
 import { createContext, type FC, type ReactNode, useContext, useEffect, useState } from "react";
+import { getApiBaseUrl } from "../lib/api.js";
+import {
+  clearTauriStoredSession,
+  getTauriStoredSession,
+  setTauriStoredSession,
+} from "../lib/auth/tauriAuth.js";
+import { isTauri } from "../lib/dataSource.js";
 import { useLocalStorage } from "../lib/hooks/useLocalStorage.js";
+import { getLocalDb, resetLocalDatabase } from "../lib/local-db/index.js";
 
 export interface UserSession {
   id: string;
@@ -30,40 +38,67 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   useEffect(() => {
     let isMounted = true;
     const checkSession = async () => {
+      // In Tauri mode, check persistent store first
+      if (isTauri()) {
+        const stored = await getTauriStoredSession();
+        if (stored?.user && isMounted) {
+          try {
+            const db = await getLocalDb();
+            const meta = await db.select<{ user_id: string | null }[]>(
+              "SELECT user_id FROM _sync_meta WHERE id = 1",
+            );
+            const prevUser = meta[0]?.user_id || null;
+            if (prevUser && prevUser !== stored.user.id) {
+              await resetLocalDatabase(db);
+              await db.execute(
+                "UPDATE _sync_meta SET last_sync_at = NULL, user_id = ? WHERE id = 1",
+                [stored.user.id],
+              );
+            }
+          } catch {}
+          setUser(stored.user);
+          setToken(stored.token);
+          setIsLoadingSession(false);
+          return;
+        }
+      }
+
       try {
         const headers: Record<string, string> = {};
         if (token && token !== "session-token") {
           headers.Authorization = `Bearer ${token}`;
         }
-        const API_BASE_URL = import.meta.env.DEV ? "" : import.meta.env.VITE_API_URL || "";
-        const res = await fetch(`${API_BASE_URL}/api/auth/get-session`, {
-          headers,
-          credentials: "include",
-        });
+        const API_BASE_URL = getApiBaseUrl();
+        const fetchOptions: RequestInit = { headers };
+        if (!isTauri()) {
+          fetchOptions.credentials = "include";
+        }
+
+        const res = await fetch(`${API_BASE_URL}/api/auth/get-session`, fetchOptions);
 
         if (res.ok) {
           const data = await res.json();
           if (data?.user && isMounted) {
             setUser(data.user);
             const sessionToken = data.session?.token || token;
-            // Only set if we actually have a valid non-fallback token
             if (sessionToken && sessionToken !== "session-token") {
               setToken(sessionToken);
+              if (isTauri()) {
+                setTauriStoredSession({ token: sessionToken, user: data.user });
+              }
             } else {
-              removeToken(); // Rely entirely on cookies
+              removeToken();
             }
           } else if (isMounted) {
-            // Session expired or invalid on backend
             removeUser();
             removeToken();
           }
         } else if (res.status === 401 && isMounted) {
-          // Explicitly unauthorized, meaning session is invalid
           removeUser();
           removeToken();
         }
       } catch (_err) {
-        // Network or fetch error - keep cached local user state if offline
+        // Keep cached local user state if offline
       } finally {
         if (isMounted) {
           setIsLoadingSession(false);
@@ -80,6 +115,24 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
   const login = (newToken: string | null, newUser: UserSession) => {
     if (newToken && newToken !== "session-token") {
       setToken(newToken);
+      if (isTauri()) {
+        setTauriStoredSession({ token: newToken, user: newUser });
+        getLocalDb()
+          .then(async (db) => {
+            const meta = await db.select<{ user_id: string | null }[]>(
+              "SELECT user_id FROM _sync_meta WHERE id = 1",
+            );
+            const prevUser = meta[0]?.user_id || null;
+            if (prevUser !== newUser.id) {
+              await resetLocalDatabase(db);
+            }
+            await db.execute(
+              "UPDATE _sync_meta SET last_sync_at = NULL, user_id = ? WHERE id = 1",
+              [newUser.id],
+            );
+          })
+          .catch(() => {});
+      }
     } else {
       removeToken();
     }
@@ -88,16 +141,24 @@ export const AuthProvider: FC<{ children: ReactNode }> = ({ children }) => {
 
   const updateUser = (updatedUser: UserSession) => {
     setUser(updatedUser);
+    if (isTauri() && token) {
+      setTauriStoredSession({ token, user: updatedUser });
+    }
   };
 
   const logout = () => {
-    const API_BASE_URL = import.meta.env.DEV ? "" : import.meta.env.VITE_API_URL || "";
-    fetch(`${API_BASE_URL}/api/auth/sign-out`, {
-      method: "POST",
-      credentials: "include",
-    }).catch(() => {});
+    const API_BASE_URL = getApiBaseUrl();
+    const fetchOptions: RequestInit = { method: "POST" };
+    if (!isTauri()) {
+      fetchOptions.credentials = "include";
+    }
+    fetch(`${API_BASE_URL}/api/auth/sign-out`, fetchOptions).catch(() => {});
     removeToken();
     removeUser();
+    if (isTauri()) {
+      clearTauriStoredSession();
+      resetLocalDatabase().catch(() => {});
+    }
   };
 
   return (

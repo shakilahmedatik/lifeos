@@ -29,15 +29,3 @@ export type {
   UpdateLearningResourceInput,
   UpdateSkillAreaInput,
 };
-
-export interface LearningBackup {
-  id: string;
-  timestamp: string;
-  version: string;
-  schema: string;
-  data: {
-    areas: SkillArea[];
-    resources: LearningResource[];
-    logs: LearningLog[];
-  };
-}

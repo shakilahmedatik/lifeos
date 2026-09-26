@@ -108,7 +108,7 @@ describe("AccountService", () => {
   });
 
   it("creates an account", async () => {
-    const account = await service.createAccount({ name: "Main Bank", type: "bank" });
+    const account = await service.createAccount({ name: "Main Bank", type: "bank" }, "test-user");
     expect(account.name).toBe("Main Bank");
     expect(account.type).toBe("bank");
     expect(account.archived).toBe(false);
@@ -116,40 +116,40 @@ describe("AccountService", () => {
   });
 
   it("lists all accounts", async () => {
-    await service.createAccount({ name: "Account 1", type: "bank" });
-    await service.createAccount({ name: "Account 2", type: "cash" });
-    expect(await service.listAccounts()).toHaveLength(2);
+    await service.createAccount({ name: "Account 1", type: "bank" }, "test-user");
+    await service.createAccount({ name: "Account 2", type: "cash" }, "test-user");
+    expect(await service.listAccounts("test-user")).toHaveLength(2);
   });
 
   it("lists only active accounts", async () => {
-    const account1 = await service.createAccount({ name: "Active", type: "bank" });
-    await service.createAccount({ name: "To Archive", type: "cash" });
-    await service.archiveAccount(account1.id);
-    const active = await service.listActiveAccounts();
+    const account1 = await service.createAccount({ name: "Active", type: "bank" }, "test-user");
+    await service.createAccount({ name: "To Archive", type: "cash" }, "test-user");
+    await service.archiveAccount(account1.id, "test-user");
+    const active = await service.listActiveAccounts("test-user");
     expect(active).toHaveLength(1);
     expect(active[0].name).toBe("To Archive");
   });
 
   it("updates an account", async () => {
-    const account = await service.createAccount({ name: "Old Name", type: "bank" });
-    const updated = await service.updateAccount(account.id, { name: "New Name" });
+    const account = await service.createAccount({ name: "Old Name", type: "bank" }, "test-user");
+    const updated = await service.updateAccount(account.id, { name: "New Name" }, "test-user");
     expect(updated?.name).toBe("New Name");
   });
 
   it("archives an account", async () => {
-    const account = await service.createAccount({ name: "To Archive", type: "bank" });
-    expect(await service.archiveAccount(account.id)).toBe(true);
-    const archived = await service.getAccount(account.id);
+    const account = await service.createAccount({ name: "To Archive", type: "bank" }, "test-user");
+    expect(await service.archiveAccount(account.id, "test-user")).toBe(true);
+    const archived = await service.getAccount(account.id, "test-user");
     expect(archived?.archived).toBe(true);
   });
 
   it("gets account balance", async () => {
-    const account = await service.createAccount({ name: "Bank", type: "bank" });
-    expect(await service.getAccountBalance(account.id)).toBe(0);
+    const account = await service.createAccount({ name: "Bank", type: "bank" }, "test-user");
+    expect(await service.getAccountBalance(account.id, "test-user")).toBe(0);
   });
 
   it("prevents deleting an account with existing transactions", async () => {
-    const account = await service.createAccount({ name: "Bank", type: "bank" });
+    const account = await service.createAccount({ name: "Bank", type: "bank" }, "test-user");
     const now = new Date().toISOString();
     transactionRepo.mockTransactions.set("tx-1", {
       id: "tx-1",
@@ -161,8 +161,33 @@ describe("AccountService", () => {
       createdAt: now,
       updatedAt: now,
     });
-    await expect(service.deleteAccount(account.id)).rejects.toThrow(
+    await expect(service.deleteAccount(account.id, "test-user")).rejects.toThrow(
       "Cannot delete account with existing transactions. Archive the account instead.",
     );
+  });
+
+  it("creates opening balance transaction when initialBalanceMinor is provided", async () => {
+    const account = await service.createAccount(
+      { name: "Salary Account", type: "bank", initialBalanceMinor: 50000 },
+      "test-user",
+    );
+    expect(account.id).toBeDefined();
+    expect(transactionRepo.mockTransactions.size).toBe(1);
+    const tx = Array.from(transactionRepo.mockTransactions.values())[0];
+    expect(tx.accountId).toBe(account.id);
+    expect(tx.amountMinor).toBe(50000);
+    expect(tx.categoryId).toBe("cat-system-opening-balance");
+  });
+
+  it("allows deleting an account if only opening balance transaction exists", async () => {
+    const account = await service.createAccount(
+      { name: "Temporary Account", type: "cash", initialBalanceMinor: 20000 },
+      "test-user",
+    );
+    expect(transactionRepo.mockTransactions.size).toBe(1);
+    const deleted = await service.deleteAccount(account.id, "test-user");
+    expect(deleted).toBe(true);
+    expect(accountRepo.accounts.has(account.id)).toBe(false);
+    expect(transactionRepo.mockTransactions.size).toBe(0);
   });
 });

@@ -1,81 +1,74 @@
-import type { DashboardSummary, NewReminderInput } from "@lifeos/contracts";
+import type { DashboardSummary } from "@lifeos/contracts";
 import { getClientDateString } from "@lifeos/contracts/date-utils";
-import { useCallback, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAppToast } from "../../../components/Toast.js";
-import { api } from "../../../lib/api.js";
-import { useVisibilityPolling } from "../../../lib/useVisibilityPolling.js";
-
-const POLL_INTERVAL = 30_000;
+import { getDataSource } from "../../../lib/dataSource.js";
+import { queryKeys } from "../../../lib/queryKeys.js";
 
 export function useDashboard() {
-  const [summary, setSummary] = useState<DashboardSummary | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
+  const queryClient = useQueryClient();
   const toast = useAppToast();
+  const today = getClientDateString();
+  const ds = getDataSource();
 
-  const fetchSummary = useCallback(async () => {
-    try {
-      const today = getClientDateString();
-      const data = await api.getSummary(today);
-      setSummary(data);
-      setError(null);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load dashboard");
-      toast.error("Failed to load dashboard");
-    } finally {
-      setLoading(false);
-    }
-  }, [toast]);
+  const summaryQuery = useQuery<DashboardSummary>({
+    queryKey: queryKeys.dashboard.summary(today),
+    queryFn: () => ds.getSummary(today),
+    refetchInterval: 15_000,
+  });
 
-  useVisibilityPolling(fetchSummary, POLL_INTERVAL);
-
-  const handleHabitLog = async (habitId: string, value: number, meta?: string) => {
-    try {
-      const today = getClientDateString();
-      await api.logHabit(habitId, today, value, meta);
-      await fetchSummary();
-    } catch {
-      toast.error("Failed to log habit");
-    }
+  const invalidateSummary = () => {
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.dashboard.summary(today),
+    });
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.routine.tasks(today),
+    });
+    queryClient.invalidateQueries({
+      queryKey: queryKeys.habits.today(),
+    });
   };
 
-  const handleHabitUnlog = async (logId: string) => {
-    try {
-      await api.unlogHabitByLogId(logId);
-      await fetchSummary();
-    } catch {
-      toast.error("Failed to undo habit log");
-    }
-  };
+  const startTaskMutation = useMutation({
+    mutationFn: (taskId: string) => ds.updateTaskStatus(taskId, "in_progress"),
+    onSuccess: () => {
+      toast.success("Task started");
+      invalidateSummary();
+    },
+    onError: () => toast.error("Failed to start task"),
+  });
 
-  const handleCompleteReminder = async (id: string) => {
-    try {
-      await api.updateReminder(id, { completed: true });
-      await fetchSummary();
-    } catch {
-      toast.error("Failed to update reminder");
-    }
-  };
+  const completeTaskMutation = useMutation({
+    mutationFn: (taskId: string) => ds.updateTaskStatus(taskId, "done"),
+    onSuccess: () => {
+      toast.success("Task completed!");
+      invalidateSummary();
+    },
+    onError: () => toast.error("Failed to complete task"),
+  });
 
-  const handleCreateReminder = async (input: NewReminderInput) => {
-    try {
-      await api.createReminder(input);
-      toast.success("Reminder added");
-      await fetchSummary();
-    } catch {
-      toast.error("Failed to create reminder");
-    }
-  };
+  const logHabitMutation = useMutation({
+    mutationFn: ({ habitId, value, meta }: { habitId: string; value: number; meta?: string }) =>
+      ds.logHabit(habitId, today, value, meta),
+    onSuccess: () => invalidateSummary(),
+    onError: () => toast.error("Failed to log habit"),
+  });
+
+  const unlogHabitMutation = useMutation({
+    mutationFn: (logId: string) => ds.unlogHabitByLogId(logId),
+    onSuccess: () => invalidateSummary(),
+    onError: () => toast.error("Failed to undo habit log"),
+  });
 
   return {
-    summary,
-    loading,
-    error,
-    refresh: fetchSummary,
-    logHabit: handleHabitLog,
-    unlogHabit: handleHabitUnlog,
-    completeReminder: handleCompleteReminder,
-    createReminder: handleCreateReminder,
+    summary: summaryQuery.data ?? null,
+    loading: summaryQuery.isLoading,
+    error: summaryQuery.error ? (summaryQuery.error as Error).message : null,
+    refresh: () => summaryQuery.refetch(),
+    startTask: (taskId: string) => startTaskMutation.mutateAsync(taskId),
+    completeTask: (taskId: string) => completeTaskMutation.mutateAsync(taskId),
+    logHabit: (habitId: string, value: number, meta?: string) =>
+      logHabitMutation.mutateAsync({ habitId, value, meta }),
+    unlogHabit: (logId: string) => unlogHabitMutation.mutateAsync(logId),
   };
 }

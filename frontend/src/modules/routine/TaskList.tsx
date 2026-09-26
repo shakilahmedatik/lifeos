@@ -7,12 +7,13 @@ import {
   Search as SearchIcon,
   X as XIcon,
 } from "lucide-react";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Badge from "../../components/ui/Badge.js";
 import Card from "../../components/ui/Card.js";
 import { EmptyState } from "../../components/ui/EmptyState.js";
 import { Select } from "../../components/ui/Select.js";
+import { useRoutineCategories } from "./hooks/useRoutineCategories.js";
 import TaskCategoryBadge, { CATEGORY_COLORS } from "./TaskCategoryBadge.js";
 
 interface TaskListProps {
@@ -51,9 +52,41 @@ export default function TaskList({
   const navigate = useNavigate();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<TaskCategory | "all">("all");
+  const { categories: routineCategories } = useRoutineCategories();
+
+  const categoryOptions = useMemo(() => {
+    const base = [{ value: "all", label: "All Categories" }];
+    if (routineCategories && routineCategories.length > 0) {
+      return [
+        ...base,
+        ...routineCategories.map((c) => ({
+          value: c.id,
+          label: `${c.icon ? `${c.icon} ` : ""}${c.name}`,
+        })),
+      ];
+    }
+    return [
+      ...base,
+      { value: "general", label: "General" },
+      { value: "routine", label: "Routine" },
+      { value: "must_do", label: "Must Do" },
+      { value: "work", label: "Work" },
+      { value: "workout", label: "Workout" },
+      { value: "learning", label: "Learning" },
+      { value: "habit", label: "Habit" },
+      { value: "personal", label: "Personal" },
+      { value: "flex", label: "Flex" },
+    ];
+  }, [routineCategories]);
 
   const filteredTasks = tasks.filter((t) => {
-    if (categoryFilter !== "all" && t.category !== categoryFilter) return false;
+    if (categoryFilter !== "all" && t.category !== categoryFilter) {
+      // Also check category name match
+      const matched = routineCategories.find((c) => c.id === categoryFilter);
+      if (!matched || matched.name.toLowerCase() !== t.category?.toLowerCase()) {
+        return false;
+      }
+    }
     if (search.trim()) {
       const q = search.toLowerCase();
       const matchTitle = t.title.toLowerCase().includes(q);
@@ -84,15 +117,7 @@ export default function TaskList({
           <Select
             value={categoryFilter}
             onChange={(e) => setCategoryFilter(e.target.value as TaskCategory | "all")}
-            options={[
-              { value: "all", label: "All Categories" },
-              { value: "general", label: "General" },
-              { value: "work", label: "Work" },
-              { value: "workout", label: "Workout" },
-              { value: "learning", label: "Learning" },
-              { value: "habit", label: "Habit" },
-              { value: "personal", label: "Personal" },
-            ]}
+            options={categoryOptions}
           />
         </div>
       </div>
@@ -112,6 +137,10 @@ export default function TaskList({
       ) : (
         <div className="space-y-3">
           {sortedTasks.map((task) => {
+            const matchedCategoryObj = routineCategories.find(
+              (c) =>
+                c.id === task.category || c.name.toLowerCase() === task.category?.toLowerCase(),
+            );
             const catStyle = CATEGORY_COLORS[task.category] || CATEGORY_COLORS.general;
             const duration = computeDurationMins(task.startTime, task.endTime);
             const isOvernight = task.startTime > task.endTime;
@@ -147,7 +176,11 @@ export default function TaskList({
                         {task.title}
                       </span>
 
-                      <TaskCategoryBadge category={task.category} />
+                      <TaskCategoryBadge
+                        category={task.category}
+                        categoryObj={matchedCategoryObj}
+                        categories={routineCategories}
+                      />
 
                       <Badge variant={STATUS_VARIANTS[task.status]} size="sm">
                         {task.status.replace("_", " ")}

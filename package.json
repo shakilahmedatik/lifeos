@@ -8,19 +8,23 @@
     "pnpm": ">=11.0.0"
   },
   "scripts": {
-    "dev": "pnpm --filter @lifeos/backend dev & pnpm --filter @lifeos/frontend dev",
-    "check": "biome check .",
-    "format": "biome format . --write",
-    "test": "vitest run"
+    "dev": "turso dev --db-file ./backend/local.db --port 8081 & pnpm --filter @lifeos/backend dev & pnpm --filter @lifeos/frontend dev",
+    "build": "pnpm --filter @lifeos/contracts build && pnpm --filter @lifeos/backend build && pnpm --filter @lifeos/frontend build",
+    "check": "biome check backend/src frontend/src packages",
+    "format": "biome format backend/src frontend/src packages --write",
+    "test": "vitest run",
+    "db:push": "pnpm --filter @lifeos/backend db:push",
+    "db:studio": "pnpm --filter @lifeos/backend db:studio",
+    "db:generate": "pnpm --filter @lifeos/backend db:generate"
   },
   "onlyBuiltDependencies": [
     "esbuild",
     "@biomejs/biome"
   ],
-
   "devDependencies": {
     "@biomejs/biome": "^2.5.5",
     "jsdom": "^29.1.1",
+    "playwright": "^1.62.1",
     "vitest": "^4.1.10"
   },
   "overrides": {
