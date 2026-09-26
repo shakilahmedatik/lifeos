@@ -47,7 +47,7 @@ jobs:
           pnpm test
 
       - name: Build Tauri macOS app
-        uses: tauri-apps/tauri-action@v2
+        uses: tauri-apps/tauri-action@v0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VITE_API_URL: ${{ secrets.VITE_API_URL || 'https://api-lifeos.shatik.me' }}
