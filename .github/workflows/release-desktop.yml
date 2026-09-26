@@ -57,6 +57,10 @@ jobs:
           projectPath: './frontend'
           tagName: v__VERSION__
           releaseName: 'LifeOS Desktop v__VERSION__'
-          releaseBody: 'See release notes for changes.'
+          releaseBody: |
+            ### 🚀 What's New
+            - **Blazing Fast Dashboard:** The dashboard is now purely offline-first and loads instantly without waiting for network requests.
+            - **Real-time Sync:** Fixed a cache invalidation bug so the dashboard automatically updates in real-time when you log habits or complete tasks in other modules.
+            - **Updater Fixes:** Fixed GitHub Action pipeline to properly generate auto-updater signatures.
           releaseDraft: false
           prerelease: false

@@ -1,7 +1,8 @@
 export const queryKeys = {
   // Dashboard
   dashboard: {
-    summary: (date?: string) => (date ? (["dashboard", "summary", date] as const) : (["dashboard", "summary"] as const)),
+    summary: (date?: string) =>
+      date ? (["dashboard", "summary", date] as const) : (["dashboard", "summary"] as const),
   },
   // Routine
   routine: {
