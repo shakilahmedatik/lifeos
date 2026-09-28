@@ -33,11 +33,13 @@ export function useAutoUpdater() {
     setIsUpdating(true);
     try {
       const { check } = await import("@tauri-apps/plugin-updater");
+      const { relaunch } = await import("@tauri-apps/plugin-process");
       const update = await check();
       if (update?.available) {
         toast.success("Downloading and installing update...");
         await update.downloadAndInstall();
         toast.success("Update installed! Relaunching app...");
+        await relaunch();
       }
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Failed to install update");

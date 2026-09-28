@@ -98,9 +98,10 @@ export class SyncEngine {
 
       if (!userChanged) {
         for (const table of SYNCABLE_TABLES) {
-          const rows = await db.select<Record<string, unknown>[]>(
-            `SELECT * FROM ${table} WHERE _sync_status = 'pending'`,
-          );
+          const query = isFullSync
+            ? `SELECT * FROM ${table} WHERE deleted_at IS NULL`
+            : `SELECT * FROM ${table} WHERE _sync_status = 'pending'`;
+          const rows = await db.select<Record<string, unknown>[]>(query);
           if (rows.length > 0) {
             localChanges[table] = rows;
             const primaryKey = table === "settings" ? "key" : "id";

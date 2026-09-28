@@ -57,6 +57,8 @@ const TABLE_TIMESTAMP_COLUMN: Record<string, string> = {
   settings: "updated_at",
 };
 
+import { DEFAULT_FINANCE_CATEGORIES } from "@lifeos/contracts";
+
 export function createSyncRouter(db: DrizzleClient): Router {
   const router = Router();
   const tableColumnsCache = new Map<string, Set<string>>();
@@ -76,8 +78,22 @@ export function createSyncRouter(db: DrizzleClient): Router {
     }
   }
 
+  async function ensureSystemCategories() {
+    const now = new Date().toISOString();
+    for (const cat of DEFAULT_FINANCE_CATEGORIES) {
+      const rawSql = `INSERT INTO categories (id, user_id, name, kind, is_system, archived, created_at, updated_at) VALUES (?, '', ?, ?, 1, 0, ?, ?) ON CONFLICT(id) DO UPDATE SET is_system = 1`;
+      try {
+        const q = buildParamQuery(rawSql, [cat.id, cat.name, cat.kind, now, now]);
+        await db.run(q);
+      } catch (err) {
+        console.warn("Failed to ensure system category in sync router:", err);
+      }
+    }
+  }
+
   router.post("/", async (req, res, next) => {
     try {
+      await ensureSystemCategories();
       const userId = (req as unknown as { user: { id: string } }).user?.id || "";
       const { lastSyncAt, changes, forceFull } = req.body || {};
       const shouldFilterByTime = Boolean(lastSyncAt) && !forceFull;
