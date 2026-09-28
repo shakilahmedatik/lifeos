@@ -1,7 +1,7 @@
 {
   "name": "@lifeos/frontend",
   "type": "module",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "private": true,
   "packageManager": "pnpm@11.9.0",
   "engines": {
@@ -22,7 +22,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tanstack/react-query": "^5.101.4",
     "@tanstack/react-query-devtools": "^5.101.4",
-    "@tauri-apps/api": "^2.11.1",
+    "@tauri-apps/api": "^2.12.0",
     "@tauri-apps/plugin-notification": "^2.3.3",
     "@tauri-apps/plugin-opener": "^2.5.4",
     "@tauri-apps/plugin-process": "~2.4.0",
@@ -37,7 +37,7 @@
     "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@tauri-apps/cli": "^2.2.0",
+    "@tauri-apps/cli": "^2.12.0",
     "@testing-library/jest-dom": "^7.0.0",
     "@testing-library/react": "^16.3.2",
     "@types/react": "^19.2.17",
