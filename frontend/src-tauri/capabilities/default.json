@@ -2,7 +2,9 @@
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "default",
   "description": "Default permissions for LifeOS application",
-  "windows": ["main"],
+  "windows": [
+    "main"
+  ],
   "permissions": [
     "core:default",
     "core:window:default",
@@ -22,6 +24,7 @@
     "notification:default",
     "notification:allow-notify",
     "notification:allow-request-permission",
-    "notification:allow-is-permission-granted"
+    "notification:allow-is-permission-granted",
+    "process:default"
   ]
 }
